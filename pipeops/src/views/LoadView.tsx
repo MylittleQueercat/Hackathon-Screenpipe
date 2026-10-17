@@ -4,7 +4,7 @@ import mockJson from '../data/mock-experiment.json';
 import type { DataOrigin } from '../data/load';
 import type { RawExperimentBundle } from '../data/schema';
 import { fetchLiveExperiment, fetchRuns, fetchVariants, streamWfevalRun, type RunSummary, type VariantSummary } from '../data/live';
-import { Eyebrow, GhostButton, PrimaryButton } from '../components/ui';
+import { Eyebrow, GhostButton, PrimaryButton, Select } from '../components/ui';
 
 const mock = mockJson as RawExperimentBundle;
 
@@ -162,18 +162,13 @@ export function LoadView({
 
           <div className="mt-6 flex flex-col gap-3">
             <Labeled label="variant">
-              <select
-                className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+              <Select
                 value={form.variant}
-                onChange={(e) => setForm((f) => ({ ...f, variant: e.target.value }))}
+                onChange={(v) => setForm((f) => ({ ...f, variant: v }))}
+                options={(variants ?? []).map((v) => ({ value: v.file, label: v.name }))}
                 disabled={running}
-              >
-                {(variants ?? []).map((v) => (
-                  <option key={v.file} value={v.file}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
+                placeholder="choose a variant"
+              />
             </Labeled>
             <div className="flex gap-3">
               <Labeled label="suite">

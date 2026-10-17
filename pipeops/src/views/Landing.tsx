@@ -17,7 +17,10 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
         transition={{ duration: 0.7, ease: EASE }}
         className="relative z-10 flex flex-col items-center text-center"
       >
-        <span className="font-mono text-[12px] uppercase tracking-[0.3em] text-ink-400">Screenpipe Workflows</span>
+        <span className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.3em] text-ink-400">
+          <img src="/screenpipe-icon.png" alt="" className="h-4 w-4 rounded-[5px] opacity-90" />
+          Screenpipe Workflows
+        </span>
         <h1 className="mt-5 text-[112px] font-semibold leading-[0.92] tracking-tightest text-ink-50">PipeOps</h1>
         <p className="mt-4 text-[26px] font-medium text-signal">Prove It Before You Ship It.</p>
         <p className="mt-6 max-w-[620px] text-[17px] leading-relaxed text-ink-300">

@@ -1,5 +1,5 @@
-import { animate, motion, useMotionValue, useTransform } from 'framer-motion';
-import { useEffect, type ReactNode } from 'react';
+import { AnimatePresence, animate, motion, useMotionValue, useTransform } from 'framer-motion';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 export type Provenance = 'recorded' | 'live' | 'simulated' | 'placeholder' | 'derived';
 
@@ -167,5 +167,89 @@ export function ArrowRight() {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
       <path d="M2 7h10M8 3l4 4-4 4" />
     </svg>
+  );
+}
+
+/** Custom dropdown matching the app's own styling — never the browser's native <select> chrome. */
+export function Select<T extends string>({
+  value,
+  onChange,
+  options,
+  disabled,
+  placeholder = 'select…',
+  className = '',
+}: {
+  value: T | '';
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const current = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-ink-900 px-3 py-2 font-mono text-[13px] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          open ? 'border-signal/50' : 'border-ink-700 hover:border-ink-500'
+        }`}
+      >
+        <span className={`truncate ${current ? 'text-ink-100' : 'text-ink-500'}`}>{current?.label ?? placeholder}</span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`shrink-0 text-ink-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
+          <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.ul
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute z-30 mt-1.5 max-h-60 w-full overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-1 shadow-xl shadow-black/40"
+          >
+            {options.map((o) => (
+              <li key={o.value}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-left font-mono text-[13px] transition-colors ${
+                    o.value === value ? 'bg-signal/10 text-signal' : 'text-ink-200 hover:bg-ink-850'
+                  }`}
+                >
+                  {o.label}
+                </button>
+              </li>
+            ))}
+          </motion.ul>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
