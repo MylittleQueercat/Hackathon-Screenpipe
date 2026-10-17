@@ -85,3 +85,23 @@ The failure it targets is gone: no 409 after a rejected publish in 3 runs
 sent both publishes in the same second, one got 409 instead of its detailed 422, and
 Review diagnosed that draft by hand (15 bash calls). Parallel publishes are the
 remaining variance.
+
+## no-second-precision (ablation)
+
+clearer-rejection and the revision note on the harness engine without second-precision
+(exact matching, as upstream). Is second-precision still needed once rejections are
+clear? `patches/variants/no-second-precision.patch`.
+
+| Run | Requests | Seconds | Checks | Failed calls |
+|---|---|---|---|---|
+| 20261017T214449Z r1 | 23 | 172 | 10/11 | 4 |
+| 20261017T214454Z r2 | 26 | 206 | 10/11 | 4 |
+| 20261017T214459Z r3 | 29 | 186 | 10/11 | 3 |
+
+Every run hits the whole-second rejection 2-3 times. Median 26 requests against 20
+for the same change with second-precision (14, 20, 36) and 19 for clearer-rejection
+(18, 19, 19); cache read 0.8-1.2M against 0.4-0.7M outside rejection-keeps-revision r3. Keep
+second-precision.
+
+`exception_missed:missing_date` is missed in 8 of 12 Review runs on this step, baseline
+included: not caused by these changes, and still open.
