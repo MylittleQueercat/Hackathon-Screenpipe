@@ -1,9 +1,9 @@
 """Run one variant on one suite: per phase, seed the history, run a full workflow cycle,
 keep everything needed to grade and audit it, then grade.
 
-A run happens at the fixed `LIVE` path on the fixed `PORT`, one at a time per Mac, so
-the paths and port in what the agents see are the same on every machine; it then moves
-to `runs/<utc>-<variant>-<suite>-s<seed>-r<repeat>/`:
+A run happens in a fixed slot (`engine.slot`: slot 0 is `LIVE` on `PORT`), the first
+free one unless `--slot` picks it, so the paths and port in what the agents see are the
+same on every machine; it then moves to `runs/<utc>-<variant>-<suite>-s<seed>-r<repeat>/`:
   run.json        provenance: variant, data hashes, engine commit/patch/binary, Pi, image
   truth.json      copied from the data dir (graded here, never mounted or seeded)
   seeded.jsonl    every seeded frame: id, timestamp, app, hidden owner
@@ -33,9 +33,10 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from . import generate
-from .engine import APP, ENGINES, EVAL_TZ, LIVE, PORT, TASKS, Engine, EngineError, clone_template
+from .engine import (APP, ENGINES, EVAL_TZ, LIVE, PORT, SLOTS, TASKS, Engine, EngineError,
+                     clone_template, slot)
 from .grade import grade_run
-from .sandbox import Sandbox, image_id
+from .sandbox import Sandbox, image_id, is_published
 from .usage import phase_usage
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,7 +73,8 @@ def provenance(variant: dict, variant_path: Path, data: Path, binary: Path, run_
         "pi_version": json.loads(pi.read_text())["version"] if pi.exists() else None,
         "pi_lock_sha256": sha256_file(pi_lock) if (pi_lock := run_dir / "home/.screenpipe/pi-agent/bun.lock").exists() else None,
         "bun_version": subprocess.run([str(APP / "bun"), "--version"], capture_output=True, text=True).stdout.strip(),
-        "sandbox_image": image_id(), "extension_sha256": sha256_file(EXTENSION),
+        "sandbox_image": image_id(), "sandbox_image_published": is_published(),
+        "extension_sha256": sha256_file(EXTENSION),
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -216,7 +218,8 @@ def leaks(run_dir: Path) -> list[str]:
     needles = sorted({str(Path.home()), str(ROOT)}, key=len, reverse=True)
     pattern = re.compile("(?:" + "|".join(map(re.escape, needles)) + r")[^\s\"'\\]*")
     found = set()
-    texts = [json.loads(log.read_text()).get("stdout") or "" for log in run_dir.glob("phase*/logs/*.json")]
+    logs = [*run_dir.glob("phase*/logs/*.json"), *run_dir.glob("logs/*.json")]  # a phase's, a stage's
+    texts = [json.loads(log.read_text()).get("stdout") or "" for log in logs]
     if (run_dir / "requests.jsonl").exists():
         texts.append((run_dir / "requests.jsonl").read_text())
     for text in texts:
@@ -257,7 +260,12 @@ def flatten(value) -> str:
     return "" if value is None else str(value)
 
 
-def masked(text: str) -> str:
+def masked(text: str, k: int = 0) -> str:
+    """Nonces masked; slot k's path and port written as slot 0's."""
+    if k:
+        root, port = slot(k)
+        text = text.replace(str(root), str(LIVE))
+        text = re.sub(rf"(localhost|127\.0\.0\.1):{port}\b", rf"\1:{PORT}", text)
     for pattern, mark in NONCES:
         text = pattern.sub(mark, text)
     return text
@@ -265,24 +273,31 @@ def masked(text: str) -> str:
 
 def prompts(run_dir: Path) -> dict[str, str]:
     """Each agent's first instructions and task prompt, masked, kept under prompts/ and
-    hashed: two runs of one variant must give the same hashes on any machine."""
+    hashed: two runs of one variant must give the same hashes on any machine and slot."""
     out, log = {}, run_dir / "requests.jsonl"
     if not log.exists():
         return out
+    try:
+        k = json.loads((run_dir / "run.json").read_text()).get("slot") or 0
+    except (OSError, ValueError):
+        k = 0
     (run_dir / "prompts").mkdir(exist_ok=True)
     for line in log.read_text().splitlines():
         r = json.loads(line)
         for key in ("instructions", "input"):
             name = f"{r.get('task')}.{key}"
             if r.get("type") == "request" and key in r and name not in out:
-                text = masked(flatten(r[key]))
+                text = masked(flatten(r[key]), k)
                 (run_dir / "prompts" / f"{name}.txt").write_text(text)
                 out[name] = hashlib.sha256(text.encode()).hexdigest()
     return dict(sorted(out.items()))
 
 
 def port_free(port: int) -> bool:
+    """Nothing listens there. Connections a stopped engine left in TIME_WAIT don't count:
+    a new engine binds the port anyway (snapshots restart one on the same port)."""
     with socket.socket() as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             s.bind(("127.0.0.1", port))
             return True
@@ -291,28 +306,70 @@ def port_free(port: int) -> bool:
 
 
 @contextmanager
-def live_slot(run_id: str):
-    """The fixed run location, held for the run. A run a crash left there is moved to
-    runs/ first, so nothing is lost and nothing leaks into the next one."""
+def live_slot(k: int | None = None):
+    """A fixed run location and port, held for the run: slot `k`, or the first free one.
+    A run a crash left there is moved to runs/ first, so nothing is lost and nothing
+    leaks into the next one. Yields (run dir, port, slot)."""
     LIVE.parent.mkdir(parents=True, exist_ok=True)
     LIVE.parent.chmod(0o700)  # /Users/Shared is shared; the template holds a login
-    with open(LIVE.parent / "lock", "w") as lock:
+    for i in ([k] if k is not None else range(SLOTS)):
+        root, port = slot(i)
+        lock = open(LIVE.parent / ("lock" if i == 0 else f"lock{i}"), "w")
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise EngineError(f"another run holds {LIVE.parent}: one run at a time per Mac") from None
-        if LIVE.exists():
-            try:
-                stale = json.loads((LIVE / "run.json").read_text())["run_id"]
-            except (OSError, KeyError, ValueError):
-                stale = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-unknown"
-            shutil.move(str(LIVE), str(ROOT / "runs" / f"{stale}-aborted"))
-        if not port_free(PORT):
-            raise EngineError(f"port {PORT} is in use: the eval engine needs it (the same on every Mac)")
-        yield LIVE
+            lock.close()
+            continue
+        if not port_free(port):
+            lock.close()
+            if k is not None:
+                raise EngineError(f"port {port} is in use: slot {i}'s engine needs it (the same on every Mac)")
+            continue
+        with lock:
+            if root.exists():
+                try:
+                    stale = json.loads((root / "run.json").read_text())["run_id"]
+                except (OSError, KeyError, ValueError):
+                    stale = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-unknown"
+                shutil.move(str(root), str(ROOT / "runs" / f"{stale}-aborted"))
+            yield root, port, i
+        return
+    raise EngineError(f"slot {k} is held by another run" if k is not None
+                      else f"all {SLOTS} slots are held by other runs (or their ports are in use)")
 
 
-def run(variant_path: Path, suite: str, seed: int, repeat: int, phases: list[int], timeout: float) -> Path:
+@contextmanager
+def harness(run_dir: Path, port: int, variant: dict, binary: Path):
+    """The sandbox and a started engine for a run in its slot, the variant's overrides
+    installed. Yields (engine, sandbox); the caller enables and runs the agents."""
+    data_dir = run_dir / "home/.screenpipe"
+    if found := context_files(data_dir):
+        raise EngineError(f"Pi would put these in every agent's prompt: {found}")
+    shim = data_dir / "pi-agent/bash-env.sh"
+    shim.parent.mkdir(parents=True, exist_ok=True)
+    shim.touch()  # mounted by inode; the engine rewrites it in place on each spawn
+    engine = Engine(run_dir, port=port, binary=binary, extra_env={
+        **variant.get("env", {}), "WFEVAL_REQUEST_LOG": str(run_dir / "requests.jsonl")})
+    with Sandbox(engine.port, rw=[data_dir / "pipes"], ro=[shim]) as box:
+        engine.extra_env.update({"SANDBOX_CONTAINER": box.container, "DOCKER": box.docker,
+                                 "DOCKER_HOST": box.docker_host})
+        install_overrides(engine, variant)
+        with engine:
+            yield engine, box
+
+
+def seal(run_dir: Path, seeded_total: dict, relayed) -> dict:
+    """After the move to runs/: what reached the engine and the agents, in run.json."""
+    report = json.loads((run_dir / "run.json").read_text())
+    report.update({"finished_at": datetime.now(timezone.utc).isoformat(), "relayed_connections": relayed,
+                   "contamination": contamination(run_dir, seeded_total), "host_path_leaks": leaks(run_dir),
+                   "prompts": prompts(run_dir)})
+    (run_dir / "run.json").write_text(json.dumps(report, indent=1))
+    return report
+
+
+def run(variant_path: Path, suite: str, seed: int, repeat: int, phases: list[int], timeout: float,
+        slot_no: int | None = None) -> Path:
     variant = json.loads(variant_path.read_text())
     data = ROOT / "data" / f"{suite}-s{seed}"
     if not (data / "manifest.json").exists():
@@ -323,50 +380,35 @@ def run(variant_path: Path, suite: str, seed: int, repeat: int, phases: list[int
     final.parent.mkdir(exist_ok=True)
     binary = ROOT / variant.get("binary", ".engines/target/debug/screenpipe")
     seeded_total, relayed = {"frames": 0, "events": 0}, None
-    with live_slot(run_id) as run_dir:
+    with live_slot(slot_no) as (run_dir, port, slot_no):
         try:
             clone_template(run_dir)
             shutil.copy(data / "truth.json", run_dir / "truth.json")
-            report = {"run_id": run_id, **provenance(variant, variant_path, data, binary, run_dir)}
+            report = {"run_id": run_id, "slot": slot_no,
+                      **provenance(variant, variant_path, data, binary, run_dir)}
             (run_dir / "run.json").write_text(json.dumps(report, indent=1))
-            data_dir = run_dir / "home/.screenpipe"
-            if found := context_files(data_dir):
-                raise EngineError(f"Pi would put these in every agent's prompt: {found}")
-            shim = data_dir / "pi-agent/bash-env.sh"
-            shim.parent.mkdir(parents=True, exist_ok=True)
-            shim.touch()  # mounted by inode; the engine rewrites it in place on each spawn
-            engine = Engine(run_dir, port=PORT, binary=binary, extra_env={
-                **variant.get("env", {}), "WFEVAL_REQUEST_LOG": str(run_dir / "requests.jsonl")})
             seen: set[Path] = set()
-            with Sandbox(engine.port, rw=[data_dir / "pipes"], ro=[shim]) as box:
-                engine.extra_env.update({"SANDBOX_CONTAINER": box.container, "DOCKER": box.docker,
-                                         "DOCKER_HOST": box.docker_host})
-                install_overrides(engine, variant)
-                with engine:
-                    engine.enable_workflows()
-                    install_overrides(engine, variant)  # install may rewrite a pipe dir
-                    engine.set_model(variant.get("model", "intelligent"), variant.get("preset"))
-                    with open(run_dir / "seeded.jsonl", "a") as seeded_out:
-                        for phase in phases:
-                            doc = json.loads((data / f"phase{phase}.json").read_text())
-                            meta = run_phase(engine, phase, doc, run_dir, seeded_out, seen,
-                                             variant.get("price_model"), timeout)
-                            seeded_total["frames"] += meta["frames"]
-                            seeded_total["events"] += meta.get("events", 0)
-                            print(f"phase {phase}: {meta['status']} ({meta['cycle_status']}) in "
-                                  f"{meta['seconds']} s, {meta['usage']['agent_runs']} agent runs", file=sys.stderr)
-                            if meta["status"] in ("rerun", "invalid"):
-                                break
+            with harness(run_dir, port, variant, binary) as (engine, box):
+                engine.enable_workflows()
+                install_overrides(engine, variant)  # install may rewrite a pipe dir
+                engine.set_model(variant.get("model", "intelligent"), variant.get("preset"))
+                with open(run_dir / "seeded.jsonl", "a") as seeded_out:
+                    for phase in phases:
+                        doc = json.loads((data / f"phase{phase}.json").read_text())
+                        meta = run_phase(engine, phase, doc, run_dir, seeded_out, seen,
+                                         variant.get("price_model"), timeout)
+                        seeded_total["frames"] += meta["frames"]
+                        seeded_total["events"] += meta.get("events", 0)
+                        print(f"phase {phase}: {meta['status']} ({meta['cycle_status']}) in "
+                              f"{meta['seconds']} s, {meta['usage']['agent_runs']} agent runs", file=sys.stderr)
+                        if meta["status"] in ("rerun", "invalid"):
+                            break
                 relayed = box.portal.connections if box.portal else None
         finally:
             shutil.move(str(run_dir), str(final))
 
     run_dir = final
-    report = json.loads((run_dir / "run.json").read_text())
-    report.update({"finished_at": datetime.now(timezone.utc).isoformat(), "relayed_connections": relayed,
-                   "contamination": contamination(run_dir, seeded_total), "host_path_leaks": leaks(run_dir),
-                   "prompts": prompts(run_dir)})
-    (run_dir / "run.json").write_text(json.dumps(report, indent=1))
+    report = seal(run_dir, seeded_total, relayed)
     with open(run_dir / "results.jsonl", "w") as f:
         for g in grade_run(run_dir):
             g = {k: v for k, v in g.items() if k != "attributed"} | {
@@ -385,8 +427,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--phases", default="1,2,3")
     ap.add_argument("--timeout", type=float, default=3600, help="seconds per cycle")
+    ap.add_argument("--slot", type=int, help=f"0..{SLOTS - 1}; default: the first free one")
     a = ap.parse_args(argv)
-    out = run(a.variant, a.suite, a.seed, a.repeat, [int(p) for p in a.phases.split(",")], a.timeout)
+    out = run(a.variant, a.suite, a.seed, a.repeat, [int(p) for p in a.phases.split(",")], a.timeout,
+              a.slot)
     print(out)
     return 0
 

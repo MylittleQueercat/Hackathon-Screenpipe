@@ -5,10 +5,9 @@ Isolation: the engine gets a fresh HOME and data dir cloned from a warm template
 port of its own on 127.0.0.1, and a built environment that inherits nothing from this
 shell (Pi inherits the engine's environment, and this shell holds API keys). Nothing in
 that environment depends on the machine: user, timezone and locale are fixed, and a run
-lives at `LIVE` on its fixed `PORT` (run.py), so the agents see the same paths and port
-on every Mac. Capture
-is off: no screen, audio, clicks, keystrokes, clipboard or meetings, so the only
-history is what the harness seeds.
+lives in a fixed slot (`slot()`, run.py), so the agents see the same paths and port on
+every Mac. Capture is off: no screen, audio, clicks, keystrokes, clipboard or meetings,
+so the only history is what the harness seeds.
 """
 
 from __future__ import annotations
@@ -36,6 +35,15 @@ EVAL_TZ = "UTC"
 EVAL_USER = "eval"
 LIVE = Path("/Users/Shared/wfeval/live")  # exists on every Mac; no AGENTS.md above it
 PORT = 3036
+SLOTS = 4  # runs at once per Mac
+
+
+def slot(k: int) -> tuple[Path, int]:
+    """Slot 0 is `LIVE` on `PORT`; slot k is `live<k>` on `PORT + k`. Agents in slot k see
+    that path and port, which prompt fingerprints mask back to slot 0's (run.py)."""
+    if not 0 <= k < SLOTS:
+        raise ValueError(f"slot {k} is not in 0..{SLOTS - 1}")
+    return (LIVE if k == 0 else LIVE.with_name(f"live{k}")), PORT + k
 TASKS = ["workflow-discover", "workflow-deepen", "workflow-review", "workflow-maintain"]
 FAILED = {"failed", "cancelled", "interrupted", "timed_out"}
 ACTIVE = {"running", "queued"}

@@ -1,4 +1,7 @@
-from wfeval.grade import grade_phase, idle_churn
+import pytest
+
+from wfeval import generate
+from wfeval.grade import grade_phase, has_any, idle_churn
 
 
 def frame(seeded, owner, phase=1, app=None, nth=0, day_run=None):
@@ -95,3 +98,10 @@ def test_idle_churn():
     b = {"analysis": {"workflows": [{"id": "1", "revision": 2}, {"id": "2", "revision": 1}]}}
     assert idle_churn(a, b) == {"created": 1, "updated": 1}
     assert idle_churn(a, a) == {"created": 0, "updated": 0}
+
+
+@pytest.mark.parametrize("suite", ["receipts", "busy"])
+def test_missing_date_accepts_the_hyphenated_spelling(suite):
+    _, truth = generate.build(suite, 1)
+    words = next(c for c in truth["checks"] if c["id"] == "missing_date")["any"]
+    assert has_any("Flagged rows (missing-date scan-0415) need resolving", words)

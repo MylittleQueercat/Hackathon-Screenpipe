@@ -51,6 +51,26 @@ def image_id(image: str = IMAGE) -> str | None:
     return r.stdout.strip() if r.returncode == 0 else None
 
 
+def published() -> tuple[str, str]:
+    """(config digest, manifest digest) of the published image, pinned in load.sh."""
+    pins = dict(line.split("=", 1) for line in (Path(__file__).resolve().parents[2] / "sandbox/load.sh")
+                .read_text().splitlines() if line.startswith(("PUBLISHED=", "ID=")))
+    return pins["ID"].strip(), pins["PUBLISHED"].strip().split("@", 1)[1]
+
+
+def is_published(image: str = IMAGE) -> bool:
+    """The image is the published one. Docker names an image by its config digest (the
+    classic store, OrbStack) or by its manifest digest (the containerd store, Docker
+    Desktop's default): either one, or the manifest digest among its RepoDigests."""
+    r = subprocess.run([docker_bin(), "image", "inspect", "--format", "{{.Id}} {{join .RepoDigests \" \"}}", image],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return False
+    config, manifest = published()
+    names = r.stdout.split()
+    return names[0] in (config, manifest) or any(n.endswith("@" + manifest) for n in names[1:])
+
+
 class Portal:
     """Host side of portal.py: one engine port, nothing else. Inside, the box listens on
     3030 and on the engine's own port; both reach that engine."""

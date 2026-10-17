@@ -143,7 +143,8 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
             else:
                 result = has_any(text, c["any"])
             if result is False:
-                tags["steps_incomplete" if c["id"] == "steps" else f"exception_missed:{c['id']}"] += 1
+                steps = c["id"] == "steps" or c["id"].endswith("_steps")
+                tags["steps_incomplete" if steps else f"exception_missed:{c['id']}"] += 1
         elif kind == "absent_app":
             if mine:
                 result = not any(c["app"].lower() in a["apps"] for a in mine)
@@ -197,9 +198,10 @@ def idle_churn(before: dict, after: dict) -> dict:
             "updated": sum(1 for k in new.keys() & old.keys() if new[k] != old[k])}
 
 
-def grade_run(run: Path) -> list[dict]:
-    """Grades of every phase a run completed, from the files it kept."""
-    truth = json.loads((run / "truth.json").read_text())
+def grade_run(run: Path, truth_file: Path | None = None) -> list[dict]:
+    """Grades of every phase a run completed, from the files it kept; with `truth_file`,
+    against another version of the suite's truth (the history must be the same)."""
+    truth = json.loads((truth_file or run / "truth.json").read_text())
     seeded = [json.loads(l) for l in (run / "seeded.jsonl").read_text().splitlines()]
     out, previous, prev_catalog = [], None, None
     for phase_dir in sorted(run.glob("phase*")):

@@ -146,8 +146,9 @@ def verify(suite: Suite, phases: dict[int, dict], truth: dict) -> None:
                 problems.append(f"{check['id']}: no {check['job']} frame in phase {check['phase']} shows {text!r}")
     for job, spec in truth["jobs"].items():
         days = {f["day"] for p, f in frames if p == 1 and f["owner"] == job}
-        if spec["expect"] == "published" and len(days) < 3:
-            problems.append(f"{job}: on {len(days)} days, a job to find needs 3 (rule 1)")
+        need = spec.get("min_days", 3)
+        if spec["expect"] == "published" and len(days) < need:
+            problems.append(f"{job}: on {len(days)} days, a job to find needs {need} (rule 1)")
         if spec["expect"] == "unpublished" and len(days) != 1:
             problems.append(f"{job}: a one-off must be on exactly 1 day, is on {len(days)}")
     allow = suite.leak_allow

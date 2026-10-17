@@ -1,4 +1,5 @@
-"""`wfeval <command>`: generate, template, run, grade, compare, cleanup."""
+"""`wfeval <command>`: generate, template, check-engine, run, snapshot, stage, grade,
+compare, cleanup."""
 
 from __future__ import annotations
 
@@ -21,13 +22,25 @@ def main() -> int:
         print(f"template ready: {data}\nlog in once (opens a browser):\n"
               f"  SCREENPIPE_DATA_DIR={data} {Path(__file__).resolve().parents[2]}/.engines/target/debug/screenpipe login")
         return 0
+    if cmd == "check-engine":
+        from .check import main as m
+        return m(argv)
     if cmd == "run":
         from .run import main as m
         return m(argv)
+    if cmd == "snapshot":
+        from .stage import main_snapshot as m
+        return m(argv)
+    if cmd == "stage":
+        from .stage import main_stage as m
+        return m(argv)
     if cmd == "grade":
         from .grade import grade_run
+        truth = None
+        if argv[:1] == ["--truth"]:  # regrade against the current truth: --truth data/<suite>-s<seed>/truth.json
+            truth, argv = Path(argv[1]), argv[2:]
         for run in argv:
-            for g in grade_run(Path(run)):
+            for g in grade_run(Path(run), truth):
                 g.pop("attributed")
                 print(json.dumps(g))
         return 0

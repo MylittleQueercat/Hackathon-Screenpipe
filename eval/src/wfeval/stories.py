@@ -438,7 +438,7 @@ def receipts(rng: random.Random, cast: Cast = Cast(), name: str = "receipts") ->
                      ["tracker", "tracker.csv", "csv", "log", "spreadsheet"]],
              "on_screen": [receipt_name(d["acme"]), TRACKER_HEADER]},
             {"id": "missing_date", "job": "receipts", "phase": 1, "kind": "keywords",
-             "any": ["missing date", "no date", "unknown-date", "unknown date", "undated",
+             "any": ["missing date", "missing-date", "no date", "unknown-date", "unknown date", "undated",
                      "without a date", "date is missing", "date missing", "lacks a date"],
              "on_screen": [receipt_name(d["market"]), "missing date"]},
             {"id": "duplicate", "job": "receipts", "phase": 1, "kind": "keywords",
@@ -473,4 +473,271 @@ def receipts(rng: random.Random, cast: Cast = Cast(), name: str = "receipts") ->
     return Suite(name, phases, truth, noise, leak_allow=[("tracker.csv", "duplicate")])
 
 
-SUITES = {"receipts": receipts}
+# ------------------------------------------------------------------ the busy suite
+
+@dataclass(frozen=True)
+class Invoice:
+    number: str
+    client: str
+    address: str
+    item: str
+    amount: str
+
+
+INVOICES = (
+    Invoice("INV-2026-031", "Fabrikam", "accounts@fabrikam.com", "Design work, sprint 19", "1,200.00"),
+    Invoice("INV-2026-032", "Contoso", "ap@contoso.com", "Workshop facilitation", "850.00"),
+    Invoice("INV-2026-033", "Fabrikam", "accounts@fabrikam.com", "Design work, sprint 20", "1,200.00"),
+    Invoice("INV-2026-034", "Tailspin", "finance@tailspin.io", "Brand review", "640.00"),
+)
+INVOICE_LOG = "number,client,amount,sent_to,status"
+
+
+def invoice_name(inv: Invoice) -> str:
+    return f"{inv.number}_{inv.client}.pdf"
+
+
+class Invoicing:
+    """The invoice folder and the sent-invoice log as they change over the week."""
+
+    def __init__(self, cast: Cast):
+        self.folder = f"{cast.home}/Documents/Invoices"
+        self.files = [("INV-2026-029_Contoso.pdf", "-20"), ("INV-2026-030_Tailspin.pdf", "-12"),
+                      ("invoice-template.pages", "-60")]
+        self.rows = ["INV-2026-029,Contoso,850.00,ap@contoso.com,sent",
+                     "INV-2026-030,Tailspin,640.00,finance@tailspin.io,sent"]
+        self.today = 0
+
+    def listing(self) -> Screen:
+        return finder(self.folder, [(n, f"⟦d:{int(d) - self.today}⟧", "120 KB",
+                                     "Pages document" if n.endswith(".pages") else "PDF document")
+                                    for n, d in sorted(self.files)])
+
+    def log(self, partial: str | None = None) -> Screen:
+        lines = [INVOICE_LOG, *self.rows] + ([partial] if partial is not None else [])
+        return textedit("invoices-sent.csv", "\n".join(lines))
+
+
+def invoice_run(rng: random.Random, inv_state: Invoicing, cast: Cast, inv: Invoice, offset: int) -> Run:
+    """Bill a client: fill the Pages template, export a PDF, check it, mail it, log it."""
+    inv_state.today = offset
+    name = invoice_name(inv)
+    doc = ["Invoice", f"Number: {inv.number}", f"Bill to: {inv.client}", f"Item: {inv.item}",
+           f"Total: {inv.amount} EUR", "Payment within 30 days", f"From: {cast.user}"]
+    drafts = [app_screen("Pages", "invoice-template.pages", ["Invoice", f"Number: {t}"])
+              for t in typed(rng, inv.number, 3)]
+    filled = app_screen("Pages", "invoice-template.pages", doc)
+    steps = [
+        Step([inv_state.listing()], secs(rng, 6, 14), "click", [click("AXRow", "invoice-template.pages")]),
+        Step(drafts + [filled], secs(rng, 40, 90), "key_press", key="fill"),
+        Step([app_screen("Pages", "Export Your Document", ["Export Your Document", "PDF", "Word", "EPUB",
+                                                           "Image Quality: Best", "Cancel", "Next…"]),
+              app_screen("Pages", "Export", ["Save As:", name, "Where:", "Invoices", "Cancel", "Export"])],
+             secs(rng, 8, 16), "click", [click("AXButton", "Export")], key="export"),
+    ]
+    inv_state.files.append((name, str(offset)))
+    message = [f"To: {inv.address}", f"Subject: Invoice {inv.number}"]
+    body = f"Hello, please find attached invoice {inv.number} for {inv.item.lower()}. Best, {cast.user.split()[0]}"
+    steps += [
+        Step([preview(name, doc)], secs(rng, 10, 25), "scroll_stop", key="check"),
+        Step([mail("Inbox", [], message + [t, name], f"Invoice {inv.number}")
+              for t in typed(rng, body, rng.randint(3, 5))], secs(rng, 25, 50), "key_press",
+             [click("AXButton", "Attach")], key="mail"),
+        Step([mail("Sent", [(inv.address, f"Invoice {inv.number}", "11:05")], None, "Sent")],
+             secs(rng, 3, 8), "click", [click("AXButton", "Send")], key="sent"),
+    ]
+    row = f"{inv.number},{inv.client},{inv.amount},{inv.address},sent"
+    screens = [inv_state.log(t) for t in typed(rng, row, rng.randint(3, 5))]
+    inv_state.rows.append(row)
+    steps.append(Step(screens + [inv_state.log()], secs(rng, 20, 45), "key_press",
+                      [click("AXTextArea")], key="log"))
+    return Run("invoices", steps)
+
+
+def hours_run(rng: random.Random, cast: Cast, entries: list[tuple[str, str, str]]) -> Run:
+    """Report hours to the agency: read them off the calendar, fill its form, submit.
+    entries: (weekday, project, hours)."""
+    week = [f"{d} {p} {h} h" for d, p, h in entries]
+    form = "https://hours.northbeam.co/report"
+    typed_rows = []
+    for d, p, h in entries:
+        typed_rows.append(f"{d} | {p} | {h}")
+    steps = [Step([app_screen("Calendar", "Calendar", ["Day", "Week", "Month", "Year", "Today", *week])],
+                  secs(rng, 20, 45), "window_focus", key="calendar")]
+    filled: list[str] = []
+    for row in typed_rows:
+        steps.append(Step([browser(cast.browser, "Report hours | Northbeam", form,
+                                   ["Report hours", "Day | Project | Hours", *filled, t])
+                           for t in typed(rng, row, 3)], secs(rng, 12, 25), "key_press", key="form"))
+        filled.append(row)
+    total = sum(float(h) for _, _, h in entries)
+    steps.append(Step([browser(cast.browser, "Hours received | Northbeam", f"{form}/done",
+                               ["Hours received", f"Total: {total:g} h", "Submitted ⟦d:0⟧",
+                                "Your manager will approve them"])],
+                      secs(rng, 5, 12), "click", [click("AXButton", "Submit")], key="submit"))
+    return Run("hours", steps)
+
+
+def photo_batch(rng: random.Random, cast: Cast) -> Run:
+    """Once: rename holiday photos in Finder. Renaming files, like filing, but no trigger,
+    no lookup and no log, and on one day only."""
+    folder = f"{cast.home}/Pictures/Lisbon"
+    names = [f"IMG_{4810 + i}.jpg" for i in range(5)]
+    steps = []
+    for i, old in enumerate(names):
+        new = f"lisbon-{i + 1:02d}.jpg"
+        rows = [(n if j >= i else f"lisbon-{j + 1:02d}.jpg", "⟦d:-9⟧", "3.1 MB", "JPEG image")
+                for j, n in enumerate(names)]
+        steps.append(Step([finder(folder, rows, (old, t)) for t in typed(rng, new.removesuffix(".jpg"), 2)],
+                          secs(rng, 6, 12), "key_press", [click("AXRow", old)], key="rename"))
+    steps.append(Step([preview("lisbon-01.jpg", ["lisbon-01.jpg", "4032 × 3024"])], secs(rng, 10, 20),
+                      "window_focus", key="look"))
+    return Run("photos", steps)
+
+
+MANUALS = [("Keychron-V1-manual.pdf", ["Keychron V1", "Quick start", "Bluetooth pairing", "Page 3 of 18"]),
+           ("rental-agreement.pdf", ["Rental agreement", "Article 4: deposit", "Page 2 of 7"]),
+           ("train-tickets-berlin.pdf", ["Night train", "Paris Est - Berlin Hbf", "Coach 41, berth 3"]),
+           ("climbing-gym-waiver.pdf", ["Release of liability", "Signature", "Page 1 of 2"])]
+NEWSLETTERS = [("Rust Weekly", "This week in Rust 571", ["Updates from the core team", "Crate of the week"]),
+               ("Bloc Gym", "New problems set this week", ["Wall 3 reset", "Youth comp on Sunday"]),
+               ("Seat61", "Autumn rail deals", ["Eurostar sale", "Night train updates"])]
+
+
+class LookalikeNoise(Noise):
+    """Noise that uses the jobs' apps (a PDF in Preview, a Finder folder, a mail read)
+    without a trigger, steps or outcome: nothing is renamed, saved, logged or sent."""
+
+    def segment(self, rng: random.Random) -> Run:
+        if rng.random() < 0.5:
+            return super().segment(rng)
+        kind = rng.choice(["pdf", "folder", "newsletter"])
+        if kind == "pdf":
+            name, page = rng.choice(MANUALS)
+            step = Step([preview(name, page)], secs(rng, 20, 90), "scroll_stop", [{"event_type": "scroll"}])
+        elif kind == "folder":
+            rows = [(n, f"⟦d:-{rng.randint(1, 40)}⟧", f"{rng.randint(1, 900)} KB", "PDF document")
+                    for n, _ in rng.sample(MANUALS, 3)]
+            step = Step([finder(f"{self.cast.home}/Downloads", rows)], secs(rng, 6, 20), "click")
+        else:
+            sender, subject, body = rng.choice(NEWSLETTERS)
+            step = Step([mail("Inbox", [(sender, subject, "08:02")], [f"From: {sender}", f"Subject: {subject}",
+                                                                      *body], subject)],
+                        secs(rng, 15, 60), "scroll_stop", [click("AXRow", subject)])
+        return Run("noise", [step])
+
+
+def busy(rng: random.Random, cast: Cast = Cast(), name: str = "busy") -> Suite:
+    """A busier week than `receipts`, to move scores off its ceiling: five days, four jobs
+    (one a look-alike of receipt filing, one seen on only two days), two one-offs (one a
+    batch rename), and noise in the jobs' own apps."""
+    pw, inv = Paperwork(cast), Invoicing(cast)
+    noise = LookalikeNoise(cast)
+    d = cast.docs
+    inbox_others = [("Northbeam HR", "Holiday calendar 2027", "Mon"),
+                    ("Gym Bloc", "Your October membership", "Sun"),
+                    ("Bank", "Statement available", "Fri")]
+
+    def day(offset: int, docs: list[str]) -> dict[str, str]:
+        pw.today = offset
+        return dict(zip(docs, pw.arrive(rng, offset, len(docs))))
+
+    s = day(-5, ["acme", "bluebird"])
+    d5 = [receipt_run(rng, pw, s["acme"], d["acme"]),
+          email_run(rng, cast, cast.threads[0], inbox_others),
+          receipt_run(rng, pw, s["bluebird"], d["bluebird"])]
+
+    s = day(-4, ["transport", "market"])
+    d4 = [invoice_run(rng, inv, cast, INVOICES[0], -4),
+          receipt_run(rng, pw, s["transport"], d["transport"], order="track_first"),
+          hours_run(rng, cast, [("Mon", "Atlas", "4"), ("Tue", "Atlas", "6.5"), ("Tue", "Beacon", "1.5")]),
+          receipt_run(rng, pw, s["market"], d["market"], notes="missing date")]
+
+    pw.today = -3
+    d3 = [email_run(rng, cast, cast.threads[1], inbox_others[1:]),
+          printer_setup(rng, cast),
+          invoice_run(rng, inv, cast, INVOICES[1], -3)]
+
+    s = day(-2, ["studio", "pharmacy"])
+    d2 = [receipt_run(rng, pw, s["studio"], d["studio"], status="review needed", notes="over 500"),
+          photo_batch(rng, cast),
+          invoice_run(rng, inv, cast, INVOICES[2], -2),
+          receipt_run(rng, pw, s["pharmacy"], d["pharmacy"], interruption=noise.chat(rng))]
+
+    s = day(-1, ["cafe", "print"])
+    d1 = [receipt_run(rng, pw, s["cafe"], d["cafe"]),
+          hours_run(rng, cast, [("Wed", "Beacon", "5"), ("Thu", "Atlas", "7"), ("Fri", "Atlas", "3.5")]),
+          email_run(rng, cast, cast.threads[2], inbox_others[:2]),
+          receipt_run(rng, pw, s["print"], d["print"])]
+
+    s = day(0, ["hardware", "bakery"])
+    today = [rule_notice(rng, pw),
+             receipt_run(rng, pw, s["hardware"], d["hardware"], rule="TYPE_DATE_NAME"),
+             invoice_run(rng, inv, cast, INVOICES[3], 0),
+             receipt_run(rng, pw, s["bakery"], d["bakery"], rule="TYPE_DATE_NAME")]
+
+    truth = {
+        "suite": name,
+        "jobs": {
+            "receipts": {"expect": "published",
+                         "summary": "Rename scanned receipts DATE_NAME_TYPE.pdf and log them in tracker.csv"},
+            "email": {"expect": "published",
+                      "summary": "Save an emailed attachment into the project folder and reply"},
+            "invoices": {"expect": "published",
+                         "summary": "Fill the invoice template, export a PDF, mail it to the client, log it"},
+            # Two days: the code's minimum for repetition (DATA.md rule 1 asks 3 elsewhere).
+            "hours": {"expect": "published", "min_days": 2,
+                      "summary": "Read the week's hours off the calendar and report them in the agency form"},
+            "printer": {"expect": "unpublished", "summary": "One-off printer driver setup"},
+            "photos": {"expect": "unpublished", "summary": "One-off renaming of holiday photos"},
+        },
+        "checks": [
+            {"id": "found", "job": "receipts", "phase": 1, "kind": "published"},
+            {"id": "no_duplicate", "job": "receipts", "phase": 1, "kind": "single"},
+            {"id": "steps", "job": "receipts", "phase": 1, "kind": "keywords",
+             "all": [["rename", "renamed", "renaming"],
+                     ["tracker", "tracker.csv", "csv", "log", "spreadsheet"]],
+             "on_screen": [receipt_name(d["acme"]), TRACKER_HEADER]},
+            {"id": "missing_date", "job": "receipts", "phase": 1, "kind": "keywords",
+             "any": ["missing date", "missing-date", "no date", "unknown-date", "unknown date", "undated",
+                     "without a date", "date is missing", "date missing", "lacks a date"],
+             "on_screen": [receipt_name(d["market"]), "missing date"]},
+            {"id": "high_value", "job": "receipts", "phase": 1, "kind": "keywords",
+             "any": ["review needed", "needs review", "over 500", "above 500", "high amount",
+                     "high-value", "high value", "large amount", "flag"],
+             "on_screen": [f"Amount: {d['studio'].amount} EUR", "review needed"]},
+            {"id": "noise_excluded", "job": "receipts", "phase": 1, "kind": "absent_app", "app": "Discord"},
+            {"id": "drift", "job": "receipts", "phase": 2, "kind": "drift",
+             "any": ["TYPE_DATE_NAME", "type first", "type, date", "type_date_name",
+                     receipt_name(d["hardware"], "TYPE_DATE_NAME")],
+             "on_screen": ["New: TYPE_DATE_NAME.pdf", receipt_name(d["hardware"], "TYPE_DATE_NAME")]},
+            {"id": "email_separate", "job": "email", "phase": 1, "kind": "separate",
+             "from": "receipts", "on_screen": [t.attachment for t in cast.threads]},
+            {"id": "invoices_found", "job": "invoices", "phase": 1, "kind": "published"},
+            {"id": "invoices_single", "job": "invoices", "phase": 1, "kind": "single"},
+            {"id": "invoices_steps", "job": "invoices", "phase": 1, "kind": "keywords",
+             "all": [["export", "pdf"], ["mail", "email", "send", "sent"],
+                     ["invoices-sent", "log", "csv", "record"]],
+             "on_screen": [invoice_name(INVOICES[0]), INVOICE_LOG]},
+            {"id": "invoices_not_receipts", "job": "invoices", "phase": 1, "kind": "separate",
+             "from": "receipts", "on_screen": [f"Number: {INVOICES[0].number}"]},
+            {"id": "invoices_not_email", "job": "invoices", "phase": 1, "kind": "separate",
+             "from": "email", "on_screen": [f"Subject: Invoice {INVOICES[1].number}"]},
+            {"id": "hours_found", "job": "hours", "phase": 1, "kind": "published"},
+            {"id": "hours_steps", "job": "hours", "phase": 1, "kind": "keywords",
+             "all": [["calendar"], ["hours", "timesheet", "time sheet", "form"]],
+             "on_screen": ["Report hours", "Hours received"]},
+            {"id": "one_off_unpublished", "job": "printer", "phase": 1, "kind": "unpublished",
+             "on_screen": ["Printers & Scanners"]},
+            {"id": "photos_unpublished", "job": "photos", "phase": 1, "kind": "unpublished",
+             "on_screen": ["lisbon-01.jpg"]},
+            {"id": "evidence_resolves", "kind": "evidence"},
+            {"id": "idle_cost", "phase": 3, "kind": "cost"},
+        ],
+    }
+    phases = {1: [Day(-5, d5), Day(-4, d4), Day(-3, d3), Day(-2, d2), Day(-1, d1)],
+              2: [Day(0, today)], 3: []}
+    return Suite(name, phases, truth, noise)
+
+
+SUITES = {"receipts": receipts, "busy": busy}

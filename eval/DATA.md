@@ -61,7 +61,8 @@ it is meant to test.
 
 1. **Recurrence across days.** A job meant to be found runs on at least 3 distinct days
    (the code needs 2; the third leaves room for one missed day), at least once a day. A
-   one-off appears on exactly one day.
+   one-off appears on exactly one day. A job may declare `min_days: 2` to test the
+   code's threshold itself (`busy`'s hours report).
 2. **Inside the window.** Phase 1 history sits within the last 6 days of the anchor.
    Phase 2 history is dated after the phase-1 cycle's `checkedThrough`, otherwise
    discover sees nothing new: it ends a minute before seeding, and the runner waits
@@ -99,6 +100,7 @@ it is meant to test.
 | Suite | Jobs | Use | Built |
 |---|---|---|---|
 | `receipts` | Receipt filing (4 days) with its exceptions; email attachment (3 days); a one-off; noise; idle | Develop against it | yes |
+| `busy` | Receipts (4 days), email (3), invoice sending (3, a look-alike of receipts), hours report (2 days only), two one-offs (one a batch rename), noise in the jobs' apps; 5 days | Move scores off the ceiling | yes |
 | `receipts-renamed` | The same stories, other vendors, apps and times | Consistency | planned |
 | `holdout` | Other jobs: support ticket triage, weekly sales report, a one-off | Final comparison only | planned |
 
@@ -127,6 +129,20 @@ rename it in Finder to `DATE_NAME_TYPE.pdf`, add a row to `tracker.csv` in TextE
 with the synonyms listed in the truth file. Keyword matching can miss a paraphrase; the
 raw workflow text is kept with every grade so a miss can be read and, if needed, added
 as a synonym or settled by a judge validated against hand labels.
+
+### `busy`: what is harder
+
+The receipt and email jobs are `receipts`' (fewer exceptions: missing date, high value,
+the chat in a run, the naming-rule drift in phase 2). Added:
+
+| Check | Seeded as | Expected after the cycle |
+|---|---|---|
+| `invoices_found`, `invoices_single` | 3 days: fill the Pages template, export a PDF, check it in Preview, mail it, add a row to `invoices-sent.csv` in TextEdit | one workflow |
+| `invoices_steps` | every run | steps include the export, the mail, the log |
+| `invoices_not_receipts`, `invoices_not_email` | the same apps as receipt filing (Finder, Preview, a TextEdit CSV) and email (Mail, an attachment) | separate workflows |
+| `hours_found`, `hours_steps` | 2 days: read hours off Calendar, type them in the agency's form, submit | a workflow naming the calendar and the hours form |
+| `photos_unpublished` | 1 day: five holiday photos renamed in Finder | not published |
+| (noise) | PDFs opened in Preview, Downloads browsed in Finder, newsletters read in Mail; nothing renamed, saved, logged or sent | no workflow |
 
 ## Limits
 
