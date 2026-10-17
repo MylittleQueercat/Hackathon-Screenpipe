@@ -184,8 +184,9 @@ def write(suite_name: str, seed: int, out: Path | None = None) -> Path:
 
 def anchor(doc: dict, now: datetime) -> list[dict]:
     """Seed-ready frames: absolute UTC timestamps, capture dates filled in, owners dropped.
-    Phase 1 days are local days before `now`'s date; later phases end just before `now`.
-    `now` must be timezone-aware (local)."""
+    Phase 1 days are days (in `now`'s timezone, the eval's UTC) before `now`'s date; later
+    phases end just before `now`.
+    `now` must be timezone-aware."""
     tz = now.tzinfo
     out = []
     for f in doc["frames"]:

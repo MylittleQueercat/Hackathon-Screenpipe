@@ -13,14 +13,16 @@ harness, eval-sketch (sandboxed tools, provenance, reruns, paired comparison).
 1. `generate.py` renders a suite's hidden stories (`stories.py`) into frames,
    deterministically from (suite, seed), and refuses to write a suite whose checks have
    no on-screen evidence or whose screens leak the answer.
-2. `run.py` clones a warm template data dir, starts the **patched engine** (fresh HOME,
-   own port on 127.0.0.1, environment built from scratch, all capture off), installs and
+2. `run.py` clones a warm template data dir to `/Users/Shared/wfeval/live`, starts the
+   **patched engine** there (fresh HOME, port 3036 on 127.0.0.1, environment built from
+   scratch, all capture off; see "Same inputs on every Mac"), installs and
    enables the four workflow pipes, seeds phase 1 through `POST /eval/seed`, and runs a
    cycle the way the desktop's "Update now" does. Phase 2 (a naming rule changes) and
-   phase 3 (nothing new) follow on the same engine.
+   phase 3 (nothing new) follow on the same engine. The run then moves to `runs/`.
 3. Agent tools run in a container (`sandbox/`, `agent/sandbox-tools.ts`): Pi's own
    bash/read/write/edit definitions, executed via `docker exec`, `--network none`. Inside,
-   `localhost:3030` is the eval engine, relayed over the exec pipe (`sandbox/portal.py`);
+   `localhost:3030` and `localhost:3036` are the eval engine, relayed over the exec pipe
+   (`sandbox/portal.py`);
    the real screenpipe on the host's 3030 is unreachable. This matters: the curl auth shim
    and the agents assume port 3030, so on the host they would either miss auth or hit your
    real history.
@@ -28,8 +30,10 @@ harness, eval-sketch (sandboxed tools, provenance, reruns, paired comparison).
    then scores the suite's checks. `compare.py` pairs two variants phase by phase.
 
 Each run keeps `run.json` (variant, data hashes, engine commit, patch and binary hashes, Pi
-version, image id, contamination check, host-path leak scan), the catalog, workspace,
-executions and pipe logs of every phase, `seeded.jsonl` and `results.jsonl`.
+version and lockfile, bun version, image id, contamination check, host-path leak scan,
+prompt hashes), the catalog, workspace, executions and pipe logs of every phase,
+`requests.jsonl` (every model request, its usage, every tool call), `prompts/`,
+`seeded.jsonl` and `results.jsonl`.
 
 ## Needs
 
@@ -59,8 +63,8 @@ CXX=/usr/bin/c++ AR=/usr/bin/ar CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER=/usr/bi
 
 ## Use
 
-One phase (about 8 to 15 minutes; with Sonnet 5 about 45 model requests and 1.3 M input
-tokens, nearly all cached, out of the account's AI allowance):
+One phase (8 to 15 minutes; with Sonnet 5, 45 to 120 model requests and over a million
+input tokens, nearly all cached, out of the account's AI allowance):
 
 ```sh
 uv run wfeval run --variant variants/baseline.json --suite receipts --seed 1 --phases 1

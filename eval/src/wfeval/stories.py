@@ -27,7 +27,7 @@ class Run:
 
 @dataclass
 class Day:
-    offset: int  # local days from the anchor; phase 2 is today (0)
+    offset: int  # days from the anchor (eval timezone, UTC); phase 2 is today (0)
     runs: list[Run]
 
 

@@ -96,11 +96,11 @@ it is meant to test.
 
 ## Suites
 
-| Suite | Jobs | Use |
-|---|---|---|
-| `receipts` | Receipt filing (4 days) with its exceptions; email attachment (3 days); a one-off; noise; idle | Develop against it |
-| `receipts-renamed` | The same stories, other vendors, apps and times | Consistency |
-| `holdout` | Other jobs: support ticket triage, weekly sales report, a one-off | Final comparison only |
+| Suite | Jobs | Use | Built |
+|---|---|---|---|
+| `receipts` | Receipt filing (4 days) with its exceptions; email attachment (3 days); a one-off; noise; idle | Develop against it | yes |
+| `receipts-renamed` | The same stories, other vendors, apps and times | Consistency | planned |
+| `holdout` | Other jobs: support ticket triage, weekly sales report, a one-off | Final comparison only | planned |
 
 ### `receipts`: what each check expects
 
