@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --signal: #c8ff4d;
+  --cost: #ff7a52;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #0a0b0d;
+  color: #e4e6eb;
+  font-family: 'Inter Variable', Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Background: faint engineering grid + vignette */
+.lab-bg {
+  background-color: #0a0b0d;
+  background-image:
+    radial-gradient(1200px 700px at 50% 35%, rgba(200, 255, 77, 0.035), transparent 70%),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+/* Visual language: recorded = solid, placeholder = dashed, simulated = hatched */
+.hatch {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(200, 255, 77, 0.16) 0 2px,
+    transparent 2px 7px
+  );
+}
+.hatch-muted {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.06) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+.glow-signal {
+  box-shadow:
+    0 0 0 1px rgba(200, 255, 77, 0.55),
+    0 0 32px -4px rgba(200, 255, 77, 0.45);
+}
+
+.text-glow {
+  text-shadow: 0 0 40px rgba(200, 255, 77, 0.35);
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+.dash-flow {
+  stroke-dasharray: 6 8;
+  animation: dash-flow 1.2s linear infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 3px;
+}
