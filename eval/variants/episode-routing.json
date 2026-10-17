@@ -1,0 +1,17 @@
+{
+  "name": "episode-routing",
+  "description": "Discover groups observed work episodes by trigger and outcome before routing distinct jobs to Deepen.",
+  "binary": ".engines/target/debug/screenpipe",
+  "model": "preset:eval-sonnet",
+  "preset": {
+    "id": "eval-sonnet",
+    "provider": "screenpipe-cloud",
+    "model": "claude-sonnet-5",
+    "maxContextChars": 200000
+  },
+  "price_model": "claude-sonnet-5",
+  "pipes": {
+    "workflow-discover": "variants/episode-routing-discover.md"
+  },
+  "env": {}
+}

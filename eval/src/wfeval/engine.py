@@ -92,7 +92,9 @@ def clone_template(dest: Path) -> None:
         raise EngineError("no template: run `wfeval template` first")
     dest.mkdir(parents=True, exist_ok=True)
     # APFS clone: a copy in O(1) that shares blocks until written.
-    subprocess.run(["/bin/cp", "-cRp", str(TEMPLATE / "home"), str(dest / "home")], check=True)
+    # -p calls chflags on Bun's absolute cache symlinks and fails with ELOOP on
+    # macOS 26. -R retains the private file modes needed for the copied login.
+    subprocess.run(["/bin/cp", "-cR", str(TEMPLATE / "home"), str(dest / "home")], check=True)
 
 
 @dataclass
