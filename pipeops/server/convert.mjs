@@ -258,6 +258,11 @@ function buildWorkflows(results, catalogs) {
       title,
       steps: w?.stages?.length ? w.stages.map((s) => s.name) : null,
       matchedTo: job,
+      trigger: w?.trigger ?? null,
+      outcome: w?.outcome ?? null,
+      variations: w?.variations?.length ? w.variations : null,
+      limitations: w?.limitations?.length ? w.limitations : null,
+      confidence: typeof w?.confidence === 'number' ? w.confidence : null,
     };
   });
 }

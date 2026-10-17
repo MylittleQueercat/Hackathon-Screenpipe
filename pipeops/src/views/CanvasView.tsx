@@ -478,11 +478,38 @@ function Inspector({
         <Eyebrow>Output</Eyebrow>
         <div className="mt-2 text-[44px] font-semibold leading-none tracking-tight text-ink-50">Generated workflows</div>
         <p className="mt-4 text-[15px] leading-relaxed text-ink-300">Reusable workflows the agent produced for this run.</p>
-        <div className="mt-8 space-y-3">
+        <div className="mt-8 space-y-3 overflow-y-auto">
           {run.generatedWorkflows ? (
             run.generatedWorkflows.map((w) => (
-              <div key={w.id} className="rounded-xl border border-ink-700 p-4 text-ink-100">
-                {w.title}
+              <div key={w.id} className="rounded-xl border border-ink-700 p-4">
+                <div className="text-[15px] font-medium text-ink-100">{w.title}</div>
+                {w.confidence != null && (
+                  <div className="mt-1 font-mono text-[11px] text-ink-500">confidence {w.confidence}/4</div>
+                )}
+                {w.trigger && (
+                  <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-ink-300">
+                    <span className="text-ink-500">trigger · </span>
+                    {w.trigger}
+                  </p>
+                )}
+                {w.outcome && (
+                  <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink-300">
+                    <span className="text-ink-500">outcome · </span>
+                    {w.outcome}
+                  </p>
+                )}
+                {w.variations && (
+                  <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-ink-400">
+                    <span className="text-ink-500">variations · </span>
+                    {w.variations.join(' · ')}
+                  </p>
+                )}
+                {w.limitations && (
+                  <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-ink-400">
+                    <span className="text-ink-500">limitations · </span>
+                    {w.limitations.join(' · ')}
+                  </p>
+                )}
               </div>
             ))
           ) : (

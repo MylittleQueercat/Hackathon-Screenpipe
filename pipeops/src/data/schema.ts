@@ -35,6 +35,15 @@ export interface WorkflowRecord {
   steps?: string[] | null;
   /** id of the ground-truth workflow it was matched to, if any */
   matchedTo?: string | null;
+  /** Below: only ever present for generated workflows, read straight from catalog.json.
+   *  Ground-truth entries (from truth.json) don't carry these — left undefined, not null,
+   *  since truth.json simply has no such field to be "missing" from. */
+  trigger?: string | null;
+  outcome?: string | null;
+  variations?: string[] | null;
+  limitations?: string[] | null;
+  /** The engine's own 1–4 confidence rating for this candidate workflow. */
+  confidence?: number | null;
 }
 
 export interface CheckRecord {
