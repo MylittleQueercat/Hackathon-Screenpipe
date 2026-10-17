@@ -91,12 +91,13 @@ All runs: `receipts` suite, seed 1, Claude Sonnet 5. Full log in [`eval/EXPERIME
   variant costs more (111 vs 89 requests). A change that does not help is a result too.
 - **clearer-rejection** (the team's engine change, built on second-precision, that tells the Review
   agent *which* procedure items were rejected and why): on the Review stage, **18–19 requests and
-  130–150 s against 38–56 requests and 390–470 s for baseline**, and 13–14k output tokens against 43–49k.
-  Checks passed: 11, 10 and 11 of 11 against baseline's 10 and 10, which is too few runs to call a
-  quality gain. The claim is **faster and cheaper at the same quality**. These are stage runs
-  (three repeats each) and are not comparable to full-cycle scores.
-- The harness also surfaces **what no variant has fixed**: the `missing_date` exception is missed in 8 of 12
-  Review runs, baseline included.
+  130–150 s against 38–56 requests and 390–470 s for baseline**, and 13–14k output tokens against 43–49k,
+  with the same 11/11 on every run. The result is **the same quality, faster and cheaper**. These are
+  stage runs (three repeats each) and are not comparable to full-cycle scores.
+- **A grading error the harness helped expose.** Stage runs had been graded against ground truth that
+  lacked a spelling the workflows legitimately use, which made one check look "missed". Regraded with the
+  current truth, all 15 Review runs pass 11/11, so what separates the variants is cost, not quality. The
+  correction is logged in [`eval/EXPERIMENTS.md`](eval/EXPERIMENTS.md).
 
 ## Run the tests (offline, no model calls)
 
