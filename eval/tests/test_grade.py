@@ -1,7 +1,7 @@
 import pytest
 
 from wfeval import generate
-from wfeval.grade import grade_phase, has_any, idle_churn
+from wfeval.grade import clipped, grade_phase, has_any, idle_churn, truth_id
 
 
 def frame(seeded, owner, phase=1, app=None, nth=0, day_run=None):
@@ -105,3 +105,22 @@ def test_missing_date_accepts_the_hyphenated_spelling(suite):
     _, truth = generate.build(suite, 1)
     words = next(c for c in truth["checks"] if c["id"] == "missing_date")["any"]
     assert has_any("Flagged rows (missing-date scan-0415) need resolving", words)
+
+
+def test_clipped_counts_text_the_catalog_saved_shorter():
+    sent = {"title": "File receipts", "description": "Rename each scan. Flag a missing date.",
+            "openQuestions": ["Who resolves flags?", "Kept whole"],
+            "stages": [{"name": "Save", "description": "Save it"}]}
+    ws = {"drafts": {"a": {"status": "published", "payload": {"workflows": [sent]}},
+                     "b": {"status": "open", "payload": {"title": "Unpublished", "description": "x" * 50}}}}
+    saved = {**sent, "description": "Rename each scan.", "openQuestions": ["Who resolves", "Kept whole"],
+             "stages": [{"name": "Save", "description": "Save it"}]}
+    out = clipped(ws, {"analysis": {"workflows": [saved, {"title": "Unpublished", "description": "x"}]}})
+    assert out == {"fields": 2, "chars": 21 + 7, "where": {"description": 1, "openQuestions[]": 1}}
+    assert clipped(ws, {"analysis": {"workflows": [sent]}})["fields"] == 0
+
+
+def test_truth_id_changes_with_a_synonym():
+    truth = {"checks": [{"id": "missing_date", "any": ["missing date"]}]}
+    assert truth_id(truth) == truth_id({"checks": [{"any": ["missing date"], "id": "missing_date"}]})
+    assert truth_id(truth) != truth_id({"checks": [{"id": "missing_date", "any": ["missing date", "missing-date"]}]})

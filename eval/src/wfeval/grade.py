@@ -10,6 +10,7 @@ screen text, so matching it would credit the history rather than the workflow.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from datetime import datetime
@@ -188,6 +189,43 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
             "passed": sum(scored), "scored": len(scored),
             "score": round(sum(scored) / len(scored), 4) if scored else None,
             "mistakes": dict(sorted(tags.items())), "attributed": attributed}
+
+
+def truth_id(truth: dict) -> str:
+    """Which version of a suite's truth graded a result: runs graded with different
+    truths are not comparable until both are regraded with the same one."""
+    return hashlib.sha256(json.dumps(truth, sort_keys=True).encode()).hexdigest()[:12]
+
+
+def clipped(ws: dict, catalog: dict) -> dict:
+    """Text Review published that the catalog saved shorter: each string of a published
+    draft's payload whose saved counterpart is a strict prefix of it. Reported, not
+    scored: a check passes whenever its words survive anywhere in the workflow."""
+    saved = (catalog.get("analysis") or {}).get("workflows") or []
+    found = []
+
+    def walk(sent, kept, path):
+        if isinstance(sent, str) and isinstance(kept, str):
+            text = sent.strip()
+            if kept and len(kept) < len(text) and text.startswith(kept):
+                found.append((path, len(text) - len(kept)))
+        elif isinstance(sent, dict) and isinstance(kept, dict):
+            for k in sent.keys() & kept.keys():
+                walk(sent[k], kept[k], f"{path}.{k}" if path else k)
+        elif isinstance(sent, list) and isinstance(kept, list):
+            for a, b in zip(sent, kept):
+                walk(a, b, f"{path}[]")
+
+    for d in (ws.get("drafts") or {}).values():
+        if d.get("status") != "published" or not isinstance(d.get("payload"), dict):
+            continue
+        sent = (d["payload"].get("workflows") or [d["payload"]])[0]
+        title = (sent.get("title") or "").strip()
+        match = [w for w in saved if w.get("title") and title.startswith(w["title"])]
+        if match:
+            walk(sent, max(match, key=lambda w: len(w["title"])), "")
+    return {"fields": len(found), "chars": sum(n for _, n in found),
+            "where": dict(sorted(Counter(p for p, _ in found).items()))}
 
 
 def idle_churn(before: dict, after: dict) -> dict:
