@@ -2,7 +2,8 @@
 
 Each entry is one change to Workflows, measured with the harness on the same saved
 history: the receipts suite, seed 1, snapshot `20261017T145651Z-baseline-receipts-s1`,
-rerunning Review from step `04-p1-workflow-review` (two open drafts, nothing published).
+rerunning Review from step `04-p1-workflow-review` (two open drafts, nothing published;
+handoff-check reruns Deepen and Review from `03-p1-workflow-deepen`).
 Stage runs, Claude Sonnet 5 through the screenpipe gateway. Checks: the suite's 11
 catalog checks after Review, graded with the current truth
 (`wfeval grade --truth data/receipts-s1/truth.json <run>`; see Grading correction). Failed calls: Workflows calls the engine refused
@@ -196,3 +197,95 @@ question tends to come at the end). The next cycle's agents read the saved catal
 the drafts, so they would no longer maintain workflows from cut text; that needs full
 runs (drift and churn in phase 2) to measure. Not checked: how longer descriptions
 render in the app.
+
+## handoff-check (on full-text): Deepen and Review together
+
+Every draft reaches Review in a state Review cannot publish: a procedure item cites a
+capture that is not in its stage's evidence, or quotes text the capture does not hold.
+Review then repairs it, one rejected publish at a time. Now a handoff to Review runs
+the checks Review's publication would run. A draft that would fail is not handed off:
+its author gets each failing item ("Review could not publish this draft as it is. ...
+fix these items and hand it off again"). Repeated unchanged, the handoff goes through,
+so a draft its author cannot fix still reaches Review. Unreachable checks (503, 504)
+never block. Prompts and tools are unchanged; only the engine's reply differs.
+`patches/variants/handoff-check.patch`.
+
+Free check (`.engines/scratch/probe-handoff.py`: step 03's state, step 04's drafts handed
+off twice each): full-text accepts both broken drafts; handoff-check refuses both with
+the problems Review's publication reports, then lets the repeat through.
+
+The change moves work from Review to Deepen, so a Review-only run cannot measure it.
+These runs start one step earlier, at `03-p1-workflow-deepen`, and run Deepen then
+Review in one slot (`wfeval stage <step 03> --through workflow-review`). full-text, the
+engine it builds on, is the comparison side, run the same way at the same time.
+Requests are Deepen + Review. Failed calls exclude refused handoffs, counted on their own.
+
+| Run | Requests | Seconds | Checks | In stages | Failed calls | Refused handoffs | Output tokens |
+|---|---|---|---|---|---|---|---|
+| full-text r1 | 43 (11 + 32) | 333 | 11/11 | 4/5 | 5 (4 publish) | | 32,445 |
+| full-text r2 | 30 (14 + 16) | 244 | 10/11 | 3/5 | 4 (2 publish) | | 23,946 |
+| full-text r3 | 32 (10 + 22) | 243 | 11/11 | 4/5 | 3 (2 publish) | | 24,224 |
+| handoff-check r1 | 42 (33 + 9) | 343 | 11/11 | 5/5 | 1 | 5 | 36,192 |
+| handoff-check r2 | 29 (20 + 9) | 198 | 11/11 | 4/5 | 0 | 1 | 18,770 |
+| handoff-check r3 | 30 (21 + 9) | 223 | 10/11 | 4/5 | 1 | 2 | 21,329 |
+
+Runs `20261017T232347Z-<variant>-stage-deepen-review-…-03-p1-workflow-deepen-r1/r2` and
+`20261017T232957Z-…-r3`. "In stages": see Keyword audit below.
+
+- Review took 9 requests in all three runs and never failed a publish; on full-text it
+  took 16 to 32 and failed 2 to 4. Every draft Deepen handed off was publishable as given.
+- The total did not change: 35 requests, 273 s and 26,900 output tokens on average on
+  full-text, against 34, 255 s and 25,400 on handoff-check, within run-to-run spread.
+  Deepen did the repairs Review did before, on drafts it had just written.
+- Deepen fixed every refused draft and never used the escape hatch (repeating a handoff
+  unchanged). In r1 one draft was refused 3 times and the other twice.
+- Checks: each side has one 10/11, both `type_lookup` (see Keyword audit). Nothing to
+  tell the two apart on 3 runs each.
+
+Claim this supports: Review becomes cheap and predictable (9 requests each time, no
+rejected publish), and the cycle costs the same. It does not support a cost saving.
+
+Seen along the way:
+
+- In 2 of the 8 handoff refusals the problem was "Timing boundary does not match captured
+  source text": no item, no field, no timestamp. Deepen still fixed it, but the message
+  does not say what to fix.
+- Deepen's `finish` failed for a missing `expected_revision` in 4 of 6 runs, both
+  engines: one wasted request each.
+- Deepen's handoff hit the model's output-token limit twice in full-text r2: the call
+  never ran.
+- `variations` are still cut at 180 characters (0 to 3 per run); full-text did not widen them.
+
+## Keyword audit: what an 11/11 means
+
+The keyword checks (`steps`, `missing_date`, `duplicate`, `high_value`, `type_lookup`)
+pass when one of their words appears anywhere the agents wrote. An audit of every saved
+receipts workflow (`.engines/scratch/keyword-audit.py`, offline):
+
+- No word passes a check for the wrong reason. The bare "flag" in `high_value` never
+  carries a pass alone ("review needed" or "over 500" is always there too); "log" in
+  `steps` also matches the email workflow, but every receipts workflow names tracker.csv.
+- Where the words appear matters more. A workflow can pass `missing_date` with only an
+  open question ("how do flagged rows (duplicate, missing-date, review-needed) get
+  resolved?") and `type_lookup` with only a variation quoting the tracker's notes
+  ("e.g. 'type from client list'"). Both name the exception without saying what to do.
+
+So grades now report `in_stages` for each passing keyword check: whether its words are in
+the stages (names, descriptions, procedure steps), which say what to do. It is not
+scored, so every score above stays as it was. Regraded (`.engines/scratch/handled-md.py`):
+
+| Runs | Checks | Keyword checks in stages |
+|---|---|---|
+| full baseline runs, phase 1 (5) | 10-11/11 | 4-5 of 5 |
+| Review from step 04, every engine (18) | 11/11 | 2-4 of 5; `type_lookup` in none |
+| Deepen + Review from step 03, full-text (3) | 10-11/11 | 3-4 of 5 |
+| Deepen + Review from step 03, handoff-check (3) | 10-11/11 | 4-5 of 5; `type_lookup` in 2 |
+
+`duplicate` and `high_value` are in the stages in every run. The step 04 drafts put the
+type lookup only in a variation, and Review never moves it, whatever the engine. That is a
+property of this snapshot, not of the agents: full runs put it in the stages in 3 of 5.
+Six chain runs are too few to credit handoff-check with it.
+
+So "11/11" means every exception is named in the published workflow, not that
+each one says what to do. `in_stages` is the closer measure, and it is still a keyword
+match.
