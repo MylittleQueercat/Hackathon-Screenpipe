@@ -60,6 +60,7 @@ sandbox/load.sh            # pulls the sandbox image (pinned by digest) into Doc
 uv run wfeval template     # warm data dir with Pi and the four workflow pipes
 SCREENPIPE_DATA_DIR=$PWD/.engines/template/home/.screenpipe .engines/target/debug/screenpipe login
 uv run wfeval check-engine # 15 s, no model calls: does everything above work?
+./setup-engine.sh clearer-rejection   # optional: an engine variant from patches/variants/
 ```
 
 `login` opens a browser; the session lands in the template, and every run copies it.
@@ -118,6 +119,12 @@ variant's `binary` at it and its `source` at the branch's checkout (so `run.json
 records that branch's changed files), then run
 `uv run wfeval check-engine --variant <yours>` before spending anything. It fails, with
 what to do, when your branch breaks something the harness relies on:
+
+To share a branch, save it as `patches/variants/<name>.patch` (its diff on top of
+`harness.patch`) next to `variants/<name>.json` with `binary`
+`.engines/target-wf-<name>/debug/screenpipe` and `source` `.engines/wf-<name>`:
+`./setup-engine.sh <name>` then builds the same engine on any Mac, and `run.json`
+records the same changed files. EXPERIMENTS.md logs what each one measured.
 
 | The harness relies on | Adapt, if your change breaks it |
 |---|---|
