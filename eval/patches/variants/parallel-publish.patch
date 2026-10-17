@@ -1,0 +1,793 @@
+diff --git a/crates/screenpipe-core/src/workflows/evidence.rs b/crates/screenpipe-core/src/workflows/evidence.rs
+index 729a83e14..6dcb9ee47 100644
+--- a/crates/screenpipe-core/src/workflows/evidence.rs
++++ b/crates/screenpipe-core/src/workflows/evidence.rs
+@@ -107,7 +107,7 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
+                 .get("app_name")
+                 .and_then(Value::as_str)
+                 .unwrap_or("Conversation");
+-            if timestamp != at || !actual_app.eq_ignore_ascii_case(app) {
++            if !cites_capture(at, timestamp) || !actual_app.eq_ignore_ascii_case(app) {
+                 return None;
+             }
+             let detail = content
+@@ -132,6 +132,17 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
+         .collect()
+ }
+ 
++/// The recorder interval a citation names: its millisecond, or its whole second
++/// when cited without a fraction (see `cites_capture`).
++fn citation_span(at: DateTime<Utc>) -> ChronoDuration {
++    use chrono::Timelike;
++    if at.nanosecond() == 0 {
++        ChronoDuration::seconds(1)
++    } else {
++        ChronoDuration::milliseconds(1)
++    }
++}
++
+ #[derive(Debug)]
+ pub enum VerificationError {
+     Unavailable(&'static str),
+@@ -194,10 +205,7 @@ pub async fn resolve_references(
+                     .map_err(|e| e.to_string())?;
+                 url.query_pairs_mut()
+                     .append_pair("start_time", &at.to_rfc3339())
+-                    .append_pair(
+-                        "end_time",
+-                        &(at + ChronoDuration::milliseconds(1)).to_rfc3339(),
+-                    )
++                    .append_pair("end_time", &(at + citation_span(at)).to_rfc3339())
+                     .append_pair("app_name", &app)
+                     .append_pair("content_type", "all")
+                     .append_pair("include_frames", "false")
+@@ -247,7 +255,7 @@ pub async fn resolve_references(
+                             .into(),
+                     );
+                 }
+-                let frames: Vec<i64> = payload["data"]
++                let frames: Vec<(i64, DateTime<Utc>)> = payload["data"]
+                     .as_array()
+                     .into_iter()
+                     .flatten()
+@@ -255,13 +263,14 @@ pub async fn resolve_references(
+                         let content = &row["content"];
+                         let timestamp = content["timestamp"]
+                             .as_str()
+-                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?;
+-                        if timestamp != at
++                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?
++                            .with_timezone(&Utc);
++                        if !cites_capture(at, timestamp)
+                             || !content["app_name"].as_str()?.eq_ignore_ascii_case(&app)
+                         {
+                             return None;
+                         }
+-                        content["frame_id"].as_i64().filter(|id| *id > 0)
++                        Some((content["frame_id"].as_i64().filter(|id| *id > 0)?, timestamp))
+                     })
+                     .collect();
+                 Ok((at, app.clone(), source_points(&payload, at, &app), frames))
+@@ -274,12 +283,12 @@ pub async fn resolve_references(
+     // revoked sources cannot survive merely because they were in the index.
+     for result in results {
+         let (at, app, points, frames) = result?;
+-        for id in frames {
+-            catalog.frames.insert(id, (at, app.clone()));
++        for (id, captured) in frames {
++            catalog.frames.insert(id, (captured, app.clone()));
+         }
+         catalog
+             .points
+-            .retain(|p| p.timestamp != at || !p.app.eq_ignore_ascii_case(&app));
++            .retain(|p| !cites_capture(at, p.timestamp) || !p.app.eq_ignore_ascii_case(&app));
+         for point in points {
+             catalog.remember_app(&point.app);
+             catalog.points.push(point);
+@@ -332,7 +341,7 @@ mod tests {
+             health: json!({}),
+         };
+         let activity = vec![json!({"start":"2026-08-01T00:00:00Z","end":"2026-08-03T00:00:00Z"})];
+-        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00Z","app":"Editor","detail":"Invented result"}]}]});
++        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00.250Z","app":"Editor","detail":"Invented result"}]}]});
+         let (catalog, reads) =
+             resolve_references(&endpoint, &value, EvidenceCatalog::default(), &activity)
+                 .await
+@@ -349,6 +358,20 @@ mod tests {
+             .is_err());
+     }
+ 
++    #[test]
++    fn whole_second_citations_read_their_whole_second() {
++        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
++        assert_eq!(citation_span(at("2026-08-01T10:00:00Z")), ChronoDuration::seconds(1));
++        assert_eq!(citation_span(at("2026-08-01T10:00:00.250Z")), ChronoDuration::milliseconds(1));
++        let payload = json!({"data":[
++            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:00.725Z","app_name":"Editor","text":"in that second"}},
++            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:01.000Z","app_name":"Editor","text":"next second"}}]});
++        let points = source_points(&payload, at("2026-08-01T10:00:00Z"), "editor");
++        assert_eq!(points.len(), 1);
++        assert_eq!(points[0].timestamp, at("2026-08-01T10:00:00.725Z"));
++        assert!(source_points(&payload, at("2026-08-01T10:00:00.500Z"), "Editor").is_empty());
++    }
++
+     #[tokio::test]
+     async fn unavailable_recorder_is_retryable_but_access_denial_is_not() {
+         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+diff --git a/crates/screenpipe-core/src/workflows/mod.rs b/crates/screenpipe-core/src/workflows/mod.rs
+index 036f28668..7b9e8c677 100644
+--- a/crates/screenpipe-core/src/workflows/mod.rs
++++ b/crates/screenpipe-core/src/workflows/mod.rs
+@@ -215,11 +215,29 @@ impl EvidenceCatalog {
+     }
+ 
+     pub fn resolve(&self, timestamp: DateTime<Utc>, requested_app: &str) -> Option<&EvidencePoint> {
+-        self.points.iter().find(|point| {
+-            point.timestamp == timestamp
+-                && !requested_app.trim().is_empty()
+-                && point.app.eq_ignore_ascii_case(requested_app.trim())
+-        })
++        let app = requested_app.trim();
++        if app.is_empty() {
++            return None;
++        }
++        let same_app = |point: &&EvidencePoint| point.app.eq_ignore_ascii_case(app);
++        if let Some(point) = self
++            .points
++            .iter()
++            .filter(same_app)
++            .find(|point| point.timestamp == timestamp)
++        {
++            return Some(point);
++        }
++        // A whole-second citation of the only capture of that app in that second.
++        let mut within = self
++            .points
++            .iter()
++            .filter(same_app)
++            .filter(|point| cites_capture(timestamp, point.timestamp));
++        match (within.next(), within.next()) {
++            (Some(point), None) => Some(point),
++            _ => None,
++        }
+     }
+ 
+     pub fn meeting_minutes(&self, timestamp: DateTime<Utc>, app: &str) -> Option<u64> {
+@@ -464,6 +482,14 @@ pub fn normalized_frequency(repetitions: u64, days: u16) -> String {
+     )
+ }
+ 
++/// Whether a cited time names this capture. Agents often cite whole seconds
++/// (copied from drafts and summaries) while captures carry milliseconds; a
++/// whole-second citation names a capture in that second. Never nearer seconds.
++pub fn cites_capture(cited: DateTime<Utc>, capture: DateTime<Utc>) -> bool {
++    use chrono::{SubsecRound, Timelike};
++    cited == capture || (cited.nanosecond() == 0 && capture.trunc_subsecs(0) == cited)
++}
++
+ // Exact quote/reference validation is a traceability gate, not semantic proof.
+ // Semantic correctness is evaluated separately; the UI still labels drafts.
+ // Accessibility layouts and compact parsed views can wrap the same words
+@@ -484,48 +510,89 @@ pub fn normalize_procedure(stage: &Value, evidence: &[Value]) -> Vec<Value> {
+         .and_then(Value::as_array)
+         .into_iter()
+         .flatten()
+-        .filter_map(|detail| {
+-            let kind = detail.get("kind")?.as_str()?;
+-            if !matches!(kind, "action" | "input" | "output" | "decision" | "check") {
+-                return None;
+-            }
+-            let text = non_empty_string(detail, "text")?;
+-            let quote = non_empty_string(detail, "quote")?;
+-            // Short user instructions and control labels are valid evidence.
+-            // Source identity and exact matching, not character count, establish
+-            // provenance; Review still evaluates what the quote actually proves.
+-            if quote.chars().count() > 1_200 {
+-                return None;
+-            }
+-            let timestamp =
+-                DateTime::parse_from_rfc3339(detail.get("timestamp")?.as_str()?).ok()?;
+-            let app = detail.get("app")?.as_str()?;
+-            let source = evidence.iter().find(|source| {
+-                source
+-                    .get("timestamp")
++        .filter_map(|detail| check_procedure_item(detail, evidence).ok())
++        .take(MAX_PROCEDURE_ITEMS)
++        .collect()
++}
++
++pub const MAX_PROCEDURE_ITEMS: usize = 12;
++
++/// One procedure item checked against its stage's verified evidence: the saved
++/// item, or why it cannot be saved. Publication rejections repeat the reason so an
++/// agent can fix the item instead of guessing which one failed.
++pub fn check_procedure_item(detail: &Value, evidence: &[Value]) -> Result<Value, String> {
++    let kind = detail
++        .get("kind")
++        .and_then(Value::as_str)
++        .filter(|kind| matches!(*kind, "action" | "input" | "output" | "decision" | "check"))
++        .ok_or("kind must be action, input, output, decision or check")?;
++    let text = non_empty_string(detail, "text").ok_or("needs text")?;
++    let quote = non_empty_string(detail, "quote").ok_or("needs a quote from its source")?;
++    // Short user instructions and control labels are valid evidence.
++    // Source identity and exact matching, not character count, establish
++    // provenance; Review still evaluates what the quote actually proves.
++    if quote.chars().count() > 1_200 {
++        return Err("quote is over 1,200 characters".into());
++    }
++    let timestamp = detail
++        .get("timestamp")
++        .and_then(Value::as_str)
++        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
++        .ok_or("needs an RFC 3339 timestamp")?;
++    let app = detail
++        .get("app")
++        .and_then(Value::as_str)
++        .ok_or("needs the source app")?;
++    let cited: Vec<&Value> = evidence
++        .iter()
++        .filter(|source| {
++            source
++                .get("timestamp")
++                .and_then(Value::as_str)
++                .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
++                .is_some_and(|time| {
++                    cites_capture(timestamp.with_timezone(&Utc), time.with_timezone(&Utc))
++                })
++                && source
++                    .get("app")
+                     .and_then(Value::as_str)
+-                    .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
+-                    == Some(timestamp)
+-                    && source
+-                        .get("app")
+-                        .and_then(Value::as_str)
+-                        .is_some_and(|name| name.eq_ignore_ascii_case(app))
+-                    && !matches!(
+-                        source.get("source").and_then(Value::as_str),
+-                        Some("audio" | "meeting")
+-                    )
+-                    && source
+-                        .get("detail")
+-                        .and_then(Value::as_str)
+-                        .is_some_and(|body| contains_source_quote(body, &quote))
+-            })?;
+-            Some(
+-                json!({"kind": kind, "text": text.chars().take(800).collect::<String>(),
+-                "quote": quote, "timestamp": source["timestamp"], "app": source["app"]}),
++                    .is_some_and(|name| name.eq_ignore_ascii_case(app))
++        })
++        .collect();
++    let at = timestamp.to_rfc3339();
++    if cited.is_empty() {
++        return Err(format!(
++            "cites {app} at {at}, which is not one of this stage's verified evidence entries; \
++             add that capture to this stage's evidence or cite one that is there"
++        ));
++    }
++    let screen: Vec<&&Value> = cited
++        .iter()
++        .filter(|source| {
++            !matches!(
++                source.get("source").and_then(Value::as_str),
++                Some("audio" | "meeting")
+             )
+         })
+-        .take(12)
+-        .collect()
++        .collect();
++    if screen.is_empty() {
++        return Err(format!(
++            "cites audio at {at}; cite a screen or input capture"
++        ));
++    }
++    let source = screen
++        .into_iter()
++        .find(|source| {
++            source
++                .get("detail")
++                .and_then(Value::as_str)
++                .is_some_and(|body| contains_source_quote(body, &quote))
++        })
++        .ok_or_else(|| format!("quote is not in the text of the {app} capture at {at}"))?;
++    Ok(
++        json!({"kind": kind, "text": text.chars().take(800).collect::<String>(),
++        "quote": quote, "timestamp": source["timestamp"], "app": source["app"]}),
++    )
+ }
+ 
+ // Validate an agent-selected occurrence. Never manufacture a sequence from
+@@ -1683,7 +1750,7 @@ mod quote_tests {
+             "totalMinutes":500,"durationSource":"measured","timing":{"averageMinutes":500},
+             "quality":{"evidenceCount":999,"screenshotCount":999}}]});
+         let mut result = normalize_analysis(raw.clone(), 90, &catalog).unwrap();
+-        workspace::validate_publication(&raw, &result).unwrap();
++        workspace::validate_publication(&raw, &result, &catalog).unwrap();
+         // Reused citations count once. Model-proposed totals cannot invent
+         // observations, screenshots or a measured duration from text alone.
+         attach_screenshot_quality(&mut result);
+@@ -1739,7 +1806,7 @@ mod quote_tests {
+             {"name":"Save","description":"Save the receipt","evidence":[references[1]],"procedure":[step(1)]}
+         ]}]});
+         let result = normalize_analysis(raw.clone(), 90, &catalog).unwrap();
+-        workspace::validate_publication(&raw, &result).unwrap();
++        workspace::validate_publication(&raw, &result, &catalog).unwrap();
+         let stage = &result["workflows"][0]["stages"][0];
+         assert_eq!(stage["procedure"].as_array().unwrap().len(), 2);
+         let sources = stage["evidence"].as_array().unwrap();
+@@ -1765,7 +1832,53 @@ mod quote_tests {
+         invalid["workflows"][0]["stages"][0]["procedure"][1]["quote"] =
+             json!("An invented receipt action.");
+         let normalized = normalize_analysis(invalid.clone(), 90, &catalog).unwrap();
+-        assert!(workspace::validate_publication(&invalid, &normalized).is_err());
++        let rejection =
++            workspace::validate_publication(&invalid, &normalized, &catalog).unwrap_err();
++        // The rejection names the failing item and why, not only a count.
++        assert!(
++            rejection.contains("procedure[1]: quote is not in the text of the Receipts capture"),
++            "{rejection}"
++        );
++    }
++
++    #[test]
++    fn each_failing_procedure_item_says_why() {
++        let evidence = vec![
++            json!({"timestamp":"2026-10-16T11:29:54.697Z","app":"TextEdit","source":"screen","detail":"tracker.csv Edited"}),
++            json!({"timestamp":"2026-10-16T11:30:00Z","app":"Zoom","source":"audio","detail":"send the tracker"}),
++        ];
++        let item = |at: &str, app: &str, quote: &str| json!({"kind":"action","text":"Save the tracker","timestamp":at,"app":app,"quote":quote});
++        assert!(check_procedure_item(
++            &item("2026-10-16T11:29:54.697Z", "TextEdit", "tracker.csv"),
++            &evidence
++        )
++        .is_ok());
++        let missing = check_procedure_item(
++            &item("2026-10-16T11:29:51.530Z", "TextEdit", "tracker.csv"),
++            &evidence,
++        )
++        .unwrap_err();
++        assert!(
++            missing.contains("not one of this stage's verified evidence entries"),
++            "{missing}"
++        );
++        let quote = check_procedure_item(
++            &item("2026-10-16T11:29:54.697Z", "TextEdit", "an invented row"),
++            &evidence,
++        )
++        .unwrap_err();
++        assert!(
++            quote.starts_with("quote is not in the text of the TextEdit capture"),
++            "{quote}"
++        );
++        let audio = check_procedure_item(
++            &item("2026-10-16T11:30:00Z", "Zoom", "send the tracker"),
++            &evidence,
++        )
++        .unwrap_err();
++        assert!(audio.starts_with("cites audio"), "{audio}");
++        let kind = check_procedure_item(&json!({"kind":"note"}), &evidence).unwrap_err();
++        assert!(kind.starts_with("kind must be"), "{kind}");
+     }
+ 
+     #[test]
+@@ -1811,4 +1924,57 @@ mod quote_tests {
+         audio[0]["source"] = json!("audio");
+         assert!(normalize_procedure(&stage, &audio).is_empty());
+     }
++
++    #[test]
++    fn whole_second_citations_name_the_capture_in_that_second_only() {
++        let evidence = vec![json!({
++            "timestamp":"2026-09-18T10:00:00.725+00:00", "app":"Receipts", "source":"screen",
++            "detail":"Receipt saved successfully."
++        })];
++        let step = |at: &str| {
++            json!({"procedure":[{"kind":"check", "text":"Check the save",
++            "timestamp":at, "app":"Receipts", "quote":"Receipt saved successfully."}]})
++        };
++        let kept = normalize_procedure(&step("2026-09-18T10:00:00Z"), &evidence);
++        assert_eq!(kept.len(), 1);
++        assert_eq!(kept[0]["timestamp"], "2026-09-18T10:00:00.725+00:00");
++        for other in [
++            "2026-09-18T10:00:01Z",
++            "2026-09-18T09:59:59Z",
++            "2026-09-18T10:00:00.500Z",
++        ] {
++            assert!(
++                normalize_procedure(&step(other), &evidence).is_empty(),
++                "{other}"
++            );
++        }
++
++        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
++        let point = |s: &str| EvidencePoint {
++            timestamp: at(s),
++            app: "Receipts".into(),
++            detail: "Receipt".into(),
++            source: "screen".into(),
++            speaker: None,
++        };
++        let mut catalog = EvidenceCatalog::default();
++        catalog.points.push(point("2026-09-18T10:00:00.725Z"));
++        let resolved = catalog
++            .resolve(at("2026-09-18T10:00:00Z"), "receipts")
++            .unwrap();
++        assert_eq!(resolved.timestamp, at("2026-09-18T10:00:00.725Z"));
++        assert!(catalog
++            .resolve(at("2026-09-18T10:00:00Z"), "Mail")
++            .is_none());
++        catalog.points.push(point("2026-09-18T10:00:00.900Z"));
++        assert!(
++            catalog
++                .resolve(at("2026-09-18T10:00:00Z"), "Receipts")
++                .is_none(),
++            "ambiguous"
++        );
++        assert!(catalog
++            .resolve(at("2026-09-18T10:00:00.900Z"), "Receipts")
++            .is_some());
++    }
+ }
+diff --git a/crates/screenpipe-core/src/workflows/timing.rs b/crates/screenpipe-core/src/workflows/timing.rs
+index 2186f6698..132862b8b 100644
+--- a/crates/screenpipe-core/src/workflows/timing.rs
++++ b/crates/screenpipe-core/src/workflows/timing.rs
+@@ -32,15 +32,15 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
+             .points
+             .iter()
+             .find(|p| {
+-                p.timestamp == at
++                cites_capture(at, p.timestamp)
+                     && p.app.eq_ignore_ascii_case(app)
+                     && matches!(p.source.as_str(), "screen" | "parsed")
+                     && contains_source_quote(&p.detail, quote)
+             })
+             .ok_or("Timing boundary does not match captured source text")?;
+         Ok((
+-            at,
+-            json!({"timestamp":at.to_rfc3339(),"app":point.app,"quote":quote}),
++            point.timestamp,
++            json!({"timestamp":point.timestamp.to_rfc3339(),"app":point.app,"quote":quote}),
+         ))
+     };
+     let mut runs = Vec::new();
+@@ -112,6 +112,24 @@ mod tests {
+         assert_eq!(result["sampleCount"], 3);
+     }
+     #[test]
++    fn whole_second_boundaries_name_the_capture_in_that_second() {
++        let (input, mut catalog) = fixture();
++        for point in &mut catalog.points {
++            point.timestamp += ChronoDuration::milliseconds(250);
++        }
++        let result = normalize_timing(&input, &catalog).unwrap();
++        assert_eq!(result["averageMinutes"], 30.0);
++        let stored = result["runs"][0]["start"]["timestamp"].as_str().unwrap();
++        assert_eq!(
++            DateTime::parse_from_rfc3339(stored).unwrap(),
++            catalog.points[0].timestamp
++        );
++        // A citation with its own fraction still has to match exactly.
++        let mut off = input;
++        off["timingRuns"][0]["start"]["timestamp"] = json!("2026-09-01T09:00:00.500Z");
++        assert!(normalize_timing(&off, &catalog).is_err());
++    }
++    #[test]
+     fn sparse_evidence_without_explicit_runs_is_not_a_duration() {
+         let (_, catalog) = fixture();
+         assert!(normalize_timing(&json!({"totalMinutes":9999}), &catalog)
+diff --git a/crates/screenpipe-core/src/workflows/workspace.rs b/crates/screenpipe-core/src/workflows/workspace.rs
+index 269db0467..c2b8ebe61 100644
+--- a/crates/screenpipe-core/src/workflows/workspace.rs
++++ b/crates/screenpipe-core/src/workflows/workspace.rs
+@@ -99,6 +99,8 @@ pub fn start(ws: &mut Value, catalog: &Value) {
+         ws["cycle"]["status"] = json!("running");
+         ws["cycle"].as_object_mut().unwrap().remove("pausedAt");
+         ws["revision"] = json!(revision(ws) + 1);
++        // Nothing read before Stop may publish after Resume.
++        ws["resumedRevision"] = ws["revision"].clone();
+         return;
+     }
+     if !ws["cycle"].is_null() && ws["cycle"]["status"] == "running" {
+@@ -270,7 +272,17 @@ pub fn check_publish(ws: &Value, rev: u64, id: Option<&str>) -> Result<(), Strin
+             return Ok(());
+         }
+     }
+-    if revision(ws) != rev {
++    // A draft publication needs only that draft unchanged since the revision Review
++    // read, so independent drafts can be published in parallel. Finish needs it all.
++    let current = match id.and_then(|id| ws["drafts"][id]["version"].as_u64()) {
++        Some(version) => {
++            version <= rev
++                && rev <= revision(ws)
++                && rev >= ws["resumedRevision"].as_u64().unwrap_or(0)
++        }
++        None => revision(ws) == rev,
++    };
++    if !current {
+         return Err("Workspace changed. Read context before publishing.".into());
+     }
+     if ws["cycle"]["status"] != "running" {
+@@ -366,7 +378,12 @@ pub fn published(ws: &mut Value, id: Option<&str>, payload: Option<&Value>, rece
+ 
+ /// Publication must preserve the reviewed procedure. Normalization can report
+ /// unsupported items, but may not silently save a different, partial procedure.
+-pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), String> {
++/// A rejection names each item that failed and why, from the same checks.
++pub fn validate_publication(
++    raw: &Value,
++    normalized: &Value,
++    catalog: &super::EvidenceCatalog,
++) -> Result<(), String> {
+     let proposed = raw["workflows"].as_array().ok_or("Missing workflows")?;
+     let saved = normalized["workflows"]
+         .as_array()
+@@ -374,6 +391,7 @@ pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), Strin
+     if proposed.len() != saved.len() {
+         return Err("Some workflows could not be verified.".into());
+     }
++    let mut failures = Vec::new();
+     for (before, after) in proposed.iter().zip(saved) {
+         let stages = before["stages"]
+             .as_array()
+@@ -386,15 +404,59 @@ pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), Strin
+                 "Some stages could not be verified. Revise the draft before publishing.".into(),
+             );
+         }
++        // Every failing stage at once, so one revision can fix them all.
+         for (index, (stage, saved)) in stages.iter().zip(verified).enumerate() {
+             let requested = stage["procedure"].as_array().map_or(0, Vec::len);
+             let retained = saved["procedure"].as_array().map_or(0, Vec::len);
+             if requested != retained {
+-                return Err(format!("Stage {} retained {retained} of {requested} proposed procedure items. Check exact timestamp/app/quote references and the output contract, or explicitly revise unsupported claims. No workflow was saved.", index + 1));
++                failures.push(format!(
++                    "Stage {} retained {retained} of {requested} proposed procedure items. {}",
++                    index + 1,
++                    procedure_problems(stage, catalog)
++                ));
+             }
+         }
+     }
+-    Ok(())
++    if failures.is_empty() {
++        Ok(())
++    } else {
++        Err(format!("{} No workflow was saved.", failures.join(" ")))
++    }
++}
++
++/// Why a stage's procedure items fail, at most five, each with its position.
++fn procedure_problems(stage: &Value, catalog: &super::EvidenceCatalog) -> String {
++    let evidence = super::clean_evidence(
++        stage.get("evidence").unwrap_or(&Value::Null),
++        catalog.points.len(),
++        catalog,
++    );
++    let items = stage["procedure"].as_array().map_or(&[][..], Vec::as_slice);
++    let mut problems: Vec<String> = items
++        .iter()
++        .enumerate()
++        .filter_map(|(index, item)| {
++            super::check_procedure_item(item, &evidence)
++                .err()
++                .map(|why| format!("procedure[{index}]: {why}."))
++        })
++        .collect();
++    if problems.is_empty() && items.len() > super::MAX_PROCEDURE_ITEMS {
++        problems.push(format!(
++            "Keep at most {} procedure items per stage.",
++            super::MAX_PROCEDURE_ITEMS
++        ));
++    }
++    let more = problems.len().saturating_sub(5);
++    problems.truncate(5);
++    if more > 0 {
++        problems.push(format!("{more} more."));
++    }
++    if problems.is_empty() {
++        "Check exact timestamp/app/quote references and the output contract, or explicitly revise unsupported claims.".into()
++    } else {
++        problems.join(" ")
++    }
+ }
+ 
+ #[cfg(test)]
+@@ -693,14 +755,18 @@ mod tests {
+ 
+     #[test]
+     fn publication_cannot_silently_drop_reviewed_steps() {
++        let catalog = super::super::EvidenceCatalog::default();
+         let raw = json!({"workflows":[{"stages":[{"procedure":[{"text":"Open invoice"},{"text":"Save receipt"}]}]}]});
+-        assert!(validate_publication(&raw, &raw).is_ok());
++        assert!(validate_publication(&raw, &raw, &catalog).is_ok());
+         let partial = json!({"workflows":[{"stages":[{"procedure":[{"text":"Open invoice"}]}]}]});
+-        assert!(validate_publication(&raw, &partial)
++        assert!(validate_publication(&raw, &partial, &catalog)
+             .unwrap_err()
+             .contains("1 of 2"));
+-        assert!(validate_publication(&raw, &json!({"workflows":[]})).is_err());
+-        assert!(validate_publication(&json!({"workflows":[]}), &json!({"workflows":[]})).is_ok());
++        assert!(validate_publication(&raw, &json!({"workflows":[]}), &catalog).is_err());
++        assert!(
++            validate_publication(&json!({"workflows":[]}), &json!({"workflows":[]}), &catalog)
++                .is_ok()
++        );
+     }
+     #[test]
+     fn publish_uses_reviewed_payload_and_retry_cannot_hide_a_different_edit() {
+@@ -796,6 +862,44 @@ mod tests {
+         assert!(!can_finish(&ws));
+     }
+     #[test]
++    fn independent_drafts_publish_in_parallel_but_an_edited_draft_does_not() {
++        let mut ws = empty();
++        start(&mut ws, &json!({}));
++        let mut ids = Vec::new();
++        for _ in 0..2 {
++            let c = change("propose", &ws, None, Some(TASKS[2]));
++            ids.push(
++                apply(&mut ws, TASKS[0], &c).unwrap()["draft_id"]
++                    .as_str()
++                    .unwrap()
++                    .to_owned(),
++            );
++        }
++        let (a, b) = (&ids[0], &ids[1]);
++        let read = revision(&ws);
++        // Publishing or marking one draft does not make the other stale.
++        let version = ws["drafts"][a]["version"].as_u64().unwrap();
++        assert!(set_publication_retry(&mut ws, version, a, true));
++        published(&mut ws, Some(a), None, &json!({"changes":{"created":1}}));
++        assert!(check_publish(&ws, read, Some(b)).is_ok());
++        assert!(check_publish(&ws, revision(&ws) + 1, Some(b)).is_err());
++        // Finish still needs the whole workspace as read.
++        assert!(check_publish(&ws, read, None).is_err());
++        // An edit after the read makes that draft stale.
++        let c = change("handoff", &ws, Some(b.clone()), Some(TASKS[2]));
++        let mut edit = c;
++        edit.payload = Some(json!({"title":"Reconcile invoices, edited"}));
++        apply(&mut ws, TASKS[2], &edit).unwrap();
++        assert!(check_publish(&ws, read, Some(b)).is_err());
++        assert!(check_publish(&ws, revision(&ws), Some(b)).is_ok());
++        // Nothing read before Stop publishes after Resume.
++        let before_stop = revision(&ws);
++        pause(&mut ws);
++        start(&mut ws, &json!({}));
++        assert!(check_publish(&ws, before_stop, Some(b)).is_err());
++        assert!(check_publish(&ws, revision(&ws), Some(b)).is_ok());
++    }
++    #[test]
+     fn completion_requires_all_work_and_keeps_fixed_requested_end() {
+         let mut ws = empty();
+         start(&mut ws, &json!({}));
+diff --git a/crates/screenpipe-engine/src/routes/workflow_catalog.rs b/crates/screenpipe-engine/src/routes/workflow_catalog.rs
+index b69e1ab9c..6950511f6 100644
+--- a/crates/screenpipe-engine/src/routes/workflow_catalog.rs
++++ b/crates/screenpipe-engine/src/routes/workflow_catalog.rs
+@@ -151,6 +151,25 @@ pub struct CommitRequest {
+     pub draft_id: Option<String>,
+ }
+ 
++/// Whether a proposal may commit onto this catalog. A reviewed draft that only
++/// creates workflows cannot overwrite another change, so parallel publications
++/// need not wait on one another; updating an existing workflow still needs the
++/// catalog the agent read.
++pub(super) fn catalog_current(
++    catalog: &Value,
++    expected: u64,
++    workflows: &[Value],
++    draft: bool,
++) -> bool {
++    let revision = catalog["revision"].as_u64().unwrap_or(0);
++    revision == expected
++        || (draft
++            && expected < revision
++            && workflows
++                .iter()
++                .all(|w| w["id"].as_str().is_none_or(str::is_empty)))
++}
++
+ /// Preserve identity and user-owned corrections. Absence from a partial scan
+ /// never removes an existing workflow. No semantic matching in infrastructure.
+ pub fn reconcile(mut previous: Value, updates: Vec<Value>, through: &str) -> Result<Value, String> {
+@@ -351,7 +370,12 @@ pub(crate) async fn commit(
+             ));
+         }
+     }
+-    if previous["revision"].as_u64().unwrap_or(0) != body.expected_revision {
++    if !catalog_current(
++        &previous,
++        body.expected_revision,
++        &body.workflows,
++        body.draft_id.is_some(),
++    ) {
+         return Err(error(
+             StatusCode::CONFLICT,
+             "Catalog changed. Read it again before proposing updates.",
+@@ -418,7 +442,7 @@ pub(crate) async fn commit(
+     let mut normalized = normalize_updates(raw.clone(), &evidence)
+         .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
+     if body.workspace_revision.is_some() {
+-        workspace::validate_publication(&raw, &normalized)
++        workspace::validate_publication(&raw, &normalized, &evidence)
+             .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
+     }
+     let updates = normalized["workflows"].as_array_mut().unwrap();
+@@ -483,7 +507,12 @@ pub(crate) async fn commit(
+             ));
+         }
+     }
+-    if previous["revision"].as_u64().unwrap_or(0) != body.expected_revision {
++    if !catalog_current(
++        &previous,
++        body.expected_revision,
++        &body.workflows,
++        body.draft_id.is_some(),
++    ) {
+         return Err(error(
+             StatusCode::CONFLICT,
+             "Catalog changed. Read it again before proposing updates.",
+@@ -842,4 +871,15 @@ mod tests {
+         assert_eq!(result["analysis"]["workflows"].as_array().unwrap().len(), 1);
+         assert_eq!(result["changes"], json!({"created":0,"updated":0}));
+     }
++    #[test]
++    fn a_new_reviewed_workflow_commits_onto_a_newer_catalog_but_an_update_does_not() {
++        let catalog = json!({"revision":5});
++        let new = [json!({"title":"Reconcile invoices"})];
++        let update = [json!({"id":"wf-a","title":"Reconcile invoices"})];
++        assert!(catalog_current(&catalog, 5, &update, true));
++        assert!(catalog_current(&catalog, 4, &new, true));
++        assert!(!catalog_current(&catalog, 4, &update, true));
++        assert!(!catalog_current(&catalog, 4, &new, false));
++        assert!(!catalog_current(&catalog, 6, &new, true));
++    }
+ }
+diff --git a/crates/screenpipe-engine/src/routes/workflow_workspace.rs b/crates/screenpipe-engine/src/routes/workflow_workspace.rs
+index 4f5d69295..13384660d 100644
+--- a/crates/screenpipe-engine/src/routes/workflow_workspace.rs
++++ b/crates/screenpipe-engine/src/routes/workflow_workspace.rs
+@@ -137,7 +137,12 @@ pub(crate) async fn update(
+             let mut current = workspace::state(&previous);
+             workspace::check_publish(&current, rev, Some(id))
+                 .map_err(|e| error(StatusCode::CONFLICT, &e))?;
+-            if previous["revision"].as_u64().unwrap_or(0) != catalog_revision {
++            if !super::workflow_catalog::catalog_current(
++                &previous,
++                catalog_revision,
++                &workflows,
++                true,
++            ) {
+                 return Err(error(
+                     StatusCode::CONFLICT,
+                     "Catalog changed. Read context again.",
+@@ -165,7 +170,7 @@ pub(crate) async fn update(
+                 super::workflow_catalog::persist(&source, &previous, &next).await?;
+             }
+         }
+-        let result = super::workflow_catalog::commit(
++        let mut result = super::workflow_catalog::commit(
+             State(state.clone()),
+             Extension(source.clone()),
+             perms,
+@@ -202,9 +207,19 @@ pub(crate) async fn update(
+                     )
+                 {
+                     let mut next = previous.clone();
+-                    next["agentWorkspace"] = ws;
++                    next["agentWorkspace"] = ws.clone();
+                     super::workflow_catalog::persist(&source, &previous, &next).await?;
+                 }
++                // Marking and clearing the attempt each moved the revision; say where it
++                // is now so the next change is not refused as a conflict.
++                let now = workspace::revision(&ws);
++                if let Err((_, Json(body))) = &mut result {
++                    if let Some(message) = body["error"].as_str() {
++                        body["error"] = json!(format!(
++                            "{message} Workspace revision is now {now}: use it as expected_revision for your next change."
++                        ));
++                    }
++                }
+             }
+         }
+         return result;

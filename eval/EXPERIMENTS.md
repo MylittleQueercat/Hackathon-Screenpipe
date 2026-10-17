@@ -105,3 +105,33 @@ second-precision.
 
 `exception_missed:missing_date` is missed in 8 of 12 Review runs on this step, baseline
 included: not caused by these changes, and still open.
+
+## parallel-publish (on rejection-keeps-revision)
+
+Review often publishes both drafts in one turn (4 of the 6 runs above). Each publish
+required the whole workspace unchanged, so the second got 409 and was never checked;
+if it had succeeded, the catalog check would have refused it next. Now a draft
+publication needs only that draft unchanged since the revision Review read (still open,
+Review's, in a running cycle, and not read before a Stop), and one that creates a
+workflow does not need the catalog unchanged. Finish, and updates to an existing
+workflow, keep the exact checks. `patches/variants/parallel-publish.patch`.
+
+Free check, `wfeval probe-publish <step 04> --parallel` (both drafts at once, same
+revisions), and the same with r3's corrected payloads:
+
+| Drafts | rejection-keeps-revision | parallel-publish |
+|---|---|---|
+| as given (invalid) | one 422, one 409 | two detailed 422s |
+| corrected | one saved, one 409 | both saved |
+
+| Run | Requests | Seconds | Checks | Failed calls |
+|---|---|---|---|---|
+| 20261017T221643Z r1 | 15 | 107 | 10/11 | 2 |
+| 20261017T221643Z r2 | 13 | 92 | 10/11 | 2 |
+| 20261017T221643Z r3 | 18 | 117 | 11/11 | 2 |
+
+These runs do not measure the change: Review published one draft at a time in all
+three, and sequential publishes get the same replies as rejection-keeps-revision.
+Prompts, tools and model were byte-identical to the runs above. Sequential runs before
+took 19 and 20 requests, so 13-18 is run-to-run variation. The evidence for the change
+is the probe; a stage run measures it only when Review happens to publish in parallel.
