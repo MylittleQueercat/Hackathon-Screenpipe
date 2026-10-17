@@ -47,7 +47,7 @@ export function ReplayView({
   const [variants, setVariants] = useState<VariantSummary[]>([]);
   const [realVariant, setRealVariant] = useState('');
   const [stageError, setStageError] = useState<string | null>(null);
-  const [stageConfirming, setStageConfirming] = useState(false);
+  const [realOpen, setRealOpen] = useState(false);
   const [stageRunning, setStageRunning] = useState(false);
   const [stageLog, setStageLog] = useState('');
   const stageLogRef = useRef<HTMLDivElement>(null);
@@ -73,6 +73,8 @@ export function ReplayView({
   useEffect(() => {
     clear();
     setSim(0);
+    if (!stageRunning) setRealOpen(false); // switching stage collapses the real-execution panel
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selIdx, configId, run.id]);
 
   const preview = () => {
@@ -102,7 +104,6 @@ export function ReplayView({
 
   const runStageReplay = async () => {
     if (!match || !chosen) return;
-    setStageConfirming(false);
     setStageRunning(true);
     setStageError(null);
     setStageLog('');
@@ -376,91 +377,91 @@ export function ReplayView({
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
           </PrimaryButton>
           <p className="mt-1.5 font-mono text-[11px] text-ink-500">simulation only · no model calls</p>
-          {/* Real execution: visibly separate from the preview above: its own cost-coloured
-              panel, its own explicit confirmation, and only when a saved snapshot has a step
-              for this stage. Never fabricated. */}
-          <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
-            <div className="flex items-center justify-between">
-              <Eyebrow>Real execution</Eyebrow>
-              <span className="rounded-full border border-cost/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-cost">
-                spends AI allowance
-              </span>
+          {/* Real execution: hidden until asked for. The button only reveals the panel; nothing
+              runs until the explicit Confirm inside it, and only when a saved snapshot has a
+              step for this stage. Never fabricated. */}
+          {snapshots === null ? null : backendDown ? (
+            <p className="mt-4 text-[13px] leading-relaxed text-ink-400">
+              Real execution unavailable: the pipeops server isn't reachable. Start it with{' '}
+              <code className="font-mono">npm run server</code>. The preview above still works.
+            </p>
+          ) : !match ? (
+            <p className="mt-4 text-[13px] leading-relaxed text-ink-400">
+              {snapshots.length === 0 ? (
+                <>
+                  Real execution unavailable on this machine: no saved snapshot (<code className="font-mono">eval/snapshots/</code> is
+                  local and not part of the repo). Demo runs can only show the preview above. Create one with{' '}
+                  <code className="font-mono">wfeval snapshot</code>.
+                </>
+              ) : (
+                <>No saved snapshot has a step for {sel.name}.</>
+              )}
+            </p>
+          ) : !realOpen ? (
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={() => setRealOpen(true)}
+                className="rounded-full border border-cost/60 px-4 py-2 text-[13px] font-semibold text-cost transition hover:bg-cost/10"
+              >
+                Run Stage Replay
+              </button>
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-500">spends AI allowance</span>
             </div>
-            {snapshots === null ? (
-              <p className="mt-2 text-[13px] text-ink-500">checking for a saved snapshot…</p>
-            ) : backendDown ? (
+          ) : (
+            <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
+              <div className="flex items-center justify-between">
+                <Eyebrow>Real execution</Eyebrow>
+                <span className="rounded-full border border-cost/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-cost">
+                  spends AI allowance
+                </span>
+              </div>
               <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-                Unavailable: the pipeops server isn't reachable. Start it with <code className="font-mono">npm run server</code>. The
-                preview above still works.
+                Replays {sel.name} alone from <span className="text-ink-200">{match.snap.id}</span>
               </p>
-            ) : match ? (
-              <>
-                <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-                  Replays {sel.name} alone from snapshot <span className="text-ink-200">{match.snap.id}</span>. This is a genuine model call, not the preview.
+              <div className="mt-3">
+                <Select
+                  value={realVariant}
+                  onChange={setRealVariant}
+                  options={variants.map((v) => ({ value: v.file, label: v.name }))}
+                  disabled={stageRunning}
+                  placeholder="choose a variant"
+                  direction="up"
+                />
+              </div>
+              {chosen && !chosen.engineReady && (
+                <p className="mt-2 text-[12px] leading-relaxed text-cost">
+                  This variant's engine isn't built here. Run <code className="font-mono">cd eval &amp;&amp; {chosen.setup}</code> first.
                 </p>
-                {chosen && !chosen.engineReady && (
-                  <p className="mt-2 text-[12px] leading-relaxed text-cost">
-                    This variant's engine isn't built here. Run <code className="font-mono">cd eval &amp;&amp; {chosen.setup}</code> first.
-                  </p>
+              )}
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
+                <span className="text-[12px] leading-snug text-cost">
+                  Run {sel.name} with “{chosen?.name}” for real? Takes a few minutes.
+                </span>
+                <PrimaryButton className="shrink-0" onClick={runStageReplay} disabled={stageRunning || !chosen?.engineReady}>
+                  {stageRunning ? 'Running…' : 'Confirm'}
+                </PrimaryButton>
+                {!stageRunning && (
+                  <GhostButton className="shrink-0" onClick={() => setRealOpen(false)}>
+                    Cancel
+                  </GhostButton>
                 )}
-                {!stageConfirming && (
-                <div className="mt-3 flex items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <Select
-                      value={realVariant}
-                      onChange={(v) => {
-                        setRealVariant(v);
-                        setStageConfirming(false);
-                      }}
-                      options={variants.map((v) => ({ value: v.file, label: v.name }))}
-                      disabled={stageRunning}
-                      placeholder="choose a variant"
-                      direction="up"
-                    />
+              </div>
+              {stageError && (
+                <p className="mt-3 rounded-lg border border-cost/40 bg-cost/[0.06] p-2.5 text-[12px] leading-relaxed text-cost">{stageError}</p>
+              )}
+              {stageLog && (
+                <details className="mt-3" open={stageRunning}>
+                  <summary className="cursor-pointer font-mono text-[11px] text-ink-500">{stageError ? 'technical details' : 'live output'}</summary>
+                  <div
+                    ref={stageLogRef}
+                    className="mt-2 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[11px] text-ink-300"
+                  >
+                    <pre className="whitespace-pre-wrap">{stageLog}</pre>
                   </div>
-                  <PrimaryButton className="shrink-0" onClick={() => setStageConfirming(true)} disabled={stageRunning || !chosen?.engineReady}>
-                    {stageRunning ? 'Running…' : 'Run Stage Replay'}
-                  </PrimaryButton>
-                </div>
-                )}
-                {stageConfirming && (
-                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
-                    <span className="text-[12px] leading-snug text-cost">
-                      Run {sel.name} with “{chosen?.name}” for real? Takes a few minutes and spends AI allowance.
-                    </span>
-                    <PrimaryButton className="shrink-0" onClick={runStageReplay}>
-                      Confirm
-                    </PrimaryButton>
-                    <GhostButton className="shrink-0" onClick={() => setStageConfirming(false)}>
-                      Cancel
-                    </GhostButton>
-                  </div>
-                )}
-                {stageError && (
-                  <p className="mt-3 rounded-lg border border-cost/40 bg-cost/[0.06] p-2.5 text-[12px] leading-relaxed text-cost">{stageError}</p>
-                )}
-                {stageLog && (
-                  <details className="mt-3" open={stageRunning}>
-                    <summary className="cursor-pointer font-mono text-[11px] text-ink-500">{stageError ? 'technical details' : 'live output'}</summary>
-                    <div
-                      ref={stageLogRef}
-                      className="mt-2 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[11px] text-ink-300"
-                    >
-                      <pre className="whitespace-pre-wrap">{stageLog}</pre>
-                    </div>
-                  </details>
-                )}
-              </>
-            ) : snapshots.length === 0 ? (
-              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-                Unavailable on this machine: there is no saved snapshot (<code className="font-mono">eval/snapshots/</code> is local and
-                not part of the repo). Demo runs can only show the preview above. Create one with{' '}
-                <code className="font-mono">wfeval snapshot</code>.
-              </p>
-            ) : (
-              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">No saved snapshot has a step for {sel.name}.</p>
-            )}
-          </div>
+                </details>
+              )}
+            </div>
+          )}
 
         </div>
       </div>

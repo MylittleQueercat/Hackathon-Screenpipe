@@ -50,8 +50,6 @@ export function Header({
           <img src="/screenpipe-icon.png" alt="" className="h-4 w-4 rounded-[5px]" />
           {experiment.experiment.subject}
         </span>
-        <span className="text-ink-600">/</span>
-        <span className="text-[14px] text-ink-100">{experiment.experiment.title}</span>
       </div>
 
       <div className="absolute left-1/2 -translate-x-1/2">
