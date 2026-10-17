@@ -124,3 +124,17 @@ def test_truth_id_changes_with_a_synonym():
     truth = {"checks": [{"id": "missing_date", "any": ["missing date"]}]}
     assert truth_id(truth) == truth_id({"checks": [{"any": ["missing date"], "id": "missing_date"}]})
     assert truth_id(truth) != truth_id({"checks": [{"id": "missing_date", "any": ["missing date", "missing-date"]}]})
+
+
+def test_in_stages_needs_the_words_in_the_stages(built, seeded):
+    _, truth = built
+    g = grade_phase(1, {"analysis": {"workflows": [receipts_wf(seeded, GOOD), email_wf(seeded)]}}, seeded, truth)
+    assert g["in_stages"] == g["keyword_checks"] == 5
+    w = receipts_wf(seeded, "Rename the scan in Finder and add a row to tracker.csv.")
+    w["variations"] = ["notes explain a decision, e.g. 'type from client list'"]
+    w["openQuestions"] = ["How do missing-date, duplicate and review needed rows get resolved?"]
+    g = grade_phase(1, {"analysis": {"workflows": [w, email_wf(seeded)]}}, seeded, truth)
+    keyword = {k: v for k, v in g["checks"].items() if "in_stages" in v}
+    assert all(v["pass"] for v in keyword.values())
+    assert {k for k, v in keyword.items() if v["in_stages"]} == {"steps"}
+    assert g["in_stages"] == 1

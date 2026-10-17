@@ -129,6 +129,10 @@ rename it in Finder to `DATE_NAME_TYPE.pdf`, add a row to `tracker.csv` in TextE
 with the synonyms listed in the truth file. Keyword matching can miss a paraphrase; the
 raw workflow text is kept with every grade so a miss can be read and, if needed, added
 as a synonym or settled by a judge validated against hand labels.
+Each passing keyword check also reports `in_stages`: whether its words are in the
+stages (names, descriptions, procedure steps) rather than only in a variation, an
+open question or a limitation. A question that names the exception passes the check
+without saying what to do; `in_stages` tells the two apart. It is not scored.
 
 ### `busy`: what is harder
 

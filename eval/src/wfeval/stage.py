@@ -303,7 +303,7 @@ def previous_phase(snap: Path, phase: int, seeded: list[dict], truth: dict) -> l
 
 
 def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, timeout: float,
-          slot_no: int | None = None) -> Path:
+          slot_no: int | None = None, through: str | None = None) -> Path:
     step_dir = step_dir.resolve()
     snap = step_dir.parents[1]
     meta = json.loads((snap / "snapshot.json").read_text())
@@ -312,10 +312,16 @@ def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, tim
         task = "workflow-" + step_dir.name.split("-workflow-", 1)[1]
     if task not in TASKS:
         raise SystemExit(f"{step_dir.name} was not saved before an agent: name one with --task")
+    # `through`: the agents after it too, in the snapshot's serial order, in the same slot,
+    # so a change one agent's output depends on is measured with that agent.
+    tasks = ORDER[ORDER.index(task):ORDER.index(through) + 1] if through else [task]
+    if not tasks:
+        raise SystemExit(f"--through {through} comes before {task}")
     variant = json.loads(variant_path.read_text())
     binary = ROOT / variant.get("binary", ".engines/target/debug/screenpipe")
     suite, seed = meta["data"]["suite"], meta["data"]["seed"]
-    run_id = f"{stamp()}-{variant['name']}-stage-{task.removeprefix('workflow-')}-{snap.name}-{step_dir.name}-r{repeat}"
+    names = "-".join(t.removeprefix("workflow-") for t in tasks)
+    run_id = f"{stamp()}-{variant['name']}-stage-{names}-{snap.name}-{step_dir.name}-r{repeat}"
     final = ROOT / "runs" / run_id
     final.parent.mkdir(exist_ok=True)
     seeded = [r for l in (snap / "seeded.jsonl").read_text().splitlines()
@@ -344,9 +350,14 @@ def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, tim
             with harness(run_dir, port, variant, binary) as (engine, box):
                 disable_all(engine)  # after the overrides: a variant's pipe.md may enable
                 engine.set_model(variant.get("model", "intelligent"), variant.get("preset"))
-                if not engine.workspace(task).get("ready"):
-                    print(f"note: {task} is not ready in this state; it will run anyway", file=sys.stderr)
-                result = run_agent(engine, task, run_dir, timeout)
+                agents = []
+                for t in tasks:
+                    if not engine.workspace(t).get("ready"):
+                        print(f"note: {t} is not ready in this state; it will run anyway", file=sys.stderr)
+                    agents.append({"task": t, **run_agent(engine, t, run_dir, timeout)})
+                result = {**agents[0], "seconds": round(sum(a["seconds"] for a in agents), 1),
+                          "status": next((a["status"] for a in agents if a["status"] != "done"), "done"),
+                          **({"agents": agents} if through else {})}
                 logs = collect_logs(engine, run_dir / "logs", set())
                 result["usage"] = phase_usage(logs, variant.get("price_model"), run_dir / "requests.jsonl",
                                               result["since"], datetime.now(timezone.utc).isoformat())
@@ -364,9 +375,9 @@ def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, tim
     report = seal(run_dir, {"frames": sum(t["frames"] for t in totals), "events": sum(t["events"] for t in totals)},
                   result.get("relayed"))
     after = grade_views(phase, ws["workspace"], catalog, seeded, truth, previous)
-    view = VIEW[task]
+    view = VIEW[tasks[-1]]
     line = {"variant": variant["name"], "suite": suite, "seed": seed, "repeat": repeat, "phase": phase,
-            "stage": task, "snapshot": f"{snap.name}/{step_dir.name}", "view": view,
+            "stage": "+".join(tasks), "snapshot": f"{snap.name}/{step_dir.name}", "view": view,
             **public(after[view]), "status": result["status"], "usage": result["usage"],
             "seconds": result["seconds"],
             "other_view": {"name": "catalog" if view == "drafts" else "drafts",
@@ -415,14 +426,17 @@ def main_stage(argv: list[str] | None = None) -> int:
     ap.add_argument("step", type=Path, help="snapshots/<id>/steps/<NN>-p<phase>-<task>")
     ap.add_argument("--task", choices=TASKS, help="default: the agent the step was saved before")
     ap.add_argument("--variant", type=Path, default=ROOT / "variants" / "baseline.json")
+    ap.add_argument("--through", choices=ORDER, help="also run the agents after it, through this one")
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--timeout", type=float, default=1800, help="seconds for the agent run")
     ap.add_argument("--slot", type=int, help=f"0..{SLOTS - 1}; default: the first free one")
     a = ap.parse_args(argv)
-    out = stage(a.step, a.task, a.variant, a.repeat, a.timeout, a.slot)
+    out = stage(a.step, a.task, a.variant, a.repeat, a.timeout, a.slot, a.through)
     print(out)
     r = json.loads((out / "results.jsonl").read_text())
-    print(json.dumps({k: r[k] for k in ("stage", "view", "status", "passed", "scored", "score", "mistakes",
-                                        "before", "seconds")} | {"requests": r["usage"]["requests"]}
-                     | ({"workspace_failed": r["usage"]["workspace"]["failed"]} if "workspace" in r["usage"] else {})))
+    print(json.dumps({k: r[k] for k in ("stage", "view", "status", "passed", "scored", "score", "in_stages",
+                                        "mistakes", "before", "seconds") if k in r} | {"requests": r["usage"]["requests"]}
+                     | ({"workspace_failed": r["usage"]["workspace"]["failed"]} if "workspace" in r["usage"] else {})
+                     | ({"by_task": {t: v["requests"] for t, v in r["usage"].get("by_task", {}).items()}}
+                        if "+" in r["stage"] else {})))
     return 0
