@@ -49,6 +49,10 @@ def main() -> int:
         if argv[:1] == ["--truth"]:  # regrade against the current truth: --truth data/<suite>-s<seed>/truth.json
             truth, argv = Path(argv[1]), argv[2:]
         for run in argv:
+            if (Path(run) / "stage.json").exists():  # one agent on a snapshot step
+                from .stage import regrade
+                print(json.dumps(regrade(Path(run), truth)))
+                continue
             for g in grade_run(Path(run), truth):
                 g.pop("attributed")
                 print(json.dumps(g))

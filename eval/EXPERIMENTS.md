@@ -4,7 +4,8 @@ Each entry is one change to Workflows, measured with the harness on the same sav
 history: the receipts suite, seed 1, snapshot `20261017T145651Z-baseline-receipts-s1`,
 rerunning Review from step `04-p1-workflow-review` (two open drafts, nothing published).
 Stage runs, Claude Sonnet 5 through the screenpipe gateway. Checks: the suite's 11
-catalog checks after Review. Failed calls: Workflows calls the engine refused
+catalog checks after Review, graded with the current truth
+(`wfeval grade --truth data/receipts-s1/truth.json <run>`; see Grading correction). Failed calls: Workflows calls the engine refused
 (`usage.workspace` in `results.jsonl`, logged since 2026-10-17 20:00Z). Run ids are
 `runs/<id>`; ask for a run with `wfeval pack`.
 
@@ -18,10 +19,10 @@ Upstream a8aaee2d plus `patches/harness.patch`.
 | Run | Requests | Seconds | Checks | Failed calls |
 |---|---|---|---|---|
 | snapshot cycle | 60 | | | |
-| 20261017T150823Z r1 | 56 | 472 | 10/11 | not logged |
-| 20261017T202122Z r2 | 38 | 387 | 10/11 | 12 |
+| 20261017T150823Z r1 | 56 | 472 | 11/11 | not logged |
+| 20261017T202122Z r2 | 38 | 387 | 11/11 | 12 |
 
-Both runs miss `exception_missed:missing_date`. The 12 failed calls of r2: 5 "Stage N
+The 12 failed calls of r2: 5 "Stage N
 retained X of Y proposed procedure items", 3 x 409 "Workspace changed" right after a
 rejected publish, 2 "no stage evidence matching" (whole-second citations), 1 tool call
 truncated at the output limit, 1 note missing. `wfeval why-rejected` on r2: every
@@ -57,7 +58,7 @@ text of the Finder capture at ..."). `patches/variants/clearer-rejection.patch`.
 | Run | Requests | Seconds | Checks | Failed calls |
 |---|---|---|---|---|
 | 20261017T205455Z r1 | 19 | 152 | 11/11 | 4 |
-| 20261017T212357Z r2 | 18 | 132 | 10/11 | 5 |
+| 20261017T212357Z r2 | 18 | 132 | 11/11 | 5 |
 | 20261017T212402Z r3 | 19 | 131 | 11/11 | 3 |
 
 Each draft: one rejection, one edit, one publish. Review kept every procedure item and
@@ -76,9 +77,9 @@ expected_revision for your next change." `patches/variants/rejection-keeps-revis
 
 | Run | Requests | Seconds | Checks | Failed calls |
 |---|---|---|---|---|
-| 20261017T212825Z r1 | 14 | 101 | 10/11 | 3 |
+| 20261017T212825Z r1 | 14 | 101 | 11/11 | 3 |
 | 20261017T213817Z r2 | 20 | 147 | 11/11 | 2 |
-| 20261017T213822Z r3 | 36 | 216 | 10/11 | 3 |
+| 20261017T213822Z r3 | 36 | 216 | 11/11 | 3 |
 
 The failure it targets is gone: no 409 after a rejected publish in 3 runs
 (clearer-rejection: 3 in 3). Requests are not lower than clearer-rejection's. r3: Review
@@ -94,17 +95,14 @@ clear? `patches/variants/no-second-precision.patch`.
 
 | Run | Requests | Seconds | Checks | Failed calls |
 |---|---|---|---|---|
-| 20261017T214449Z r1 | 23 | 172 | 10/11 | 4 |
-| 20261017T214454Z r2 | 26 | 206 | 10/11 | 4 |
-| 20261017T214459Z r3 | 29 | 186 | 10/11 | 3 |
+| 20261017T214449Z r1 | 23 | 172 | 11/11 | 4 |
+| 20261017T214454Z r2 | 26 | 206 | 11/11 | 4 |
+| 20261017T214459Z r3 | 29 | 186 | 11/11 | 3 |
 
 Every run hits the whole-second rejection 2-3 times. Median 26 requests against 20
 for the same change with second-precision (14, 20, 36) and 19 for clearer-rejection
 (18, 19, 19); cache read 0.8-1.2M against 0.4-0.7M outside rejection-keeps-revision r3. Keep
 second-precision.
-
-`exception_missed:missing_date` is missed in 8 of 12 Review runs on this step, baseline
-included: not caused by these changes, and still open.
 
 ## parallel-publish (on rejection-keeps-revision)
 
@@ -126,8 +124,8 @@ revisions), and the same with r3's corrected payloads:
 
 | Run | Requests | Seconds | Checks | Failed calls |
 |---|---|---|---|---|
-| 20261017T221643Z r1 | 15 | 107 | 10/11 | 2 |
-| 20261017T221643Z r2 | 13 | 92 | 10/11 | 2 |
+| 20261017T221643Z r1 | 15 | 107 | 11/11 | 2 |
+| 20261017T221643Z r2 | 13 | 92 | 11/11 | 2 |
 | 20261017T221643Z r3 | 18 | 117 | 11/11 | 2 |
 
 These runs do not measure the change: Review published one draft at a time in all
@@ -135,3 +133,66 @@ three, and sequential publishes get the same replies as rejection-keeps-revision
 Prompts, tools and model were byte-identical to the runs above. Sequential runs before
 took 19 and 20 requests, so 13-18 is run-to-run variation. The evidence for the change
 is the probe; a stage run measures it only when Review happens to publish in parallel.
+
+## Grading correction: missing_date was never missed
+
+Earlier versions of this file reported `exception_missed:missing_date` in 10 of 15
+Review runs, baseline included. The workflows were right and the grader was wrong: every
+saved receipts workflow names the flag "missing-date" (in its open questions and
+limitations), and the snapshot's `truth.json` predates `45b61b910`, which added that
+spelling to the check. A stage run grades with the truth it ran with (the snapshot's),
+so nothing used the new spelling. The hyphen is the only difference between the two
+truths. Regraded with the current one, all 15 runs pass all 11 checks, and the tables
+above now show those grades.
+
+No conclusion changes: requests, seconds and failed calls are not graded, and every
+engine was regraded with the same truth.
+
+So that a stale truth is seen, not silently used:
+
+- `wfeval grade --truth data/<suite>-s<seed>/truth.json <run>` now regrades stage runs
+  too, from the files the run kept (it reproduces each run's own grade without
+  `--truth`).
+- A stage run whose snapshot truth differs from the current one says so, and every
+  result records `truth`, an id of the truth that graded it.
+- `wfeval compare` warns when its runs were graded with different truths.
+
+The correction also showed something the checks cannot see. The engine cuts every
+workflow description at 400 characters and every open question and limitation at 180,
+without a word to the agent (the output contract says only `string`). Every run, on
+every engine, lost 6 to 12 fields and 613 to 1,207 characters this way (9 and about 950
+in 11 of 15): the receipts
+description lost its list of exceptions mid-word ("a scan matching an existing amo").
+The checks still passed because the same words survive in other fields. Results now
+report `clipped`: each string Review published that the catalog saved shorter.
+
+## full-text (on parallel-publish)
+
+Keeps what Review writes: a workflow description up to 2,000 characters (agents write
+up to ~830; upstream cut at 400), each open question and limitation up to 600 (agents
+write up to ~370; upstream cut at 180). Titles, triggers, outcomes, stage text and
+bottlenecks keep upstream's bounds; none was ever over them. Prompts, tools and replies
+to Review are unchanged: a publish receipt does not echo the text.
+`patches/variants/full-text.patch`.
+
+Free check: the probe that publishes r3's corrected payloads saves 9 fields shorter
+(956 characters lost) on parallel-publish, none on full-text.
+
+| Run | Requests | Seconds | Checks | Failed calls | Clipped |
+|---|---|---|---|---|---|
+| 20261017T224506Z r1 | 17 | 102 | 11/11 | 2 | 0 |
+| 20261017T224506Z r2 | 19 | 127 | 11/11 | 2 | 0 |
+| 20261017T224506Z r3 | 18 | 122 | 11/11 | 2 | 0 |
+
+Every earlier run lost 6 to 12 fields; these lose none, and the receipts description
+keeps its exceptions. Requests (17, 19, 18) are within the 13-20 of sequential-publish
+Review runs on the engines it builds on: no cost to Review measured. The cost is later:
+each catalog read by the next cycle's agents is about 950 characters longer. Checks cannot show the gain (11/11 either way);
+`clipped` does.
+
+What it likely improves, not measured here: people read whole descriptions, with the
+exceptions the agents put last, and whole open questions (73 of 89 were cut, and the
+question tends to come at the end). The next cycle's agents read the saved catalog, not
+the drafts, so they would no longer maintain workflows from cut text; that needs full
+runs (drift and churn in phase 2) to measure. Not checked: how longer descriptions
+render in the app.

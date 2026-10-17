@@ -16,6 +16,8 @@ import statistics
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from .grade import truth_id
+
 USAGE = ("agent_runs", "requests", "tool_calls", "input", "cacheRead", "output")
 
 
@@ -30,8 +32,10 @@ def load(runs: list[Path]) -> dict[tuple, dict]:
         f = run / "results.jsonl"
         if not f.exists():
             continue
+        truth = json.loads((run / "truth.json").read_text()) if (run / "truth.json").exists() else None
         for line in f.read_text().splitlines():
             r = json.loads(line)
+            r.setdefault("truth", truth and truth_id(truth))
             if r["status"] not in ("rerun", "invalid"):
                 out[(history(r), r["repeat"], r["phase"])] = r  # a later rerun replaces it
     return out
@@ -98,6 +102,10 @@ def main(argv: list[str] | None = None) -> int:
     elif differ:
         print(("WARNING: an A/A pair whose agents were given different prompts (diff runs/*/prompts/): "
                if same_variant else "prompts that differ between A and B: ") + ", ".join(differ))
+    truths = {r.get("truth") for k in both for r in (A[k], B[k])}
+    if len(truths) > 1:
+        print("WARNING: these runs were graded with different versions of the suite's truth; regrade"
+              " them all with `wfeval grade --truth data/<suite>-s<seed>/truth.json` before comparing checks")
     if any(r.get("host_path_leaks") for k in both for r in (A[k], B[k])):
         print("WARNING: host paths reached the agents in some runs (run.json host_path_leaks)")
 

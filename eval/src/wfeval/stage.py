@@ -41,7 +41,7 @@ from zoneinfo import ZoneInfo
 
 from . import generate
 from .engine import ACTIVE, EVAL_TZ, SLOTS, TASKS, Engine, clone_template
-from .grade import grade_phase, ts
+from .grade import clipped, grade_phase, truth_id, ts
 from .run import (ROOT, classify, collect_logs, harness, install_overrides, live_slot, model_fallback,
                   provenance, seal, wait_for_room)
 from .usage import phase_usage
@@ -321,10 +321,15 @@ def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, tim
     seeded = [r for l in (snap / "seeded.jsonl").read_text().splitlines()
               if (r := json.loads(l))["phase"] <= phase]  # what the restored index holds
     truth = json.loads((snap / "truth.json").read_text())
+    data = ROOT / "data" / f"{suite}-s{seed}"
+    current = (data / "truth.json").exists() and json.loads((data / "truth.json").read_text())
+    if current and truth_id(current) != truth_id(truth):
+        # Graded with the truth it ran with (the snapshot's), so its runs stay comparable.
+        print(f"note: {snap.name}/truth.json differs from {data.name}/truth.json; regrade with "
+              f"`wfeval grade --truth data/{data.name}/truth.json <run>`", file=sys.stderr)
     previous = previous_phase(snap, phase, seeded, truth)
     before = grade_views(phase, json.loads((step_dir / "workspace.json").read_text())["workspace"],
                          json.loads((step_dir / "catalog.json").read_text()), seeded, truth, previous)
-    data = ROOT / "data" / f"{suite}-s{seed}"
     result = None
     with live_slot(slot_no) as (run_dir, port, slot_no):
         try:
@@ -368,9 +373,28 @@ def stage(step_dir: Path, task: str | None, variant_path: Path, repeat: int, tim
                            "score": after["catalog" if view == "drafts" else "drafts"]["score"],
                            "checks": after["catalog" if view == "drafts" else "drafts"]["checks"]},
             "before": {v: {"score": before[v]["score"], "workflows": before[v]["workflows"]} for v in before},
-            "prompts": report["prompts"], "host_path_leaks": len(report["host_path_leaks"])}
+            "prompts": report["prompts"], "host_path_leaks": len(report["host_path_leaks"]),
+            "truth": truth_id(truth), **({"clipped": clipped(ws["workspace"], catalog)} if view == "catalog" else {})}
     (run_dir / "results.jsonl").write_text(json.dumps(line) + "\n")
     return run_dir
+
+
+def regrade(run: Path, truth_file: Path | None = None) -> dict:
+    """A stage run's results line graded again from the files it kept, against
+    `truth_file` (another version of the suite's truth: the history must be the same)."""
+    line = json.loads((run / "results.jsonl").read_text().splitlines()[0])
+    truth = json.loads((truth_file or run / "truth.json").read_text())
+    seeded = [json.loads(l) for l in (run / "seeded.jsonl").read_text().splitlines()]
+    ws = json.loads((run / "workspace.json").read_text())["workspace"]
+    catalog = json.loads((run / "catalog.json").read_text())
+    snap = ROOT / "snapshots" / line["snapshot"].split("/")[0]
+    previous = previous_phase(snap, line["phase"], seeded, truth) if snap.exists() else None
+    after = grade_views(line["phase"], ws, catalog, seeded, truth, previous)
+    view, other = line["view"], "catalog" if line["view"] == "drafts" else "drafts"
+    return {**line, **public(after[view]),
+            "other_view": {"name": other, "score": after[other]["score"], "checks": after[other]["checks"]},
+            "truth": truth_id(truth), "regraded": truth_file is not None,
+            **({"clipped": clipped(ws, catalog)} if view == "catalog" else {})}
 
 
 def main_snapshot(argv: list[str] | None = None) -> int:

@@ -80,8 +80,8 @@ uv run wfeval grade runs/<the run's directory>
 
 `run` prints each phase's status; `grade` prints one JSON line per phase: the checks,
 the score, the mistake tags (`MISTAKES.md`) and usage. A run is graded against the truth
-it ran with; `grade --truth data/<suite>-s<seed>/truth.json <runs>` regrades it against
-the current one (a synonym added, say) when the history is unchanged. A full run is three phases
+it ran with; `grade --truth data/<suite>-s<seed>/truth.json <runs>` regrades it (a full
+or a stage run) against the current one (a synonym added, say) when the history is unchanged. A full run is three phases
 (drop `--phases`), about an hour, most of it waiting for the next cycle to be allowed.
 
 Comparing:
@@ -162,7 +162,13 @@ engine's data before each step: the history index, the catalog with its workspac
 drafts and handoffs), the pipe dirs. `stage <step>` restores one in a slot and runs the
 agent the step was saved before (or `--task`) once. It grades what that agent produces:
 the drafts for Discover, Deepen and Maintain, the published catalog for Review, with the
-same checks as a phase, and records both views and the grade before. Because the serial
+same checks as a phase, and records both views and the grade before. It grades with the
+snapshot's truth and says when `data/<suite>-s<seed>/truth.json` has changed since (a new
+synonym, say): regrade with `grade --truth`, as for a full run. Each result records
+`truth`, an id of the truth that graded it, and `compare` warns when its runs differ
+there. A Review result also reports `clipped`: each string Review published that the
+catalog saved shorter (the engine bounds text fields; checks cannot see this, because
+the same words often survive in another field). Because the serial
 order is not the app's (it runs ready agents at once), a snapshot is a fixed starting
 point, not a replay of a production cycle; a variant that changes the handoffs still
 needs full runs.
