@@ -1,5 +1,5 @@
-"""Paired comparison of two variants on the same histories (suite, seed, phase), the
-n-th repeat of A against the n-th repeat of B:
+"""Paired comparison of two variants on the same histories (suite, seed, phase; for stage
+runs also the snapshot step and the agent), the n-th repeat of A against the n-th of B:
 check pass rates, mistake tags, checks that flipped, pass^k, and usage. Only phases
 both sides graded are paired; reruns never count (eval-sketch's rule).
 
@@ -19,6 +19,11 @@ from pathlib import Path
 USAGE = ("agent_runs", "requests", "tool_calls", "input", "cacheRead", "output")
 
 
+def history(r: dict) -> tuple:
+    """What a result was measured on: a phase of a suite, or one agent on a snapshot step."""
+    return (r["suite"], r["seed"], r.get("snapshot") or "", r.get("stage") or "")
+
+
 def load(runs: list[Path]) -> dict[tuple, dict]:
     out = {}
     for run in runs:
@@ -28,19 +33,18 @@ def load(runs: list[Path]) -> dict[tuple, dict]:
         for line in f.read_text().splitlines():
             r = json.loads(line)
             if r["status"] not in ("rerun", "invalid"):
-                out[(r["suite"], r["seed"], r["repeat"], r["phase"])] = r  # a later rerun replaces it
+                out[(history(r), r["repeat"], r["phase"])] = r  # a later rerun replaces it
     return out
 
 
 def by_order(results: dict[tuple, dict]) -> dict[tuple, dict]:
-    """Key (suite, seed, n, phase), n counting each history's repeats in order, so the
-    n-th repeat on one side pairs with the n-th on the other whatever their numbers."""
+    """Key (history, n, phase), n counting each history's repeats in order, so the n-th
+    repeat on one side pairs with the n-th on the other whatever their numbers."""
     repeats = defaultdict(set)
-    for suite, seed, repeat, _ in results:
-        repeats[(suite, seed)].add(repeat)
+    for hist, repeat, _ in results:
+        repeats[hist].add(repeat)
     order = {key: {r: n for n, r in enumerate(sorted(rs), 1)} for key, rs in repeats.items()}
-    return {(suite, seed, order[(suite, seed)][repeat], phase): r
-            for (suite, seed, repeat, phase), r in results.items()}
+    return {(hist, order[hist][repeat], phase): r for (hist, repeat, phase), r in results.items()}
 
 
 def mcnemar(fixed: int, broken: int) -> float:
@@ -59,7 +63,7 @@ def pass_k(results: list[dict]) -> dict[str, float]:
     for r in results:
         for cid, c in r["checks"].items():
             if c["pass"] is not None:
-                by[(cid, r["suite"], r["seed"], r["phase"])].append(c["pass"])
+                by[(cid, history(r), r["phase"])].append(c["pass"])
     per = defaultdict(list)
     for (cid, *_), passes in by.items():
         per[cid].append(all(passes))
@@ -132,9 +136,10 @@ def main(argv: list[str] | None = None) -> int:
     if sources != {"request_log"}:
         print("  WARNING: some runs predate the request-log usage record; their tokens come from"
               " truncated pipe logs and undercount long agent runs. Do not compare tokens.")
-    for phase in sorted({k[3] for k in both}):
-        keys = [k for k in both if k[3] == phase]
-        print(f"  phase {phase} ({len(keys)} pairs)")
+    for hist, phase in sorted({(k[0], k[2]) for k in both}):
+        keys = [k for k in both if (k[0], k[2]) == (hist, phase)]
+        what = f"phase {phase}" + (f", {hist[3]} on {hist[2]}" if hist[3] else "")
+        print(f"  {what} ({len(keys)} pairs)")
         for field in USAGE + ("seconds",):
             get = (lambda r: r.get("seconds")) if field == "seconds" else (lambda r: (r.get("usage") or {}).get(field))
             va = [get(A[k]) for k in keys if get(A[k]) is not None]

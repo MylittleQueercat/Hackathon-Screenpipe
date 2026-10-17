@@ -63,3 +63,15 @@ def test_anchor_fills_dates_and_utc(built):
     assert "owner" not in frames[0]
     p2 = generate.anchor(phases[2], NOW)
     assert max(f["timestamp"] for f in p2) < NOW.astimezone(generate.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def test_busy_suite_is_deterministic_and_has_its_hard_parts(tmp_path):
+    a = generate.write("busy", 2, tmp_path / "a")
+    b = generate.write("busy", 2, tmp_path / "b")
+    assert (a / "manifest.json").read_bytes() == (b / "manifest.json").read_bytes()
+    phases, truth = generate.build("busy", 1)
+    days = lambda job: {f["day"] for f in phases[1]["frames"] if f["owner"] == job}
+    assert len(days("hours")) == 2 and truth["jobs"]["hours"]["min_days"] == 2
+    assert len(days("photos")) == 1 and len(days("invoices")) >= 3
+    noise_apps = {f["app_name"] for f in phases[1]["frames"] if f["owner"] == "noise"}
+    assert noise_apps & {"Preview", "Mail", "Finder"}  # noise in the jobs' own apps

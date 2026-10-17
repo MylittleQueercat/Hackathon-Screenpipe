@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from wfeval import engine
 from wfeval import run
 
@@ -59,3 +61,18 @@ def test_nonces_masked_and_prompts_hashed(tmp_path):
 def test_host_paths_are_leaks(tmp_path):
     (tmp_path / "requests.jsonl").write_text(json.dumps({"instructions": f"cwd {run.ROOT}/runs/x and /Users/Shared/wfeval/live"}))
     assert run.leaks(tmp_path) == [f"{run.ROOT}/runs/x"]
+
+
+@pytest.mark.parametrize("inspect, ok", [
+    ("{config} ghcr.io/grisetio/wfeval-sandbox@{manifest}", True),  # classic store (OrbStack)
+    ("{manifest} ghcr.io/grisetio/wfeval-sandbox@{manifest}", True),  # containerd store (Docker Desktop)
+    ("{manifest}", True),
+    ("sha256:0000 ", False),  # a local rebuild of a changed sandbox/
+])
+def test_published_image_under_either_docker_store(monkeypatch, inspect, ok):
+    from wfeval import sandbox
+    config, manifest = sandbox.published()
+    out = inspect.format(config=config, manifest=manifest)
+    monkeypatch.setattr(sandbox, "docker_bin", lambda: "docker")
+    monkeypatch.setattr(sandbox.subprocess, "run", lambda *a, **k: type("R", (), {"returncode": 0, "stdout": out})())
+    assert sandbox.is_published() is ok

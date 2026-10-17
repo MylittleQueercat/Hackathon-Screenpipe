@@ -5,3 +5,4 @@ runs/
 __pycache__/
 agent/node_modules/
 .pytest_cache/
+snapshots/

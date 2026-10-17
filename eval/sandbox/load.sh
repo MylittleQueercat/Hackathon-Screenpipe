@@ -25,8 +25,12 @@ else
   "$docker" pull "$PUBLISHED"
   "$docker" tag "$PUBLISHED" wfeval-sandbox:latest
 fi
+# Docker names an image by its config digest (classic store, e.g. OrbStack) or by its
+# manifest digest (containerd store, Docker Desktop's default): either is the published one.
+DIGEST=${PUBLISHED#*@}
 id=$("$docker" image inspect --format '{{.Id}}' wfeval-sandbox:latest)
-if [ "$id" != "$ID" ]; then
-  echo "warning: wfeval-sandbox:latest is $id, not the published $ID (sandbox/ changed?)" >&2
+digests=$("$docker" image inspect --format '{{join .RepoDigests " "}}' wfeval-sandbox:latest)
+if [ "$id" != "$ID" ] && [ "$id" != "$DIGEST" ] && [[ " $digests " != *"@$DIGEST "* ]]; then
+  echo "warning: wfeval-sandbox:latest is $id, neither published digest ($ID, $DIGEST): sandbox/ changed?" >&2
 fi
 "$docker" image inspect --format '{{.Id}} {{.Architecture}}' wfeval-sandbox:latest
