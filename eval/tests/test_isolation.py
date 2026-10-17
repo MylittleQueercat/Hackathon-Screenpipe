@@ -2,6 +2,7 @@
 
 import json
 
+from wfeval import engine
 from wfeval import run
 
 
@@ -19,6 +20,28 @@ def test_context_files_found_on_the_way_up(tmp_path):
 
 def test_live_path_has_no_context_files_above():
     assert run.context_files(run.LIVE / "home" / ".screenpipe") == []
+
+
+def test_clone_template_keeps_private_login_and_bun_cache_symlinks(tmp_path, monkeypatch):
+    template = tmp_path / "template"
+    home = template / "home"
+    data = home / ".screenpipe"
+    data.mkdir(parents=True)
+    login = data / "secrets.sqlite"
+    login.write_text("test login")
+    login.chmod(0o600)
+    cache = home / ".bun" / "install" / "cache"
+    cache.mkdir(parents=True)
+    target = cache / "pkg@1"
+    target.mkdir()
+    (cache / "pkg").symlink_to(target)
+    monkeypatch.setattr(engine, "TEMPLATE", template)
+
+    dest = tmp_path / "run"
+    engine.clone_template(dest)
+
+    assert (dest / "home" / ".bun" / "install" / "cache" / "pkg").is_symlink()
+    assert (dest / "home" / ".screenpipe" / "secrets.sqlite").stat().st_mode & 0o777 == 0o600
 
 
 def test_nonces_masked_and_prompts_hashed(tmp_path):
