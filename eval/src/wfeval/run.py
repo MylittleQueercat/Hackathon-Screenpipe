@@ -4,7 +4,7 @@ keep everything needed to grade and audit it, then grade.
 A run happens in a fixed slot (`engine.slot`: slot 0 is `LIVE` on `PORT`), the first
 free one unless `--slot` picks it, so the paths and port in what the agents see are the
 same on every machine; it then moves to `runs/<utc>-<variant>-<suite>-s<seed>-r<repeat>/`:
-  run.json        provenance: variant, data hashes, engine commit/patch/binary, Pi, image
+  run.json        provenance: variant, data hashes, engine commit/changed files/binary, Pi, image
   truth.json      copied from the data dir (graded here, never mounted or seeded)
   seeded.jsonl    every seeded frame: id, timestamp, app, hidden owner
   phase<N>/       catalog.json, workspace.json, executions.json, phase.json, logs/
@@ -60,6 +60,16 @@ def git(*args: str) -> str:
                           text=True).stdout.strip()
 
 
+def changes() -> dict[str, str | None]:
+    """Each engine file that differs from the pinned commit, tracked or not, with its sha256
+    (None: deleted). A hash of `git diff HEAD` missed files that `git apply` leaves
+    untracked and changed with git's formatting, so it differed between Macs."""
+    src = ENGINES / "upstream"
+    paths = set(git("diff", "HEAD", "--name-only", "--no-renames").splitlines())
+    paths |= set(git("ls-files", "--others", "--exclude-standard").splitlines())
+    return {p: sha256_file(src / p) if (src / p).is_file() else None for p in sorted(paths) if p}
+
+
 def provenance(variant: dict, variant_path: Path, data: Path, binary: Path, run_dir: Path) -> dict:
     pi = run_dir / "home/.screenpipe/pi-agent/node_modules/@earendil-works/pi-coding-agent/package.json"
     return {
@@ -69,7 +79,7 @@ def provenance(variant: dict, variant_path: Path, data: Path, binary: Path, run_
         "data": json.loads((data / "manifest.json").read_text()),
         "engine": {"binary": str(binary), "binary_sha256": sha256_file(binary),
                    "commit": git("rev-parse", "HEAD"),
-                   "patch_sha256": hashlib.sha256(git("diff", "HEAD").encode()).hexdigest()},
+                   "changes": changes()},
         "pi_version": json.loads(pi.read_text())["version"] if pi.exists() else None,
         "pi_lock_sha256": sha256_file(pi_lock) if (pi_lock := run_dir / "home/.screenpipe/pi-agent/bun.lock").exists() else None,
         "bun_version": subprocess.run([str(APP / "bun"), "--version"], capture_output=True, text=True).stdout.strip(),

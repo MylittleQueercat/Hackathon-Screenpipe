@@ -52,6 +52,9 @@ SNAPSHOTS = ROOT / "snapshots"
 STATE = ["storage", "storage.json", "workflows", "pipes", "store.bin", "workflows-model.json",
          "eval-blank.jpg"]
 DROP = ["*.quarantine.reserve.json", "logs", ".trigger-context.json", ".screenpipe-permissions.json"]
+# store.bin settings that hold the login (a cloud session JWT, the account): never saved,
+# so a snapshot can be shared; a restore keeps the template's.
+LOGIN = ("userId", "user")
 ORDER = ["workflow-discover", "workflow-maintain", "workflow-deepen", "workflow-review"]
 # What a stage produces: Discover, Deepen and Maintain write drafts; Review publishes.
 VIEW = {"workflow-discover": "drafts", "workflow-deepen": "drafts", "workflow-maintain": "drafts",
@@ -73,9 +76,24 @@ def save_state(data_dir: Path, dest: Path) -> None:
     for pattern in DROP:
         for p in list(dest.rglob(pattern)):
             shutil.rmtree(p) if p.is_dir() else p.unlink()
+    scrub_store(dest / "store.bin")
+
+
+def scrub_store(path: Path) -> dict:
+    """Removes LOGIN from a store.bin; returns what it removed."""
+    if not path.exists():
+        return {}
+    store = json.loads(path.read_text())
+    settings = store.get("settings") or {}
+    removed = {k: settings.pop(k) for k in LOGIN if k in settings}
+    if removed:
+        path.write_text(json.dumps(store, indent=2))
+    return removed
 
 
 def restore_state(state: Path, data_dir: Path, root_then: str, root_now: Path) -> None:
+    store = data_dir / "store.bin"
+    login = scrub_store(store) if store.exists() else {}  # the template's; put back below
     for name in STATE:
         target = data_dir / name
         if target.is_dir():
@@ -84,6 +102,11 @@ def restore_state(state: Path, data_dir: Path, root_then: str, root_now: Path) -
             target.unlink()
         if (state / name).exists():
             subprocess.run(["/bin/cp", "-cRp", str(state / name), str(target)], check=True)
+    if login and store.exists():
+        scrub_store(store)  # older snapshots kept the login of the Mac that took them
+        restored = json.loads(store.read_text())
+        restored.setdefault("settings", {}).update(login)
+        store.write_text(json.dumps(restored, indent=2))
     if root_then != str(root_now):  # taken in another slot: its path in pipe files
         for p in (data_dir / "pipes").rglob("*"):
             if p.is_file() and p.suffix in (".md", ".json", ".ts", ".txt"):

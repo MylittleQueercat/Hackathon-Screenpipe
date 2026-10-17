@@ -157,6 +157,24 @@ order is not the app's (it runs ready agents at once), a snapshot is a fixed sta
 point, not a replay of a production cycle; a variant that changes the handoffs still
 needs full runs.
 
+A snapshot is shared, not retaken: taking one costs a cycle's worth of model calls (357
+requests for receipts seed 1), and the restored slot path is the same on every Mac.
+
+## Sharing a run or a snapshot
+
+Never zip `runs/<id>` or `snapshots/<id>` by hand: a run folder keeps the engine's home,
+with your screenpipe session token (store.bin, Pi's auth.json), and older snapshots keep it
+in store.bin. Use:
+
+```sh
+uv run wfeval pack runs/<id>        # or snapshots/<id>; writes <id>.zip here
+unzip <id>.zip                      # the teammate, in eval/: lands in runs/ or snapshots/
+```
+
+`pack` leaves out `home/` and `tmp/` (grading needs neither), drops the login from every
+store.bin, and refuses if a token, an API key or the account's email is still in a file.
+Snapshots no longer save the login; a stage restores the template's.
+
 ## Same inputs on every Mac
 
 What the agents are given depends on the eval version and nothing else:
@@ -175,8 +193,9 @@ What the agents are given depends on the eval version and nothing else:
 - **Checked per run**: `prompts/` keeps each agent's system prompt and task prompt with
   the clock and engine ids masked; `run.json` hashes them and lists any host path found in
   prompts or tool output (`host_path_leaks`). `compare` warns when an A/A pair's prompts
-  differ or a run leaked. `run.json` also records the engine, Pi (and its lockfile), bun
-  (from the installed screenpipe app) and the image, which must match to compare
+  differ or a run leaked. `run.json` also records the engine (its commit, and each file
+  that differs from it: `changes`), Pi (and its lockfile), bun (from the installed
+  screenpipe app) and the image, which must match to compare
   (`sandbox_image_published`: Docker names one image by either of two digests, so the
   raw id differs between OrbStack and Docker Desktop).
 

@@ -105,3 +105,26 @@ def test_discover_drafts_cite_through_sources():
     g = grade_phase(1, stage.read_view(ws, CATALOG, "drafts"), SEEDED, TRUTH)
     assert g["checks"]["found"]["pass"] and g["checks"]["evidence_resolves"]["pass"]
     assert g["attributed"][0]["title"] == "File receipts"
+
+
+JWT = "eyJ" + "a" * 30 + "." + "b" * 30 + "." + "c" * 20
+
+
+def store(path, user_id, email, presets):
+    path.write_text(json.dumps({"settings": {"userId": user_id, "user": {"email": email}, "aiPresets": presets}}))
+
+
+def test_snapshot_state_leaves_the_login_out_and_restores_the_templates(tmp_path):
+    data = tmp_path / "a" / "home/.screenpipe"
+    data.mkdir(parents=True)
+    store(data / "store.bin", JWT, "taker@example.com", ["eval-sonnet"])
+    stage.save_state(data, tmp_path / "state")
+    saved = (tmp_path / "state/store.bin").read_text()
+    assert JWT not in saved and "taker@" not in saved and "eval-sonnet" in saved
+
+    other = tmp_path / "b" / "home/.screenpipe"
+    other.mkdir(parents=True)
+    store(other / "store.bin", "template-session", "template@example.com", [])
+    stage.restore_state(tmp_path / "state", other, str(tmp_path / "a"), tmp_path / "b")
+    s = json.loads((other / "store.bin").read_text())["settings"]
+    assert (s["userId"], s["user"]["email"], s["aiPresets"]) == ("template-session", "template@example.com", ["eval-sonnet"])

@@ -1,5 +1,5 @@
 """`wfeval <command>`: generate, template, check-engine, run, snapshot, stage, grade,
-compare, cleanup."""
+compare, pack, cleanup."""
 
 from __future__ import annotations
 
@@ -33,6 +33,9 @@ def main() -> int:
         return m(argv)
     if cmd == "stage":
         from .stage import main_stage as m
+        return m(argv)
+    if cmd == "pack":
+        from .pack import main as m
         return m(argv)
     if cmd == "grade":
         from .grade import grade_run
