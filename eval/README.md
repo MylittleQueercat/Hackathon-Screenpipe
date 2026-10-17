@@ -173,8 +173,9 @@ order is not the app's (it runs ready agents at once), a snapshot is a fixed sta
 point, not a replay of a production cycle; a variant that changes the handoffs still
 needs full runs.
 
-A snapshot is shared, not retaken: taking one costs a cycle's worth of model calls (357
-requests for receipts seed 1), and the restored slot path is the same on every Mac.
+A snapshot is shared, not retaken: taking one costs a cycle's worth of model calls (87
+requests for receipts seed 1, phase 1: Discover 10, Maintain 4, Deepen 13, Review 60), and
+the restored slot path is the same on every Mac.
 
 `uv run wfeval probe-publish snapshots/<id>/steps/<NN>-p1-workflow-review --variant <v>`
 costs nothing: it restores the step and asks the engine to publish each open draft as
