@@ -4,6 +4,7 @@ import type { Experiment, Run } from '../data/schema';
 import { CountUp, Eyebrow, Kbd, PlayIcon, PrimaryButton } from '../components/ui';
 import { fmtSeconds, pct } from '../lib/format';
 import { usePlayKey } from '../lib/events';
+import { ANIMATED, useTheme } from '../lib/theme';
 
 type Mode = 'A' | 'B' | 'AB';
 const VIZ_W = 1000;
@@ -313,6 +314,7 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
 }
 
 function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
+  const pal = ANIMATED[useTheme()];
   const max = Math.max(a.metrics.modelRequests, b.metrics.modelRequests);
   const width = VIZ_W;
   const pitch = width / max;
@@ -335,14 +337,14 @@ function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
               animate={{
                 y: visible ? 12 : 44,
                 height: visible ? 48 : 16,
-                fill: !visible ? '#1A1B20' : extra && mode !== 'A' ? '#FF7A52' : '#B9BDC6',
+                fill: !visible ? pal.off : extra && mode !== 'A' ? pal.cost : pal.on,
               }}
               transition={{ delay: extra ? (i - extraFrom) * 0.035 : 0, duration: 0.35, ease: 'easeOut' }}
             />
           );
         })}
         {/* baseline boundary */}
-        <line x1={extraX - 1.5} x2={extraX - 1.5} y1={0} y2={72} stroke="#6B707C" strokeDasharray="3 3" />
+        <line x1={extraX - 1.5} x2={extraX - 1.5} y1={0} y2={72} stroke="rgb(var(--ink-400))" strokeDasharray="3 3" />
       </svg>
       <span className="absolute -bottom-5 font-mono text-[10px] text-ink-500" style={{ left: extraX - 60 }}>
         A ends · {a.metrics.modelRequests}
@@ -393,7 +395,7 @@ function RuntimeViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
       />
       {/* extra runtime */}
       <motion.div
-        className="absolute top-[18px] h-[20px] rounded-r-full bg-cost shadow-[0_0_24px_-2px_rgba(255,122,82,0.55)]"
+        className="absolute top-[18px] h-[20px] rounded-r-full bg-cost shadow-[0_0_24px_-2px_rgb(var(--cost)/0.55)]"
         style={{ left: aX }}
         initial={false}
         animate={{ width: mode === 'A' ? 0 : bX - aX, opacity: mode === 'A' ? 0 : 1 }}

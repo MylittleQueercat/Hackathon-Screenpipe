@@ -123,8 +123,8 @@ export function LoadView({
           Select or run an experiment.
         </h1>
         <p className="mt-5 max-w-[860px] text-[17px] leading-relaxed text-ink-300">
-          PipeOps reads real wfeval run artifacts straight off disk — nothing here calls a model until you ask it
-          to. <span className="text-ink-100">Scores, checks and comparisons reveal themselves in later steps.</span>
+          See how Screenpipe's agents turn recorded activity into reusable workflows.{' '}
+          <span className="text-ink-100">Browsing is free. A model only runs when you start one.</span>
         </p>
       </motion.div>
 

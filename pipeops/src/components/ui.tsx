@@ -122,7 +122,7 @@ export function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`group inline-flex items-center gap-2 rounded-full bg-signal px-4 py-2 text-[13px] font-semibold text-ink-950 transition hover:shadow-[0_0_28px_-4px_rgba(200,255,77,0.7)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`group inline-flex items-center gap-2 rounded-full bg-signal px-4 py-2 text-[13px] font-semibold text-on-signal transition hover:shadow-[0_0_28px_-4px_rgb(var(--signal)/0.7)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
     </button>
@@ -178,6 +178,7 @@ export function Select<T extends string>({
   disabled,
   placeholder = 'select…',
   className = '',
+  direction = 'down',
 }: {
   value: T | '';
   onChange: (v: T) => void;
@@ -185,6 +186,8 @@ export function Select<T extends string>({
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  /** 'up' for selects near the bottom edge, where a downward list would be clipped. */
+  direction?: 'down' | 'up';
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -225,11 +228,11 @@ export function Select<T extends string>({
       <AnimatePresence>
         {open && (
           <motion.ul
-            initial={{ opacity: 0, y: -4 }}
+            initial={{ opacity: 0, y: direction === 'up' ? 4 : -4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
+            exit={{ opacity: 0, y: direction === 'up' ? 4 : -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute z-30 mt-1.5 max-h-60 w-full overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-1 shadow-xl shadow-black/40"
+            className={`absolute z-30 max-h-60 ${direction === 'up' ? 'bottom-full mb-1.5' : 'mt-1.5'} w-max min-w-full overflow-y-auto rounded-lg border border-ink-700 bg-ink-900 p-1 shadow-[0_12px_32px_-8px_rgb(var(--shadow)/0.4)]`}
           >
             {options.map((o) => (
               <li key={o.value}>
@@ -239,7 +242,7 @@ export function Select<T extends string>({
                     onChange(o.value);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center rounded-md px-2.5 py-1.5 text-left font-mono text-[13px] transition-colors ${
+                  className={`flex w-full items-center whitespace-nowrap rounded-md px-2.5 py-1.5 text-left font-mono text-[13px] transition-colors ${
                     o.value === value ? 'bg-signal/10 text-signal' : 'text-ink-200 hover:bg-ink-850'
                   }`}
                 >

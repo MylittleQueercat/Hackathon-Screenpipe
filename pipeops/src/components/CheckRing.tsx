@@ -54,7 +54,7 @@ export function CheckRing({
         const a0 = start + i * seg + gap / 2;
         const a1 = start + (i + 1) * seg - gap / 2;
         const isSel = selected === i;
-        const color = ok ? '#C8FF4D' : '#FF7A52';
+        const color = ok ? 'rgb(var(--signal))' : 'rgb(var(--cost))';
         const mid = (a0 + a1) / 2;
         const lr = r + stroke + 16;
         return (
@@ -63,7 +63,7 @@ export function CheckRing({
             onClick={onSelect ? () => onSelect(i) : undefined}
             style={{ cursor: onSelect ? 'pointer' : 'default' }}
           >
-            <path d={arcPath(cx, cy, r, a0, a1)} stroke="#24262C" strokeWidth={stroke} fill="none" strokeLinecap="butt" />
+            <path d={arcPath(cx, cy, r, a0, a1)} stroke="rgb(var(--ink-700))" strokeWidth={stroke} fill="none" strokeLinecap="butt" />
             <motion.path
               d={arcPath(cx, cy, r, a0, a1)}
               stroke={color}
@@ -90,7 +90,7 @@ export function CheckRing({
                 dominantBaseline="central"
                 className="font-mono"
                 fontSize="12"
-                fill={isSel ? '#C8FF4D' : '#6B707C'}
+                fill={isSel ? 'rgb(var(--signal))' : 'rgb(var(--ink-400))'}
               >
                 {String(i + 1).padStart(2, '0')}
               </text>

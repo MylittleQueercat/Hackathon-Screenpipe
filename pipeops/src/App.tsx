@@ -11,6 +11,7 @@ import { CompareView } from './views/CompareView';
 import { ReplayView } from './views/ReplayView';
 import { Landing } from './views/Landing';
 import { PLAY_EVENT } from './lib/events';
+import { applyTheme, useTheme } from './lib/theme';
 
 const W = 1920;
 const H = 1080;
@@ -29,6 +30,30 @@ function useFitScale() {
 
 /** The fixed design-surface shell every screen (landing, load, workspace) renders inside,
  *  so the whole app records at a stable 1920×1080 regardless of window size. */
+function ThemeToggle() {
+  const theme = useTheme();
+  const next = theme === 'dark' ? 'light' : 'dark';
+  return (
+    <button
+      onClick={() => applyTheme(next)}
+      title={`Switch to ${next} mode`}
+      aria-label={`Switch to ${next} mode`}
+      className="absolute right-10 top-[22px] z-50 flex h-7 w-7 items-center justify-center rounded-full border border-ink-700 bg-ink-900 text-ink-300 transition hover:border-ink-500 hover:text-ink-50"
+    >
+      {theme === 'dark' ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function Stage({ scale, children }: { scale: number; children: React.ReactNode }) {
   return (
     <div className="flex h-full w-full items-center justify-center bg-ink-950">
@@ -36,6 +61,7 @@ function Stage({ scale, children }: { scale: number; children: React.ReactNode }
         className="lab-bg relative flex shrink-0 flex-col overflow-hidden"
         style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: 'center' }}
       >
+        <ThemeToggle />
         {children}
       </div>
     </div>

@@ -1,16 +1,17 @@
+import { ANIMATED, useTheme } from '../lib/theme';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Experiment, Run, StageId } from '../data/schema';
-import { Badge, Eyebrow, GhostButton, Missing, PlayIcon, PrimaryButton } from '../components/ui';
+import { Badge, Eyebrow, GhostButton, Missing, PlayIcon, PrimaryButton, Select } from '../components/ui';
 import { pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
-import { fetchSnapshots, streamWfevalStage, type SnapshotSummary } from '../data/live';
+import { fetchSnapshots, fetchVariants, streamWfevalStage, type SnapshotSummary, type VariantSummary } from '../data/live';
 
 /* graph geometry */
 const GW = 1680;
-const GH = 330;
+const GH = 262;
 const MAIN_Y = 92;
-const BRANCH_Y = 252;
+const BRANCH_Y = 200;
 const ORIGIN_X = 40;
 const END_X = 1630;
 const stageX = (i: number) => 310 + i * 375;
@@ -28,6 +29,7 @@ export function ReplayView({
   stage: StageId | null;
   onStage: (s: StageId) => void;
 }) {
+  const pal = ANIMATED[useTheme()];
   const stages = experiment.stages;
   const selIdx = Math.max(0, stages.findIndex((s) => s.id === (stage ?? stages[2]?.id)));
   const sel = stages[selIdx];
@@ -41,13 +43,23 @@ export function ReplayView({
   // Real execution, separate from the preview above: a saved snapshot step for this
   // stage, if one exists, lets `wfeval stage` replay the actual agent.
   const [snapshots, setSnapshots] = useState<SnapshotSummary[] | null>(null);
+  const [backendDown, setBackendDown] = useState(false);
+  const [variants, setVariants] = useState<VariantSummary[]>([]);
+  const [realVariant, setRealVariant] = useState('');
+  const [stageError, setStageError] = useState<string | null>(null);
   const [stageConfirming, setStageConfirming] = useState(false);
   const [stageRunning, setStageRunning] = useState(false);
   const [stageLog, setStageLog] = useState('');
   const stageLogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchSnapshots().then(setSnapshots).catch(() => setSnapshots([]));
+    fetchSnapshots()
+      .then(setSnapshots)
+      .catch(() => {
+        setBackendDown(true);
+        setSnapshots([]);
+      });
+    fetchVariants().then(setVariants).catch(() => setVariants([]));
   }, []);
   useEffect(() => {
     stageLogRef.current?.scrollTo({ top: stageLogRef.current.scrollHeight });
@@ -78,18 +90,39 @@ export function ReplayView({
   const task = `workflow-${sel.id}`;
   const match = (snapshots ?? []).flatMap((snap) => snap.steps.filter((s) => s.task === task).map((s) => ({ snap, s })))[0];
 
+  // The real replay runs the variant picked here, defaulting to the "Replay with config"
+  // choice above when a variant file of that name exists, else the snapshot's own variant.
+  useEffect(() => {
+    const byConfig = variants.find((v) => v.name === config.label);
+    const bySnapshot = variants.find((v) => v.name === match?.snap.variant);
+    setRealVariant((byConfig ?? bySnapshot ?? variants[0])?.file ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [variants, config.label, match?.snap.id]);
+  const chosen = variants.find((v) => v.file === realVariant);
+
   const runStageReplay = async () => {
-    if (!match) return;
+    if (!match || !chosen) return;
     setStageConfirming(false);
     setStageRunning(true);
+    setStageError(null);
     setStageLog('');
+    let log = '';
     try {
       await streamWfevalStage(
-        { step: `snapshots/${match.snap.id}/steps/${match.s.step}`, task, variant: `variants/${match.snap.variant}.json`, repeat: 1 },
-        (chunk) => setStageLog((l) => l + chunk),
+        { step: `snapshots/${match.snap.id}/steps/${match.s.step}`, task, variant: chosen.file, repeat: 1 },
+        (chunk) => {
+          log += chunk;
+          setStageLog((l) => l + chunk);
+        },
       );
+      // The harness reports failure as text on the stream; surface it as a sentence, keep the raw log below.
+      if (/Traceback|\[pipeops\].*(exited with code|failed to start)/.test(log)) {
+        const lines = log.split('\n').map((l) => l.trim()).filter(Boolean);
+        const cause = [...lines].reverse().find((l) => /^\w*(Error|Exception)\b|exited with code|failed to start/.test(l));
+        setStageError(`The stage replay did not complete${cause ? `: ${cause.replace(/^\[pipeops\]\s*/, '')}` : '.'}`);
+      }
     } catch (e) {
-      setStageLog((l) => l + `\n[pipeops] ${(e as Error).message}\n`);
+      setStageError((e as Error).message);
     } finally {
       setStageRunning(false);
     }
@@ -117,12 +150,12 @@ export function ReplayView({
       </div>
 
       {/* branch graph */}
-      <div className="relative mt-8" style={{ width: GW, height: GH }}>
+      <div className="relative mt-6 shrink-0" style={{ width: GW, height: GH }}>
         <svg width={GW} height={GH} className="absolute inset-0 overflow-visible">
           <defs>
             <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-              <rect width="7" height="7" fill="#141519" />
-              <line x1="0" y1="0" x2="0" y2="7" stroke="#C8FF4D" strokeOpacity=".35" strokeWidth="2" />
+              <rect width="7" height="7" fill="rgb(var(--ink-850))" />
+              <line x1="0" y1="0" x2="0" y2="7" stroke="rgb(var(--signal))" strokeOpacity=".35" strokeWidth="2" />
             </pattern>
             <filter id="glow-b" filterUnits="userSpaceOnUse" x="-50" y="-50" width={GW + 100} height={GH + 100}>
               <feGaussianBlur stdDeviation="4" result="b" />
@@ -134,14 +167,14 @@ export function ReplayView({
           </defs>
 
           {/* recorded main line: solid */}
-          <line x1={ORIGIN_X} x2={END_X} y1={MAIN_Y} y2={MAIN_Y} stroke="#9095A0" strokeWidth="2" />
+          <line x1={ORIGIN_X} x2={END_X} y1={MAIN_Y} y2={MAIN_Y} stroke="rgb(var(--ink-300))" strokeWidth="2" />
           {/* portion that gets replaced on the branch */}
           <motion.line
             x1={forkX}
             x2={END_X}
             y1={MAIN_Y}
             y2={MAIN_Y}
-            stroke="#0A0B0D"
+            stroke="rgb(var(--ink-950))"
             strokeWidth="2"
             strokeDasharray="4 6"
             initial={false}
@@ -149,11 +182,11 @@ export function ReplayView({
           />
 
           {/* simulated branch */}
-          <path d={branchPath} stroke="#24262C" strokeWidth="2" fill="none" strokeDasharray="5 7" />
+          <path d={branchPath} stroke="rgb(var(--ink-700))" strokeWidth="2" fill="none" strokeDasharray="5 7" />
           <motion.path
             key={`b-${selIdx}-${configId}`}
             d={branchPath}
-            stroke="#C8FF4D"
+            stroke="rgb(var(--signal))"
             strokeWidth="2.5"
             fill="none"
             filter="url(#glow-b)"
@@ -161,7 +194,7 @@ export function ReplayView({
             animate={{ pathLength: sim >= 1 ? 1 : 0 }}
             transition={{ duration: 0.5 + downstream.length * 0.45, ease: 'easeInOut' }}
           />
-          {sim >= 1 && <path d={branchPath} stroke="#C8FF4D" strokeOpacity=".5" strokeWidth="1" fill="none" className="dash-flow" />}
+          {sim >= 1 && <path d={branchPath} stroke="rgb(var(--signal))" strokeOpacity=".5" strokeWidth="1" fill="none" className="dash-flow" />}
 
           {/* snapshots: diamonds between stages */}
           {stages.map((s, i) => {
@@ -177,14 +210,14 @@ export function ReplayView({
                       y: isFork ? -10 : -7,
                       width: isFork ? 20 : 14,
                       height: isFork ? 20 : 14,
-                      fill: isFork ? '#C8FF4D' : '#0A0B0D',
-                      stroke: isFork ? '#C8FF4D' : '#6B707C',
+                      fill: isFork ? pal.signal : pal.bg,
+                      stroke: isFork ? pal.signal : pal.line,
                     }}
                     strokeWidth={1.5}
                     strokeDasharray={run.stages[s.id]?.snapshotId || isFork ? undefined : '3 2'}
                   />
                 </g>
-                {isFork && <circle r="18" fill="none" stroke="#C8FF4D" strokeOpacity=".35" className="pulse-dot" />}
+                {isFork && <circle r="18" fill="none" stroke="rgb(var(--signal))" strokeOpacity=".35" className="pulse-dot" />}
               </g>
             );
           })}
@@ -227,7 +260,7 @@ export function ReplayView({
         </motion.div>
 
         {/* branch nodes */}
-        <div className="absolute font-mono text-[11px] uppercase tracking-widest text-signal/80" style={{ left: forkX + 120, top: BRANCH_Y + 46 }}>
+        <div className="absolute whitespace-nowrap font-mono text-[11px] uppercase tracking-widest text-signal/80" style={{ left: ORIGIN_X - 4, top: BRANCH_Y + 46 }}>
           replay/{run.id}@{sel.id} · config {config.label}
         </div>
         <AnimatePresence>
@@ -342,26 +375,59 @@ export function ReplayView({
           <PrimaryButton className="mt-auto self-start" onClick={preview}>
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
           </PrimaryButton>
-
-          {/* Real execution — separate action, separate confirmation, only when a saved
-              snapshot actually has a step for this stage. Never fabricated. */}
-          <div className="mt-6 border-t border-ink-800 pt-5">
-            <Eyebrow>Run it for real</Eyebrow>
+          <p className="mt-1.5 font-mono text-[11px] text-ink-500">simulation only · no model calls</p>
+          {/* Real execution: visibly separate from the preview above: its own cost-coloured
+              panel, its own explicit confirmation, and only when a saved snapshot has a step
+              for this stage. Never fabricated. */}
+          <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
+            <div className="flex items-center justify-between">
+              <Eyebrow>Real execution</Eyebrow>
+              <span className="rounded-full border border-cost/50 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-cost">
+                spends AI allowance
+              </span>
+            </div>
             {snapshots === null ? (
               <p className="mt-2 text-[13px] text-ink-500">checking for a saved snapshot…</p>
+            ) : backendDown ? (
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                Unavailable: the pipeops server isn't reachable. Start it with <code className="font-mono">npm run server</code>. The
+                preview above still works.
+              </p>
             ) : match ? (
               <>
                 <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-                  Snapshot <span className="text-ink-200">{match.snap.id}</span> has a saved state before{' '}
-                  {sel.name}. Running replays that one agent for real — a genuine model call, not a preview.
+                  Replays {sel.name} alone from snapshot <span className="text-ink-200">{match.snap.id}</span>. This is a genuine model call, not the preview.
                 </p>
-                {!stageConfirming ? (
-                  <PrimaryButton className="mt-3" onClick={() => setStageConfirming(true)} disabled={stageRunning}>
+                {chosen && !chosen.engineReady && (
+                  <p className="mt-2 text-[12px] leading-relaxed text-cost">
+                    This variant's engine isn't built here. Run <code className="font-mono">cd eval &amp;&amp; {chosen.setup}</code> first.
+                  </p>
+                )}
+                {!stageConfirming && (
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="min-w-0 flex-1">
+                    <Select
+                      value={realVariant}
+                      onChange={(v) => {
+                        setRealVariant(v);
+                        setStageConfirming(false);
+                      }}
+                      options={variants.map((v) => ({ value: v.file, label: v.name }))}
+                      disabled={stageRunning}
+                      placeholder="choose a variant"
+                      direction="up"
+                    />
+                  </div>
+                  <PrimaryButton className="shrink-0" onClick={() => setStageConfirming(true)} disabled={stageRunning || !chosen?.engineReady}>
                     {stageRunning ? 'Running…' : 'Run Stage Replay'}
                   </PrimaryButton>
-                ) : (
+                </div>
+                )}
+                {stageConfirming && (
                   <div className="mt-3 flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
-                    <span className="text-[12px] leading-snug text-cost">This spends real AI allowance. Continue?</span>
+                    <span className="text-[12px] leading-snug text-cost">
+                      Run {sel.name} with “{chosen?.name}” for real? Takes a few minutes and spends AI allowance.
+                    </span>
                     <PrimaryButton className="shrink-0" onClick={runStageReplay}>
                       Confirm
                     </PrimaryButton>
@@ -370,19 +436,32 @@ export function ReplayView({
                     </GhostButton>
                   </div>
                 )}
+                {stageError && (
+                  <p className="mt-3 rounded-lg border border-cost/40 bg-cost/[0.06] p-2.5 text-[12px] leading-relaxed text-cost">{stageError}</p>
+                )}
                 {stageLog && (
-                  <div
-                    ref={stageLogRef}
-                    className="mt-3 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[11px] text-ink-300"
-                  >
-                    <pre className="whitespace-pre-wrap">{stageLog}</pre>
-                  </div>
+                  <details className="mt-3" open={stageRunning}>
+                    <summary className="cursor-pointer font-mono text-[11px] text-ink-500">{stageError ? 'technical details' : 'live output'}</summary>
+                    <div
+                      ref={stageLogRef}
+                      className="mt-2 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[11px] text-ink-300"
+                    >
+                      <pre className="whitespace-pre-wrap">{stageLog}</pre>
+                    </div>
+                  </details>
                 )}
               </>
+            ) : snapshots.length === 0 ? (
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                Unavailable on this machine: there is no saved snapshot (<code className="font-mono">eval/snapshots/</code> is local and
+                not part of the repo). Demo runs can only show the preview above. Create one with{' '}
+                <code className="font-mono">wfeval snapshot</code>.
+              </p>
             ) : (
-              <p className="mt-2 text-[13px] text-ink-500">No saved snapshot covers {sel.name} yet.</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-ink-400">No saved snapshot has a step for {sel.name}.</p>
             )}
           </div>
+
         </div>
       </div>
     </div>
@@ -450,7 +529,7 @@ function PlanStep({ n, title, active, children }: { n: number; title: string; ac
     <li className="flex gap-4">
       <span
         className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] transition-colors duration-300 ${
-          active ? 'border-signal bg-signal text-ink-950' : 'border-ink-600 text-ink-400'
+          active ? 'border-signal bg-signal text-on-signal' : 'border-ink-600 text-ink-400'
         }`}
       >
         {n}

@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-17T21:49:52.644Z",
+  "exportedAt": "2026-10-17T22:41:08.546Z",
   "run": {
     "id": "20261017T163733Z-episode-routing-receipts-s1-r1",
     "label": "episode-routing",
@@ -129,25 +129,25 @@
   "stages": {
     "discover": {
       "modelRequests": 16,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 114,
       "snapshotId": null,
-      "output": null
+      "output": "Reconnaissance for cycle 2026-10-10..2026-10-17 complete. Inspected activity-summary for full window (apps: Zen, Discord, Finder, Preview, TextEdit, Mail, HP Easy Start, Spotify, System Settings; 586 frames, 78.4 active min). Drilled into OCR/parsed content for TextEdit (tracker.csv), Finder (Paperwork/Inbox, Projects/Atlas), Mail (Atlas timeline thread, Beacon budget v2 thread), and Discord (#general/#outdoor - personal climbing chat, no work job, skipped). Searched prior history (2026-07-19..2026-10-10) for 'tracker.csv' and 'filed in the' phrases to check recurrence beyond this week; both returned zero results, so earlier-week recurrence of the two candidate jobs could not be confirmed from this account's retained history - deepen should attempt narrower follow-up searches if needed. Found and handed off two distinct, evidence-backed candidate jobs to workflow-deepen: (1) receipt/contract scan intake renamed and logged into tracker.csv with anomaly flags (duplicate/missing date/over-$500 review), observed across scan-0412..0421 processed 13-16 Oct; (2) filing incoming project email attachments (from northbeam.co colleagues) into matching Documents/Projects/<Name> folder plus a short acknowledgment reply, observed as two separate instances (Atlas on 10-16, Beacon on 10-15) with different senders/projects confirming it is a repeated procedure, not a one-off. HP Easy Start / System Settings printer driver search (10-14) looked like a one-off printer setup, not recurring, so n…"
     },
     "maintain": {
       "modelRequests": 4,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 19,
       "snapshotId": null,
-      "output": null
+      "output": "Checked workflow_workspace context: catalog is empty (0 workflows, 0 drafts, no researchNotes). No existing saved workflows exist to investigate for staleness, duplication, overbreadth, or inaccuracy, and no user corrections were available (the /feedback endpoint is not permitted for this pipe). Nothing to correct or enrich this cycle; maintenance requires discovery/deepen agents to populate the catalog first. No changes made."
     },
     "deepen": {
       "modelRequests": 17,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 198,
       "snapshotId": null,
-      "output": null
+      "output": "Both assigned drafts investigated with direct OCR verification and handed off to workflow-review with complete payloads matching outputContract. No drafts remain owned by workflow-deepen."
     },
     "review": {
       "modelRequests": 74,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 912,
       "snapshotId": null,
       "output": null
     }

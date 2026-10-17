@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Experiment, Run, StageId } from '../data/schema';
+import type { Experiment, Run, StageId, WorkflowRecord } from '../data/schema';
 import { ArrowRight, Badge, CountUp, Eyebrow, GhostButton, Missing, MissingBlock, PlayIcon, PrimaryButton } from '../components/ui';
 import { fmtSeconds, pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
@@ -13,7 +13,7 @@ const STAGE_H = 170;
 const STAGE_TOP = 214;
 const stageCx = (i: number) => 20 + 167.5 + 335 * i;
 const ACT = { cx: 690, top: 10, w: 560, h: 88 };
-const WF = { cx: 690, top: 480, w: 480, h: 88 };
+const WF = { cx: 690, top: 480, w: 1160, h: 96 };
 const EV = { cx: 690, top: 636, w: 660, h: 124 };
 const midY = STAGE_TOP + STAGE_H / 2;
 
@@ -28,7 +28,7 @@ const EDGES = [
 const LAST_PHASE = 7;
 const PHASE_MS = 720;
 
-type Sel = { kind: 'run' } | { kind: 'activity' } | { kind: 'stage'; id: StageId } | { kind: 'workflows' } | { kind: 'eval' };
+type Sel = { kind: 'run' } | { kind: 'activity' } | { kind: 'stage'; id: StageId } | { kind: 'workflows' } | { kind: 'workflow'; id: string } | { kind: 'eval' };
 
 export function CanvasView({
   experiment,
@@ -96,10 +96,10 @@ export function CanvasView({
           <svg width={CW} height={CH} className="pointer-events-none absolute inset-0 overflow-visible">
             <defs>
               <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 1 L9 5 L0 9" fill="none" stroke="#6B707C" strokeWidth="1.4" />
+                <path d="M0 1 L9 5 L0 9" fill="none" stroke="rgb(var(--ink-400))" strokeWidth="1.4" />
               </marker>
               <marker id="arrow-on" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 1 L9 5 L0 9" fill="none" stroke="#C8FF4D" strokeWidth="1.4" />
+                <path d="M0 1 L9 5 L0 9" fill="none" stroke="rgb(var(--signal))" strokeWidth="1.4" />
               </marker>
               <filter id="edge-glow" filterUnits="userSpaceOnUse" x="-50" y="-50" width={CW + 100} height={CH + 100}>
                 <feGaussianBlur stdDeviation="4" result="b" />
@@ -113,10 +113,10 @@ export function CanvasView({
               const lit = phase >= i + 2;
               return (
                 <g key={i}>
-                  <path d={d} stroke="#33363E" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
+                  <path d={d} stroke="rgb(var(--ink-600))" strokeWidth="1.5" fill="none" markerEnd="url(#arrow)" />
                   <motion.path
                     d={d}
-                    stroke="#C8FF4D"
+                    stroke="rgb(var(--signal))"
                     strokeWidth="2"
                     fill="none"
                     filter="url(#edge-glow)"
@@ -135,7 +135,7 @@ export function CanvasView({
             {phase >= 2 && phase <= LAST_PHASE && playing && (
               <motion.div
                 key={`p-${phase}`}
-                className="pointer-events-none absolute left-0 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal shadow-[0_0_18px_6px_rgba(200,255,77,0.55)]"
+                className="pointer-events-none absolute left-0 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal shadow-[0_0_18px_6px_rgb(var(--signal)/0.55)]"
                 style={{ offsetPath: `path('${EDGES[phase - 2]}')`, offsetRotate: '0deg' } as React.CSSProperties}
                 initial={{ offsetDistance: '0%', opacity: 1 } as never}
                 animate={{ offsetDistance: '100%', opacity: 1 } as never}
@@ -203,25 +203,51 @@ export function CanvasView({
             );
           })}
 
-          {/* generated workflows */}
-          <Node
+          {/* generated workflows: each is clickable and opens its full detail in the inspector */}
+          <motion.div
+            className={`absolute flex items-center gap-5 rounded-2xl border px-5 ${
+              phase === 6 ? 'glow-signal border-signal bg-ink-850' : phase > 6 ? 'border-ink-500 bg-ink-900' : 'border-ink-700 bg-ink-900/70'
+            } ${sel.kind === 'workflows' ? 'ring-1 ring-ink-100 ring-offset-4 ring-offset-ink-950' : ''}`}
             style={{ left: WF.cx - WF.w / 2, top: WF.top, width: WF.w, height: WF.h }}
-            state={phase === 6 ? 'active' : phase > 6 ? 'done' : 'idle'}
-            selected={sel.kind === 'workflows'}
-            onClick={() => setSel({ kind: 'workflows' })}
+            animate={{ scale: phase === 6 ? 1.02 : 1, opacity: phase < 6 ? 0.6 : 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
           >
-            <div className="flex h-full items-center justify-between px-6">
-              <div>
-                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-400">output</div>
-                <div className="mt-1 text-[20px] font-medium text-ink-50">Generated workflows</div>
+            <button onClick={() => setSel({ kind: 'workflows' })} className="w-[190px] shrink-0 text-left">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-400">output</div>
+              <div className="mt-1 flex items-baseline gap-2.5">
+                <span className="text-[20px] font-medium text-ink-50">Workflows</span>
+                {run.generatedWorkflows && (
+                  <span className="tnum text-[28px] font-semibold text-ink-50">{run.generatedWorkflows.length}</span>
+                )}
               </div>
-              {run.generatedWorkflows ? (
-                <span className="tnum text-[32px] font-semibold text-ink-50">{run.generatedWorkflows.length}</span>
-              ) : (
-                <Missing size="sm" path="generatedWorkflows" />
-              )}
-            </div>
-          </Node>
+              {run.generatedWorkflows && <div className="mt-1 font-mono text-[10px] text-ink-500">click one to inspect</div>}
+            </button>
+            {run.generatedWorkflows ? (
+              <div className="flex min-w-0 flex-1 items-stretch gap-3">
+                {run.generatedWorkflows.slice(0, 3).map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => setSel({ kind: 'workflow', id: w.id })}
+                    className={`min-w-0 flex-1 rounded-xl border px-4 py-2.5 text-left transition-colors hover:border-signal/70 ${
+                      sel.kind === 'workflow' && sel.id === w.id ? 'border-signal bg-signal/[0.06]' : 'border-ink-700 bg-ink-950/40'
+                    }`}
+                  >
+                    <div className="line-clamp-2 text-[13px] font-medium leading-snug text-ink-100">{w.title}</div>
+                  </button>
+                ))}
+                {run.generatedWorkflows.length > 3 && (
+                  <button
+                    onClick={() => setSel({ kind: 'workflows' })}
+                    className="shrink-0 self-center rounded-full border border-ink-700 px-3 py-1 font-mono text-[11px] text-ink-300 hover:border-ink-400"
+                  >
+                    +{run.generatedWorkflows.length - 3} more
+                  </button>
+                )}
+              </div>
+            ) : (
+              <Missing size="sm" path="generatedWorkflows" />
+            )}
+          </motion.div>
 
           {/* evaluation — score stays sealed until Step 03; requests/runtime are execution facts, not the score */}
           <Node
@@ -276,7 +302,7 @@ export function CanvasView({
             ))}
           </div>
           <span className="font-mono text-[11px] text-ink-500">
-            playback shows stage order only · per-stage timing not in artifact
+            playback shows stage order only
           </span>
         </div>
       </div>
@@ -299,6 +325,7 @@ export function CanvasView({
               onBack={() => setSel({ kind: 'run' })}
               onOpenEvidence={onOpenEvidence}
               onReplayStage={onReplayStage}
+              onSelectWorkflow={(id) => setSel(id ? { kind: 'workflow', id } : { kind: 'workflows' })}
             />
           </motion.div>
         </AnimatePresence>
@@ -363,6 +390,7 @@ function Inspector({
   onBack,
   onOpenEvidence,
   onReplayStage,
+  onSelectWorkflow,
 }: {
   sel: Sel;
   run: Run;
@@ -370,6 +398,7 @@ function Inspector({
   onBack: () => void;
   onOpenEvidence: () => void;
   onReplayStage: (s: StageId) => void;
+  onSelectWorkflow: (id: string) => void;
 }) {
   const back = (
     <button onClick={onBack} className="mb-6 font-mono text-[11px] uppercase tracking-widest text-ink-500 hover:text-ink-200">
@@ -435,8 +464,16 @@ function Inspector({
         <div className="mt-8 space-y-4">
           <Field label="Model requests" value={rec?.modelRequests} path={`${base}.modelRequests`} />
           <Field label="Runtime" value={rec?.runtimeSeconds != null ? `${rec.runtimeSeconds}s` : null} path={`${base}.runtimeSeconds`} />
-          <Field label="Saved snapshot" value={rec?.snapshotId} path={`${base}.snapshotId`} />
-          <Field label="Stage output" value={rec?.output} path={`${base}.output`} />
+          {/* Snapshots exist only for stage replays, so the row is simply omitted when absent. */}
+          {rec?.snapshotId != null && <Field label="Saved snapshot" value={rec.snapshotId} path={`${base}.snapshotId`} />}
+          <div className="flex min-h-0 flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">Agent's own summary</span>
+            {rec?.output != null ? (
+              <p className="max-h-[200px] overflow-y-auto whitespace-pre-wrap pr-1 text-[13px] leading-relaxed text-ink-200">{rec.output}</p>
+            ) : (
+              <Missing path={`${base}.output`} />
+            )}
+          </div>
         </div>
         <div className="mt-auto rounded-2xl border border-signal/30 bg-signal/[0.04] p-5">
           <div className="text-[15px] font-medium text-ink-50">Debug this stage in isolation</div>
@@ -481,7 +518,11 @@ function Inspector({
         <div className="mt-8 space-y-3 overflow-y-auto">
           {run.generatedWorkflows ? (
             run.generatedWorkflows.map((w) => (
-              <div key={w.id} className="rounded-xl border border-ink-700 p-4">
+              <button
+                key={w.id}
+                onClick={() => onSelectWorkflow(w.id)}
+                className="block w-full rounded-xl border border-ink-700 p-4 text-left transition-colors hover:border-signal/70"
+              >
                 <div className="text-[15px] font-medium text-ink-100">{w.title}</div>
                 {w.confidence != null && (
                   <div className="mt-1 font-mono text-[11px] text-ink-500">confidence {w.confidence}/4</div>
@@ -510,7 +551,8 @@ function Inspector({
                     {w.limitations.join(' · ')}
                   </p>
                 )}
-              </div>
+                <div className="mt-3 font-mono text-[11px] text-ink-500">view full workflow →</div>
+              </button>
             ))
           ) : (
             <MissingBlock title="Workflow list, titles and steps" path={`runs[${run.id}].generatedWorkflows`}>
@@ -527,6 +569,12 @@ function Inspector({
         </GhostButton>
       </div>
     );
+  }
+
+  if (sel.kind === 'workflow') {
+    const w = run.generatedWorkflows?.find((x) => x.id === sel.id);
+    if (!w) return <div className="flex h-full flex-col">{back}</div>;
+    return <WorkflowDetail w={w} run={run} onBack={() => onSelectWorkflow('')} onOpenEvidence={onOpenEvidence} />;
   }
 
   // eval — Step 02 is "what did the agents do", not "did they pass": the score stays
@@ -566,6 +614,91 @@ function Field({ label, value, path }: { label: string; value: string | number |
     <div className="flex flex-col gap-1.5 border-b border-ink-800 pb-4">
       <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">{label}</span>
       {value != null ? <span className="text-[18px] text-ink-50">{value}</span> : <Missing path={path} />}
+    </div>
+  );
+}
+
+/** Full detail of one generated workflow, read straight from the run's catalog fields.
+ *  Absent fields render the standard labelled placeholder, nothing is filled in. */
+function WorkflowDetail({
+  w,
+  run,
+  onBack,
+  onOpenEvidence,
+}: {
+  w: WorkflowRecord;
+  run: Run;
+  onBack: () => void;
+  onOpenEvidence: () => void;
+}) {
+  const base = `runs[${run.id}].generatedWorkflows[${w.id}]`;
+  const matched = run.groundTruth?.find((g) => g.id === w.matchedTo);
+  const list = (items: string[] | null | undefined, path: string, numbered = false) =>
+    items?.length ? (
+      <ul className="mt-2 space-y-2">
+        {items.map((t, i) => (
+          <li key={i} className="flex gap-3 text-[13px] leading-relaxed text-ink-200">
+            <span className="mt-0.5 shrink-0 font-mono text-[11px] text-ink-500">{numbered ? pad2(i + 1) : '·'}</span>
+            {t}
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <div className="mt-2">
+        <Missing size="sm" path={path} />
+      </div>
+    );
+  return (
+    <div className="flex h-full flex-col">
+      <button onClick={onBack} className="mb-6 self-start font-mono text-[11px] uppercase tracking-widest text-ink-500 hover:text-ink-200">
+        ← all workflows
+      </button>
+      <Eyebrow>Generated workflow</Eyebrow>
+      <div className="mt-2 text-[24px] font-semibold leading-snug tracking-tight text-ink-50">{w.title}</div>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {w.confidence != null ? (
+          <span className="flex items-center gap-2 font-mono text-[11px] text-ink-400">
+            confidence
+            <span className="flex gap-1">
+              {[1, 2, 3, 4].map((n) => (
+                <span key={n} className={`h-1.5 w-5 rounded-full ${n <= w.confidence! ? 'bg-signal' : 'bg-ink-700'}`} />
+              ))}
+            </span>
+            <span className="text-ink-200">{w.confidence}/4</span>
+          </span>
+        ) : (
+          <Missing size="sm" path={`${base}.confidence`} />
+        )}
+        {matched && (
+          <span className="rounded-full border border-ink-600 px-2.5 py-0.5 font-mono text-[10.5px] text-ink-300" title="Pairing made by the grader in Step 03, not by an agent">
+            graded as: {matched.title}
+          </span>
+        )}
+      </div>
+
+      <div className="mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+        <Section label="Trigger">{w.trigger ? <p className="mt-2 text-[13px] leading-relaxed text-ink-200">{w.trigger}</p> : <div className="mt-2"><Missing size="sm" path={`${base}.trigger`} /></div>}</Section>
+        <Section label="Outcome">{w.outcome ? <p className="mt-2 text-[13px] leading-relaxed text-ink-200">{w.outcome}</p> : <div className="mt-2"><Missing size="sm" path={`${base}.outcome`} /></div>}</Section>
+        <Section label={`Steps${w.steps ? ` · ${w.steps.length}` : ''}`}>{list(w.steps, `${base}.steps`, true)}</Section>
+        <Section label="Variations">{list(w.variations, `${base}.variations`)}</Section>
+        <Section label="Limitations">{list(w.limitations, `${base}.limitations`)}</Section>
+      </div>
+
+      <p className="mt-4 text-[12px] leading-relaxed text-ink-500">
+        The run's artifacts record the pipeline's final catalog, not which agent wrote each field, so none is attributed to one.
+      </p>
+      <GhostButton className="mt-3 self-start" onClick={onOpenEvidence}>
+        Match against ground truth <ArrowRight />
+      </GhostButton>
+    </div>
+  );
+}
+
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="border-t border-ink-800 pt-4">
+      <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">{label}</span>
+      {children}
     </div>
   );
 }

@@ -20,6 +20,9 @@ export interface VariantSummary {
   file: string;
   name: string;
   description: string | null;
+  /** false when the variant's engine binary isn't built on this machine */
+  engineReady: boolean;
+  setup: string | null;
 }
 
 export interface SnapshotStep {

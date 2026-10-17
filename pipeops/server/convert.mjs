@@ -45,16 +45,34 @@ async function readPhaseCatalogs(dir) {
   return catalogs;
 }
 
+/** Per-phase agent executions (start/finish/duration per pipe run) and each agent's own
+ *  end-of-cycle note, from phase<N>/executions.json and phase<N>/phase.json. */
+async function readPhaseMeta(dir) {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  const meta = {};
+  for (const e of entries) {
+    const m = e.isDirectory() && e.name.match(/^phase(\d+)$/);
+    if (!m) continue;
+    const [executions, phase] = await Promise.all([
+      readJson(path.join(dir, e.name, 'executions.json')).catch(() => null),
+      readJson(path.join(dir, e.name, 'phase.json')).catch(() => null),
+    ]);
+    meta[Number(m[1])] = { executions, notes: phase?.cycle?.notes ?? null };
+  }
+  return meta;
+}
+
 /** Reads every artifact for one run directory and returns the raw pieces, or throws. */
 export async function loadRunArtifacts(runsDir, runId) {
   const dir = path.join(runsDir, runId);
-  const [run, results, truth, catalogs] = await Promise.all([
+  const [run, results, truth, catalogs, phaseMeta] = await Promise.all([
     readJson(path.join(dir, 'run.json')),
     readJsonl(path.join(dir, 'results.jsonl')),
     readJson(path.join(dir, 'truth.json')).catch(() => null),
     readPhaseCatalogs(dir),
+    readPhaseMeta(dir),
   ]);
-  return { dir, run, results, truth, catalogs };
+  return { dir, run, results, truth, catalogs, phaseMeta };
 }
 
 export async function listRuns(runsDir, entries) {
@@ -220,8 +238,25 @@ function buildChecks(results, truth, catalogs) {
   return out;
 }
 
-function buildStages(results) {
+const NOTE_MAX = 1500;
+
+function buildStages(results, phaseMeta = {}) {
   const byTask = {};
+  const seconds = {}; // sum of the agent's execution durations (ms) across its runs
+  const notes = {};
+  for (const [phase, meta] of Object.entries(phaseMeta)) {
+    for (const [pipe, runs] of Object.entries(meta.executions ?? {})) {
+      const id = pipe.replace(/^workflow-/, '');
+      const ms = runs.reduce((s, r) => s + (typeof r.duration_ms === 'number' ? r.duration_ms : 0), 0);
+      if (runs.length) seconds[id] = (seconds[id] ?? 0) + ms / 1000;
+    }
+    for (const [pipe, text] of Object.entries(meta.notes ?? {})) {
+      if (typeof text !== 'string' || !text.trim()) continue;
+      const id = pipe.replace(/^workflow-/, '');
+      const clip = text.trim().length > NOTE_MAX ? `${text.trim().slice(0, NOTE_MAX)}…` : text.trim();
+      (notes[id] ??= []).push(Object.keys(phaseMeta).length > 1 ? `Phase ${phase}: ${clip}` : clip);
+    }
+  }
   for (const r of results) {
     for (const [task, u] of Object.entries(r.usage?.by_task ?? {})) {
       const id = task.replace(/^workflow-/, '');
@@ -232,9 +267,12 @@ function buildStages(results) {
   for (const s of STAGES) {
     stages[s.id] = {
       modelRequests: byTask[s.id] ?? null,
-      runtimeSeconds: null, // not separable from requests.jsonl timestamps reliably — stays honest
-      snapshotId: null,
-      output: null,
+      // Summed agent execution time from executions.json (agents can overlap, so these do not
+      // add up to the run's wall-clock runtime). Absent -> null, never estimated.
+      runtimeSeconds: seconds[s.id] != null ? Math.round(seconds[s.id]) : null,
+      snapshotId: null, // full evaluations don't save snapshots (wfeval snapshot does)
+      // The agent's own end-of-cycle note (phase.json cycle.notes), verbatim.
+      output: notes[s.id]?.join('\n\n') ?? null,
     };
   }
   return stages;
@@ -278,7 +316,7 @@ function buildGroundTruth(truth) {
   return Object.entries(truth.jobs).map(([id, j]) => ({ id, title: j.summary ?? id }));
 }
 
-export function toRawRun(id, label, role, { run, results, truth, catalogs }) {
+export function toRawRun(id, label, role, { run, results, truth, catalogs, phaseMeta }) {
   const passed = results.reduce((s, r) => s + (r.passed ?? 0), 0);
   const scored = results.reduce((s, r) => s + (r.scored ?? 0), 0);
   const requests = results.reduce((s, r) => s + (r.usage?.requests ?? 0), 0);
@@ -295,7 +333,7 @@ export function toRawRun(id, label, role, { run, results, truth, catalogs }) {
       modelRequests: requests,
       runtimeSeconds: Math.round(seconds),
     },
-    stages: buildStages(results),
+    stages: buildStages(results, phaseMeta),
     recordedActivity: null,
     generatedWorkflows: buildWorkflows(results, catalogs),
     groundTruth: buildGroundTruth(truth),
@@ -355,7 +393,7 @@ export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtif
     source: {
       kind: 'artifact',
       file: `eval/runs/${baselineId}/results.jsonl`,
-      note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is not derivable from these files yet and renders as a placeholder.',
+      note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is the summed agent execution time from executions.json.',
     },
   });
 }

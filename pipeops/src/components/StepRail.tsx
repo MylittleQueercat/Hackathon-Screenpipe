@@ -29,7 +29,7 @@ export function StepRail({ step, loaded, onStep }: { step: number; loaded: boole
                 <span
                   className={`relative flex h-7 w-7 items-center justify-center rounded-full border font-mono text-[11px] transition ${
                     active
-                      ? 'border-signal bg-signal text-ink-950'
+                      ? 'border-signal bg-signal text-on-signal'
                       : done
                         ? 'border-signal/60 text-signal'
                         : 'border-ink-600 text-ink-400'

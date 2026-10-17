@@ -31,7 +31,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
           onClick={onEnter}
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
-          className="group mt-12 inline-flex items-center gap-3 rounded-full bg-signal px-7 py-3.5 text-[16px] font-semibold text-ink-950 transition hover:shadow-[0_0_40px_-6px_rgba(200,255,77,0.75)]"
+          className="group mt-12 inline-flex items-center gap-3 rounded-full bg-signal px-7 py-3.5 text-[16px] font-semibold text-on-signal transition hover:shadow-[0_0_40px_-6px_rgb(var(--signal)/0.75)]"
         >
           Enter the Lab
           <span className="transition-transform group-hover:translate-x-1">→</span>
@@ -39,7 +39,7 @@ export function Landing({ onEnter }: { onEnter: () => void }) {
       </motion.div>
 
       <span className="absolute bottom-8 font-mono text-[11px] tracking-widest text-ink-600">
-        an evaluation workbench · not a dashboard
+        Hackathon · Build Agents That Remember
       </span>
     </div>
   );
@@ -65,7 +65,7 @@ function Lifecycle() {
             </feMerge>
           </filter>
         </defs>
-        <circle r={r} fill="none" stroke="#24262C" strokeWidth="1" strokeDasharray="2 10" />
+        <circle r={r} fill="none" stroke="rgb(var(--ink-700))" strokeWidth="1" strokeDasharray="2 10" />
         {STAGES.map((_, i) => {
           const a = pos(i);
           const b = pos((i + 1) % n);
@@ -74,7 +74,7 @@ function Lifecycle() {
               key={i}
               d={`M ${a.x} ${a.y} A ${r} ${r} 0 0 1 ${b.x} ${b.y}`}
               fill="none"
-              stroke="#C8FF4D"
+              stroke="rgb(var(--signal))"
               strokeWidth="2"
               filter="url(#land-glow)"
               initial={{ pathLength: 0, opacity: 0 }}
@@ -89,8 +89,8 @@ function Lifecycle() {
             <g key={name} transform={`translate(${p.x} ${p.y})`}>
               <motion.circle
                 r="5"
-                fill="#0A0B0D"
-                stroke="#C8FF4D"
+                fill="rgb(var(--ink-950))"
+                stroke="rgb(var(--signal))"
                 strokeWidth="1.5"
                 animate={{ scale: [1, 1.5, 1], opacity: [0.7, 1, 0.7] }}
                 transition={{ duration: 2.2, delay: i * 0.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -102,7 +102,7 @@ function Lifecycle() {
                 className="font-mono"
                 fontSize="13"
                 letterSpacing="0.14em"
-                fill="#9095A0"
+                fill="rgb(var(--ink-300))"
               >
                 {name.toUpperCase()}
               </text>

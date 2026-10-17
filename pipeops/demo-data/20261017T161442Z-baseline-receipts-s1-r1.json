@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-17T21:49:52.511Z",
+  "exportedAt": "2026-10-17T22:41:08.412Z",
   "run": {
     "id": "20261017T161442Z-baseline-receipts-s1-r1",
     "label": "baseline",
@@ -127,25 +127,25 @@
   "stages": {
     "discover": {
       "modelRequests": 14,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 89,
       "snapshotId": null,
-      "output": null
+      "output": "Reconnaissance complete for window 2026-10-10..2026-10-17. Inspected activity-summary (apps/windows), OCR searches for tracker.csv, scan-04xx, Atlas, Beacon, Climbers. Found two distinct, evidenced candidate jobs and handed both to workflow-deepen: (1) receipt/contract scan intake & filing into tracker.csv with duplicate/over-threshold/missing-date flags (TextEdit+Preview+Finder, 2026-10-16); (2) emailed project document filing into Projects/<Name> folder + reply confirmation, observed twice with different senders/projects (Beacon w/ Priya Shah 10-15, Atlas w/ Alex Moreau 10-16), suggesting a generalizable habit. Checked Discord 'Weekend Climbers' activity - casual personal chat (pizza/weather banter), not a work job. Browsing of sourdough/keyboards/trains/weather pages appears to be personal leisure research with no actionable outcome, not included as a job. No existing catalog workflows to compare against (catalogRevision 0, empty workflows list). Coverage limitation: did not exhaustively replay every frame; relied on representative OCR snapshots per window/app. Did not verify destination folder of renamed receipt scans (tracker.csv only, no Finder move observed) - flagged as open question for deepen."
     },
     "maintain": {
       "modelRequests": 8,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 45,
       "snapshotId": null,
-      "output": null
+      "output": "Inspected workflow_workspace context (revision 1, catalogRevision 0): saved workflows list is empty, no drafts assigned to workflow-maintain, researchNotes empty. There is nothing in the existing catalog to investigate, correct, enrich, or re-time. Also reviewed activity-summary for the cycle window (2026-10-10 to 2026-10-17): activity is mostly personal browsing (sourdough baking, keyboards, night trains, weather, climbing Discord) plus a tracker.csv in TextEdit and Finder paperwork inbox — no clear recurring/repeated job matching an existing workflow since none exist yet. Since maintenance requires existing saved workflows to compare against, and the catalog is empty, no corrections or enrichments are possible this cycle. No drafts were created or modified. Recommend workflow-discover populate the catalog first; workflow-maintain has nothing to act on until then."
     },
     "deepen": {
       "modelRequests": 14,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 115,
       "snapshotId": null,
-      "output": null
+      "output": "Both assigned drafts researched further (verified source OCR directly for both candidates) and handed off to workflow-review with complete payloads matching outputContract: (1) receipt/contract scan intake-classify-log workflow, (2) emailed project document filing + reply confirmation workflow, confirmed across two independent instances (Beacon/Priya Shah, Atlas/Alex Moreau). No remaining open drafts assigned to workflow-deepen."
     },
     "review": {
       "modelRequests": 53,
-      "runtimeSeconds": null,
+      "runtimeSeconds": 0,
       "snapshotId": null,
       "output": null
     }

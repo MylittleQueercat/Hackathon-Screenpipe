@@ -6,11 +6,11 @@ import { Badge } from './ui';
 export function Logo() {
   return (
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden>
-      <circle cx="4" cy="13" r="3" fill="#C8FF4D" />
-      <circle cx="13" cy="5" r="2.4" stroke="#C8FF4D" strokeWidth="1.4" />
-      <circle cx="13" cy="21" r="2.4" stroke="#C8FF4D" strokeWidth="1.4" />
-      <circle cx="22" cy="13" r="3" stroke="#C8FF4D" strokeWidth="1.4" />
-      <path d="M6.5 11.5 L11 6.5 M6.5 14.5 L11 19.5 M15 6.5 L19.6 11.4 M15 19.5 L19.6 14.6" stroke="#C8FF4D" strokeOpacity=".55" strokeWidth="1.2" />
+      <circle cx="4" cy="13" r="3" fill="rgb(var(--signal))" />
+      <circle cx="13" cy="5" r="2.4" stroke="rgb(var(--signal))" strokeWidth="1.4" />
+      <circle cx="13" cy="21" r="2.4" stroke="rgb(var(--signal))" strokeWidth="1.4" />
+      <circle cx="22" cy="13" r="3" stroke="rgb(var(--signal))" strokeWidth="1.4" />
+      <path d="M6.5 11.5 L11 6.5 M6.5 14.5 L11 19.5 M15 6.5 L19.6 11.4 M15 19.5 L19.6 14.6" stroke="rgb(var(--signal))" strokeOpacity=".55" strokeWidth="1.2" />
     </svg>
   );
 }
@@ -41,7 +41,7 @@ export function Header({
   const showSwitcher = activeRunId !== null && step !== 3;
   const o = ORIGIN_LABEL[origin ?? 'recorded'];
   return (
-    <header className="relative z-20 flex h-[72px] shrink-0 items-center justify-between border-b border-ink-800/80 px-10">
+    <header className="relative z-20 flex h-[72px] shrink-0 items-center justify-between border-b border-ink-800/80 pl-10 pr-[88px]">
       <div className="flex items-center gap-4">
         <Logo />
         <span className="text-[17px] font-semibold tracking-tight text-ink-50">PipeOps</span>

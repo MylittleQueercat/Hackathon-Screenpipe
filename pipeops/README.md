@@ -45,6 +45,14 @@ Step 01 has two sources. **Demo runs** are sanitized, portable experiments bundl
 runs in `eval/runs/`. To share your own run: `npm run export-run -- <runId>`, then
 `npm run validate-demo` and `npm test` — full steps in `demo-data/CONTRIBUTING.md`.
 
+## Troubleshooting
+
+`ModuleNotFoundError: No module named 'wfeval'` from `uv run wfeval …` on macOS: Python 3.13+
+ignores `.pth` files carrying the macOS *hidden* flag, which breaks the editable install.
+The pipeops server already works around it (it runs wfeval with `PYTHONPATH=eval/src`). For the CLI by hand, use
+`PYTHONPATH=src uv run wfeval …` from `eval/`, or `chflags nohidden eval/.venv/lib/*/site-packages/*.pth`
+(the flag can come back).
+
 ## Notes
 
 - The app only reads artifacts and, on explicit request, runs the harness. It never

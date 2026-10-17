@@ -181,7 +181,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
             <div className={`mt-6 rounded-2xl border p-5 ${check.passed ? 'border-signal/40 bg-signal/[0.05]' : 'border-cost/40 bg-cost/[0.06]'}`}>
               <div className="flex items-center justify-between">
                 <span className={`flex items-center gap-3 text-[22px] font-semibold ${check.passed ? 'text-signal' : 'text-cost'}`}>
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-full ${check.passed ? 'bg-signal text-ink-950' : 'bg-cost text-ink-950'}`}>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full ${check.passed ? 'bg-signal text-on-signal' : 'bg-cost text-on-signal'}`}>
                     {check.passed ? '✓' : '×'}
                   </span>
                   {check.passed ? 'Passed' : 'Failed'}
@@ -305,7 +305,7 @@ function Matching({ run }: { run: Run }) {
                 key={i}
                 d={`M 0 ${y0} C 100 ${y0}, 100 ${y1}, 200 ${y1}`}
                 fill="none"
-                stroke={ready ? '#C8FF4D' : '#4A4E58'}
+                stroke={ready ? 'rgb(var(--signal))' : 'rgb(var(--ink-500))'}
                 strokeWidth="1.5"
                 className={ready ? '' : 'dash-flow'}
               />

@@ -29,6 +29,9 @@ async function fakeRun(runsDir, id, { variant = 'v', kind, seed = 1, sha = 'aa',
   await writeFile(path.join(d, 'results.jsonl'), JSON.stringify(row) + '\n');
   await writeFile(path.join(d, 'truth.json'), JSON.stringify({ checks: [{ id: 'c1', kind: 'published', job: 'j' }], jobs: { j: { expect: 'published', summary: 'Job J' } } }));
   await writeFile(path.join(d, 'engine.log'), 'SECRET sk-abcdefghijklmnop0123');
+  await writeFile(path.join(d, 'phase1/executions.json'), JSON.stringify({ 'workflow-discover': [
+    { status: 'completed', duration_ms: 90000 }, { status: 'completed', duration_ms: 5 }] }));
+  await writeFile(path.join(d, 'phase1/phase.json'), JSON.stringify({ cycle: { notes: { 'workflow-discover': 'Found two jobs. Saved to /Users/someone/x', 'workflow-review': '   ' } } }));
   return d;
 }
 
@@ -60,6 +63,20 @@ test('export keeps only allowlisted content: no engine log, host paths or secret
   assert.ok(!text.includes('sk-abc') && !text.includes('/Users/someone') && !text.includes('.engines'));
   assert.deepEqual(validatePortable(doc, { fileName: 'r1.json' }), []);
   assert.equal(doc.metrics.costUsd, null); // missing data stays null, never invented
+  await rm(tmp, { recursive: true });
+});
+
+test('per-stage runtime and the agent note come from the run files; nothing is invented', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
+  await fakeRun(tmp, 'r1');
+  const doc = await exportRun(tmp, 'r1');
+  assert.equal(doc.stages.discover.runtimeSeconds, 90); // summed executions
+  assert.match(doc.stages.discover.output, /^Found two jobs\. Saved to \/Users\/<redacted>\/x$/);
+  for (const id of ['maintain', 'deepen', 'review']) {
+    assert.equal(doc.stages[id].runtimeSeconds, null, id); // no executions -> null, not 0
+    assert.equal(doc.stages[id].output, null, id); // blank note -> null
+  }
+  assert.equal(doc.stages.discover.snapshotId, null);
   await rm(tmp, { recursive: true });
 });
 

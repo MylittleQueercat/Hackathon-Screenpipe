@@ -6,7 +6,7 @@
 
 import express from 'express';
 import { spawn } from 'node:child_process';
-import { readFile, readdir } from 'node:fs/promises';
+import { access, readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundleFromRuns, buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
@@ -14,11 +14,15 @@ import { conditionsKey, portableToRawRun, readPortableFile, validatePortable } f
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..'); // .../Hackathon-Screenpipe
-const EVAL_DIR = path.join(REPO_ROOT, 'eval');
+const EVAL_DIR = process.env.PIPEOPS_EVAL_DIR ?? path.join(REPO_ROOT, 'eval');
 const RUNS_DIR = process.env.PIPEOPS_RUNS_DIR ?? path.join(EVAL_DIR, 'runs');
 const DEMO_DIR = process.env.PIPEOPS_DEMO_DIR ?? path.join(__dirname, '..', 'demo-data');
 const VARIANTS_DIR = path.join(EVAL_DIR, 'variants');
 const SNAPSHOTS_DIR = path.join(EVAL_DIR, 'snapshots');
+// Spawned wfeval processes import the package from eval/src directly. On macOS the editable
+// install's .pth file can get the "hidden" flag, which Python 3.13+ ignores ("No module named
+// 'wfeval'"); putting src/ on PYTHONPATH makes Stage Replay and runs independent of that.
+const PY_ENV = { ...process.env, PYTHONPATH: [path.join(EVAL_DIR, 'src'), process.env.PYTHONPATH].filter(Boolean).join(path.delimiter) };
 const PORT = process.env.PIPEOPS_SERVER_PORT ? Number(process.env.PIPEOPS_SERVER_PORT) : 8787;
 
 const app = express();
@@ -107,7 +111,7 @@ app.get('/api/demo-experiment', async (req, res) => {
       source: {
         kind: 'artifact',
         file: `pipeops/demo-data/${base.run.id}.json`,
-        note: 'Bundled demo run (portable pipeops.run format, sanitized). Per-stage runtime is not recorded in the format and renders as a placeholder.',
+        note: 'Bundled demo run (portable pipeops.run format, sanitized). Per-stage runtime is the summed agent execution time recorded at export.',
       },
     }),
   );
@@ -119,7 +123,9 @@ app.get('/api/variants', async (_req, res) => {
     const variants = await Promise.all(
       files.map(async (f) => {
         const v = JSON.parse(await readFile(path.join(VARIANTS_DIR, f), 'utf8'));
-        return { file: `variants/${f}`, name: v.name, description: v.description ?? null };
+        // A variant whose engine binary isn't built here can't be run (see setup-engine.sh).
+        const engineReady = await access(path.join(EVAL_DIR, v.binary ?? '')).then(() => true, () => false);
+        return { file: `variants/${f}`, name: v.name, description: v.description ?? null, engineReady, setup: engineReady ? null : `./setup-engine.sh ${v.name}` };
       }),
     );
     res.json(variants);
@@ -195,7 +201,7 @@ app.post('/api/wfeval/run', async (req, res) => {
   if (repeat) args.push('--repeat', String(repeat));
 
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' });
-  const proc = spawn('uv', args, { cwd: EVAL_DIR });
+  const proc = spawn('uv', args, { cwd: EVAL_DIR, env: PY_ENV });
   live = { proc, done: false, runId: null, error: null };
 
   const beforeDirs = new Set(await readdir(RUNS_DIR).catch(() => []));
@@ -221,7 +227,7 @@ app.post('/api/wfeval/run', async (req, res) => {
     if (newDir) {
       res.write(`\n[pipeops] run complete: ${newDir}\n`);
       await new Promise((resolve) => {
-        const grade = spawn('uv', ['run', 'wfeval', 'grade', `runs/${newDir}`], { cwd: EVAL_DIR });
+        const grade = spawn('uv', ['run', 'wfeval', 'grade', `runs/${newDir}`], { cwd: EVAL_DIR, env: PY_ENV });
         grade.stdout.on('data', onData);
         grade.stderr.on('data', onData);
         grade.on('close', resolve);
@@ -255,12 +261,30 @@ app.post('/api/wfeval/stage', async (req, res) => {
   if (!step || !variant) {
     return res.status(400).json({ error: 'step and variant are required' });
   }
+  // Validate before anything is spawned: stay inside snapshots/ and variants/, and fail
+  // with a readable message instead of a Python traceback.
+  if (String(step).includes('..') || !/^snapshots\/[\w.-]+\/steps\/[\w.-]+$/.test(String(step)) || !(await exists(path.join(EVAL_DIR, String(step), 'step.json')))) {
+    return res.status(400).json({ error: `No saved snapshot step "${step}". Snapshots live in eval/snapshots/ and are created with \`wfeval snapshot\`.` });
+  }
+  if (String(variant).includes('..') || !/^variants\/[\w.-]+\.json$/.test(String(variant)) || !(await exists(path.join(EVAL_DIR, String(variant))))) {
+    return res.status(400).json({ error: `Unknown variant "${variant}".` });
+  }
+  if (task && !['workflow-discover', 'workflow-maintain', 'workflow-deepen', 'workflow-review'].includes(String(task))) {
+    return res.status(400).json({ error: `Unknown task "${task}".` });
+  }
+  if (repeat !== undefined && !(Number.isInteger(Number(repeat)) && Number(repeat) >= 1 && Number(repeat) <= 3)) {
+    return res.status(400).json({ error: 'repeat must be 1–3' });
+  }
+  const vdef = JSON.parse(await readFile(path.join(EVAL_DIR, String(variant)), 'utf8'));
+  if (!(await exists(path.join(EVAL_DIR, vdef.binary ?? '')))) {
+    return res.status(409).json({ error: `The engine for variant "${vdef.name}" isn't built on this machine. Build it first: cd eval && ./setup-engine.sh ${vdef.name}` });
+  }
   const args = ['run', 'wfeval', 'stage', String(step), '--variant', String(variant)];
   if (task) args.push('--task', String(task));
   if (repeat) args.push('--repeat', String(repeat));
 
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' });
-  const proc = spawn('uv', args, { cwd: EVAL_DIR });
+  const proc = spawn('uv', args, { cwd: EVAL_DIR, env: PY_ENV });
   live = { proc, done: false, runId: null, error: null };
 
   const onData = (buf) => res.write(buf.toString('utf8'));
@@ -284,6 +308,9 @@ app.post('/api/wfeval/stage', async (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const exists = (p) => access(p).then(() => true, () => false);
+
+// Loopback only: this server can start paid model runs, so it must not be reachable from the LAN.
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`pipeops server on http://localhost:${PORT} (eval dir: ${EVAL_DIR}, demo dir: ${DEMO_DIR})`);
 });

@@ -6,6 +6,9 @@
     <title>PipeOps · Agent Evaluation Lab</title>
   </head>
   <body class="bg-ink-950">
+    <script>
+      try { var q = new URLSearchParams(location.search).get('theme'); if (q === 'light' || q === 'dark') localStorage.setItem('pipeops-theme', q); if (localStorage.getItem('pipeops-theme') === 'light') document.documentElement.dataset.theme = 'light'; } catch (e) {}
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
