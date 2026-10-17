@@ -17,6 +17,7 @@ export function Logo() {
 
 const ORIGIN_LABEL: Record<DataOrigin, { label: string; tone: 'recorded' | 'live' | 'placeholder' }> = {
   recorded: { label: 'Recorded experiment', tone: 'recorded' },
+  demo: { label: 'Demo experiment', tone: 'recorded' },
   live: { label: 'Live experiment · just ran', tone: 'live' },
   mock: { label: 'Mock placeholder', tone: 'placeholder' },
 };

@@ -5,6 +5,7 @@
 
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { conditionsKey, fullRunProblem } from './portable.mjs';
 
 const STAGES = [
   { id: 'discover', name: 'Discover', summary: 'Finds candidate workflows in recorded activity.' },
@@ -61,6 +62,9 @@ export async function listRuns(runsDir, entries) {
   for (const id of entries) {
     try {
       const { run, results } = await loadRunArtifacts(runsDir, id);
+      // Stage / snapshot runs grade a single agent, not a full cycle — never list them as
+      // full evaluation scores (they aren't comparable to them).
+      if (fullRunProblem(run, results)) continue;
       const totalRequests = results.reduce((s, r) => s + (r.usage?.requests ?? 0), 0);
       const totalSeconds = results.reduce((s, r) => s + (r.seconds ?? 0), 0);
       const passed = results.reduce((s, r) => s + (r.passed ?? 0), 0);
@@ -71,6 +75,8 @@ export async function listRuns(runsDir, entries) {
         suite: run.data?.suite ?? null,
         seed: run.data?.seed ?? null,
         phases: results.map((r) => r.phase),
+        conditions: conditionsKey({ suite: run.data?.suite, seed: run.data?.seed, repeat: results[0]?.repeat,
+          phases: results.map((r) => r.phase), dataSha256: run.data?.sha256 }),
         startedAt: run.started_at ?? null,
         finishedAt: run.finished_at ?? null,
         qualityPassed: passed,
@@ -308,25 +314,17 @@ function verdict(a, b) {
   return { verdict: 'No change detected.', note: 'Identical totals.' };
 }
 
-export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtifacts, variantId, variantLabel, variantArtifacts }) {
-  const baseRun = toRawRun(baselineId, baselineLabel, 'baseline', baselineArtifacts);
-  const varRun = variantArtifacts
-    ? toRawRun(variantId, variantLabel, 'variant', variantArtifacts)
-    : toRawRun(baselineId, baselineLabel, 'variant', baselineArtifacts);
+/** Assembles the UI bundle from two already-built RawRuns (local artifacts or demo files). */
+export function bundleFromRuns({ baseRun, varRun, suite, source, hasVariant }) {
   const { verdict: v, note } = verdict(baseRun, varRun);
-  const suite = baselineArtifacts.run.data?.suite ?? 'unknown';
   return {
     schemaVersion: 1,
-    source: {
-      kind: 'artifact',
-      file: `eval/runs/${baselineId}/results.jsonl`,
-      note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is not derivable from these files yet and renders as a placeholder.',
-    },
+    source,
     experiment: {
       id: suite,
       title: `Workflow discovery — ${suite}`,
       subject: 'Screenpipe Workflows',
-      question: variantArtifacts ? `Does ${varRun.label} improve on ${baseRun.label}?` : `How did ${baseRun.label} do?`,
+      question: hasVariant ? `Does ${varRun.label} improve on ${baseRun.label}?` : `How did ${baseRun.label} do?`,
     },
     stages: STAGES.map((s) => ({ id: s.id, name: s.name, summary: s.summary, summaryStatus: 'draft' })),
     evidenceLenses: EVIDENCE_LENSES,
@@ -339,4 +337,25 @@ export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtif
       note,
     },
   };
+}
+
+export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtifacts, variantId, variantLabel, variantArtifacts }) {
+  const keyOf = (a) => conditionsKey({ suite: a.run.data?.suite, seed: a.run.data?.seed, repeat: a.results[0]?.repeat,
+    phases: a.results.map((r) => r.phase), dataSha256: a.run.data?.sha256 });
+  if (variantArtifacts && keyOf(baselineArtifacts) !== keyOf(variantArtifacts)) {
+    throw new Error('these runs used different test conditions (suite, seed, phases or data) and cannot be compared');
+  }
+  const baseRun = toRawRun(baselineId, baselineLabel, 'baseline', baselineArtifacts);
+  const varRun = variantArtifacts
+    ? toRawRun(variantId, variantLabel, 'variant', variantArtifacts)
+    : toRawRun(baselineId, baselineLabel, 'variant', baselineArtifacts);
+  return bundleFromRuns({
+    baseRun, varRun, hasVariant: Boolean(variantArtifacts),
+    suite: baselineArtifacts.run.data?.suite ?? 'unknown',
+    source: {
+      kind: 'artifact',
+      file: `eval/runs/${baselineId}/results.jsonl`,
+      note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is not derivable from these files yet and renders as a placeholder.',
+    },
+  });
 }

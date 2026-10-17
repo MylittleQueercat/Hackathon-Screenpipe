@@ -9,12 +9,14 @@ import { spawn } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
+import { bundleFromRuns, buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
+import { conditionsKey, portableToRawRun, readPortableFile, validatePortable } from './portable.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..'); // .../Hackathon-Screenpipe
 const EVAL_DIR = path.join(REPO_ROOT, 'eval');
-const RUNS_DIR = path.join(EVAL_DIR, 'runs');
+const RUNS_DIR = process.env.PIPEOPS_RUNS_DIR ?? path.join(EVAL_DIR, 'runs');
+const DEMO_DIR = process.env.PIPEOPS_DEMO_DIR ?? path.join(__dirname, '..', 'demo-data');
 const VARIANTS_DIR = path.join(EVAL_DIR, 'variants');
 const SNAPSHOTS_DIR = path.join(EVAL_DIR, 'snapshots');
 const PORT = process.env.PIPEOPS_SERVER_PORT ? Number(process.env.PIPEOPS_SERVER_PORT) : 8787;
@@ -29,13 +31,86 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, evalDir: EVAL_DIR }))
 
 app.get('/api/runs', async (_req, res) => {
   try {
-    const entries = (await readdir(RUNS_DIR, { withFileTypes: true }))
+    // A fresh clone has no eval/runs/ — that's an empty Local Runs list, not an error.
+    const entries = (await readdir(RUNS_DIR, { withFileTypes: true }).catch(() => []))
       .filter((e) => e.isDirectory())
       .map((e) => e.name);
     res.json(await listRuns(RUNS_DIR, entries));
   } catch (e) {
     res.status(500).json({ error: String(e.message ?? e) });
   }
+});
+
+// Demo Runs: portable, sanitized experiment files bundled in pipeops/demo-data/. Every
+// request re-reads the directory, so a newly added valid file shows up without a restart.
+// Invalid files are skipped (and reported via /api/demo-runs/problems), never half-loaded.
+async function readDemoRuns() {
+  const files = (await readdir(DEMO_DIR).catch(() => [])).filter((f) => f.endsWith('.json')).sort();
+  const runs = [];
+  const problems = [];
+  for (const f of files) {
+    try {
+      const doc = await readPortableFile(path.join(DEMO_DIR, f));
+      const errs = validatePortable(doc, { fileName: f });
+      if (errs.length) problems.push({ file: f, errors: errs });
+      else runs.push(doc);
+    } catch (e) {
+      problems.push({ file: f, errors: [String(e.message ?? e)] });
+    }
+  }
+  return { runs, problems };
+}
+
+app.get('/api/demo-runs', async (_req, res) => {
+  const { runs } = await readDemoRuns();
+  res.json(
+    runs
+      .map((d) => ({
+        id: d.run.id,
+        variant: d.provenance.variant.name,
+        suite: d.conditions.suite,
+        seed: d.conditions.seed,
+        phases: d.conditions.phases,
+        conditions: conditionsKey(d.conditions),
+        startedAt: d.run.startedAt,
+        finishedAt: d.run.finishedAt,
+        qualityPassed: d.metrics.qualityPassed,
+        qualityTotal: d.metrics.qualityTotal,
+        modelRequests: d.metrics.modelRequests,
+        runtimeSeconds: d.metrics.runtimeSeconds,
+      }))
+      .sort((a, b) => (a.id < b.id ? 1 : -1)),
+  );
+});
+
+app.get('/api/demo-runs/problems', async (_req, res) => res.json((await readDemoRuns()).problems));
+
+app.get('/api/demo-experiment', async (req, res) => {
+  const baselineId = req.query.baseline;
+  const variantId = req.query.variant && req.query.variant !== baselineId ? req.query.variant : null;
+  if (!baselineId) return res.status(400).json({ error: 'missing ?baseline=<runId>' });
+  const { runs } = await readDemoRuns();
+  const base = runs.find((d) => d.run.id === baselineId);
+  const variant = variantId ? runs.find((d) => d.run.id === variantId) : null;
+  if (!base || (variantId && !variant)) return res.status(404).json({ error: 'demo run not found' });
+  if (variant && conditionsKey(base.conditions) !== conditionsKey(variant.conditions)) {
+    return res.status(400).json({ error: 'these runs used different test conditions (suite, seed, phases or data) and cannot be compared' });
+  }
+  const baseRun = portableToRawRun(base, 'baseline');
+  const varRun = portableToRawRun(variant ?? base, 'variant');
+  res.json(
+    bundleFromRuns({
+      baseRun,
+      varRun,
+      hasVariant: Boolean(variant),
+      suite: base.conditions.suite,
+      source: {
+        kind: 'artifact',
+        file: `pipeops/demo-data/${base.run.id}.json`,
+        note: 'Bundled demo run (portable pipeops.run format, sanitized). Per-stage runtime is not recorded in the format and renders as a placeholder.',
+      },
+    }),
+  );
 });
 
 app.get('/api/variants', async (_req, res) => {
@@ -210,5 +285,5 @@ app.post('/api/wfeval/stage', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`pipeops server on http://localhost:${PORT} (eval dir: ${EVAL_DIR})`);
+  console.log(`pipeops server on http://localhost:${PORT} (eval dir: ${EVAL_DIR}, demo dir: ${DEMO_DIR})`);
 });

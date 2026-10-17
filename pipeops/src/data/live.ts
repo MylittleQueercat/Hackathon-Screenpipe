@@ -6,6 +6,8 @@ export interface RunSummary {
   suite: string | null;
   seed: number | null;
   phases: number[];
+  /** Opaque key: two runs may only be compared when their keys are equal. */
+  conditions: string;
   startedAt: string | null;
   finishedAt: string | null;
   qualityPassed: number;
@@ -46,14 +48,19 @@ export async function fetchRuns(): Promise<RunSummary[]> {
   return json(await fetch('/api/runs'));
 }
 
+/** Bundled, sanitized runs from pipeops/demo-data/ — work without eval/runs/. */
+export async function fetchDemoRuns(): Promise<RunSummary[]> {
+  return json(await fetch('/api/demo-runs'));
+}
+
 export async function fetchVariants(): Promise<VariantSummary[]> {
   return json(await fetch('/api/variants'));
 }
 
-export async function fetchLiveExperiment(baseline: string, variant?: string): Promise<RawExperimentBundle> {
+export async function fetchLiveExperiment(baseline: string, variant?: string, source: 'local' | 'demo' = 'local'): Promise<RawExperimentBundle> {
   const params = new URLSearchParams({ baseline });
   if (variant) params.set('variant', variant);
-  return json(await fetch(`/api/experiment?${params}`));
+  return json(await fetch(`${source === 'demo' ? '/api/demo-experiment' : '/api/experiment'}?${params}`));
 }
 
 export async function fetchStatus(): Promise<{ running: boolean; runId: string | null; error: string | null }> {

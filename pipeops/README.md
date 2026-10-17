@@ -38,6 +38,13 @@ continue with a placeholder mock experiment instead — it never falls back sile
 The UI renders on a fixed 1920×1080 surface that scales to fit the window, for stable
 screen recordings.
 
+## Demo runs vs local runs
+
+Step 01 has two sources. **Demo runs** are sanitized, portable experiments bundled in
+`demo-data/` (they work on a fresh clone, no `eval/runs/` needed). **Local runs** are the
+runs in `eval/runs/`. To share your own run: `npm run export-run -- <runId>`, then
+`npm run validate-demo` and `npm test` — full steps in `demo-data/CONTRIBUTING.md`.
+
 ## Notes
 
 - The app only reads artifacts and, on explicit request, runs the harness. It never

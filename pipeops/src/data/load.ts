@@ -12,7 +12,7 @@ import type { CheckSlot, Experiment, RawExperimentBundle, RawRun, Run } from './
 
 /** Where the currently-loaded bundle came from — shown in the Header so a recorded run
  *  and a just-finished live run are never visually confused with each other. */
-export type DataOrigin = 'recorded' | 'live' | 'mock';
+export type DataOrigin = 'recorded' | 'demo' | 'live' | 'mock';
 
 function normalizeRun(run: RawRun): Run {
   // Per-check records either exist in the artifact or they don't. When they don't,

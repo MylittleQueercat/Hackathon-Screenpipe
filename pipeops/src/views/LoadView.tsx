@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import mockJson from '../data/mock-experiment.json';
 import type { DataOrigin } from '../data/load';
 import type { RawExperimentBundle } from '../data/schema';
-import { fetchLiveExperiment, fetchRuns, fetchVariants, streamWfevalRun, type RunSummary, type VariantSummary } from '../data/live';
+import { fetchDemoRuns, fetchLiveExperiment, fetchRuns, fetchVariants, streamWfevalRun, type RunSummary, type VariantSummary } from '../data/live';
 import { Eyebrow, GhostButton, PrimaryButton, Select } from '../components/ui';
 
 const mock = mockJson as RawExperimentBundle;
@@ -26,7 +26,10 @@ export function LoadView({
   standalone?: boolean;
   currentRunId?: string;
 }) {
-  const [runs, setRuns] = useState<RunSummary[] | null>(null);
+  const [source, setSource] = useState<'demo' | 'local'>('demo');
+  const [localRuns, setLocalRuns] = useState<RunSummary[] | null>(null);
+  const [demoRuns, setDemoRuns] = useState<RunSummary[] | null>(null);
+  const runs = source === 'demo' ? demoRuns : localRuns;
   const [variants, setVariants] = useState<VariantSummary[] | null>(null);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -40,7 +43,10 @@ export function LoadView({
   const refresh = () => {
     setBackendError(null);
     fetchRuns()
-      .then(setRuns)
+      .then(setLocalRuns)
+      .catch((e: Error) => setBackendError(e.message));
+    fetchDemoRuns()
+      .then(setDemoRuns)
       .catch((e: Error) => setBackendError(e.message));
     fetchVariants()
       .then((v) => {
@@ -65,16 +71,17 @@ export function LoadView({
     try {
       // Pair with the most recent run of a different variant, so Compare Variants (Step
       // 04) has something real to compare against instead of the run against itself.
+      // Only runs with identical test conditions (suite, seed, phases, data) qualify.
       const picked = runs?.find((r) => r.id === id);
       const partner = runs
-        ?.filter((r) => r.id !== id && r.variant !== picked?.variant)
+        ?.filter((r) => r.id !== id && r.variant !== picked?.variant && r.conditions === picked?.conditions)
         .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))[0];
       // Whichever of the two is actually named "baseline" takes the baseline slot,
       // regardless of which one was clicked.
       const [baselineId, variantId] =
         partner?.variant === 'baseline' && picked?.variant !== 'baseline' ? [partner.id, id] : [id, partner?.id];
-      const bundle = await fetchLiveExperiment(baselineId, variantId);
-      onLoad(bundle, id, 'recorded');
+      const bundle = await fetchLiveExperiment(baselineId, variantId, source);
+      onLoad(bundle, id, source === 'demo' ? 'demo' : 'recorded');
     } catch (e) {
       setBackendError((e as Error).message);
     } finally {
@@ -143,9 +150,23 @@ export function LoadView({
             <Eyebrow>A · Explore recorded runs</Eyebrow>
             <GhostButton onClick={refresh}>refresh</GhostButton>
           </div>
+          <div className="mt-4 flex gap-2">
+            {(['demo', 'local'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSource(s)}
+                className={`rounded-full border px-4 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.12em] transition-colors ${
+                  source === s ? 'border-signal/70 text-signal' : 'border-ink-700 text-ink-400 hover:border-ink-500'
+                }`}
+              >
+                {s === 'demo' ? 'Demo runs' : 'Local runs'}
+              </button>
+            ))}
+          </div>
           <div className="mt-5 flex-1 space-y-3 overflow-y-auto pr-2">
             {runs === null && !backendError && <p className="font-mono text-[13px] text-ink-500">loading runs…</p>}
-            {runs?.length === 0 && <p className="text-[14px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
+            {runs?.length === 0 && source === 'local' && <p className="text-[14px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
+            {runs?.length === 0 && source === 'demo' && <p className="text-[14px] text-ink-500">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
             {runs?.map((r) => (
               <RunCard key={r.id} r={r} active={r.id === currentRunId} loading={loadingId === r.id} onClick={() => loadRecorded(r.id)} />
             ))}
