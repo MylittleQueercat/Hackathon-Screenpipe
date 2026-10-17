@@ -173,7 +173,9 @@ requests for receipts seed 1), and the restored slot path is the same on every M
 `uv run wfeval probe-publish snapshots/<id>/steps/<NN>-p1-workflow-review --variant <v>`
 costs nothing: it restores the step and asks the engine to publish each open draft as
 the agents left it, with no model. A variant that changes publication checks shows its
-effect there before a Review stage pays for the retries.
+effect there before a Review stage pays for the retries. `--parallel` sends all those
+publishes at once against the same revisions, as Review does when it publishes several
+drafts in one turn.
 
 `uv run wfeval why-rejected runs/<id>` also costs nothing: for each rejected publish in
 a run, it checks every stage evidence entry and procedure item the agent submitted
