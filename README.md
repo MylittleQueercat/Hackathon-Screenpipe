@@ -1,27 +1,39 @@
 # PipeOps: Prove It Before You Ship It
 
-> Code tests tell you if your software works. **PipeOps tells you if your agents found the right work.**
+> **Did your agent find the right workflows? And how much did it cost?**
 
 **Team PipeOps** · Hackathon · Build Agents That Remember · Track 01, *Find what to automate*
 
-screenpipe Workflows turns your screen history into potential automations. But generating a workflow
-is not the same as discovering the right one:
+screenpipe Workflows turns your screen history into potential automations. When a developer changes the
+agents behind it, a prompt, a routing rule or the model, ordinary code tests cannot say whether it got better.
+Two questions decide that:
 
-- Did the agent find the recurring task?
-- Did it miss the important exceptions?
-- Did it include irrelevant activity?
-- Is every step backed by real evidence?
+- **Quality.** Did the agents discover the right work? Did they find the recurring task, keep its steps and
+  exceptions, ignore irrelevant activity, and back every claim with evidence that really exists?
+- **Efficiency.** What did it take to discover it? Model requests, token usage and runtime.
 
-**PipeOps is an evaluation workbench built specifically for screenpipe Workflows.** It runs the real
-Workflows agents against controlled activity histories with known answers, then checks what they
-discovered, what they missed, and whether the evidence they cite actually exists. Developers can then
-put two agent versions side by side and see what a change did to **workflow quality, model requests,
-token usage and runtime**.
+**PipeOps helps developers measure, compare and improve AI workflow agents, balancing discovery quality with
+execution cost.** It runs the real Workflows agents against controlled activity histories with known answers,
+scores the workflows they publish, and records what each run consumed.
+
+Either number alone misleads. A cheaper agent that finds fewer workflows is not an improvement, and an agent
+that finds the same workflows at a higher cost is not one either. Our own bundled pair shows it: baseline and
+episode-routing both pass 11/11 checks, but the variant needs 111 model requests against 89 and 1175 s against
+650 s, so PipeOps reports *no improvement demonstrated*.
+
+With PipeOps a developer can:
+
+1. **Evaluate** a run: what was discovered, what was missed, and the evidence behind each of the 11 checks.
+2. **Compare** two agent versions under identical test conditions, on quality, model requests and runtime
+   (the workbench), with token usage alongside in `wfeval compare` (the command line).
+3. **Replay one stage** (say, only the Review agent) from a saved state instead of rerunning the whole cycle.
+   A stage improvement is a lead, not proof: it does not by itself show the full pipeline got better.
 
 Instead of guessing whether a change made Workflows better, you get evidence to decide.
 
-Finding repeatable work is only the first step. PipeOps helps developers verify that Workflows found the
-right tasks, so they can improve agent behavior with measurable results.
+> **Scope.** PipeOps evaluates how Workflows *discovers* workflows from activity (activity → agents →
+> workflows). It does not measure what an automation saves a user once it is executed, and it reports
+> tokens and runtime, not dollars, because we have no reliable price data to convert them.
 
 ![Agent Execution: what Screenpipe actually produced](docs/screenshots/light-agent-execution.png)
 
