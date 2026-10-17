@@ -28,3 +28,20 @@ truncated at the output limit, 1 note missing. `wfeval why-rejected` on r2: ever
 procedure rejection had items citing a capture absent from that stage's evidence, which
 Review never added; it published by dropping those items (draft 592b stage 1: 3 items
 to 1).
+
+## second-precision
+
+Agents cite whole seconds; captures carry milliseconds; publication compared them
+exactly in three places (evidence resolution, procedure sources, timing boundaries). A
+whole-second citation now names the one capture of that app in that second
+(`cites_capture`; ambiguous or neighbouring seconds still fail).
+`patches/variants/second-precision.patch`.
+
+| Run | Requests | Seconds | Checks | Failed calls |
+|---|---|---|---|---|
+| 20261017T195449Z r1 | 61 | 562 | 11/11 | not logged |
+
+No saving on its own. Free probe (`wfeval probe-publish`): drafts get past evidence
+matching and fail on their real errors instead; a hand-corrected draft publishes here
+and is still rejected by baseline. Review's cost was the procedure rejections it could
+not diagnose, not this.

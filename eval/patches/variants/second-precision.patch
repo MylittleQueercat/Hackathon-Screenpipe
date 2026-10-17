@@ -1,0 +1,264 @@
+diff --git a/crates/screenpipe-core/src/workflows/evidence.rs b/crates/screenpipe-core/src/workflows/evidence.rs
+index 729a83e14..6dcb9ee47 100644
+--- a/crates/screenpipe-core/src/workflows/evidence.rs
++++ b/crates/screenpipe-core/src/workflows/evidence.rs
+@@ -107,7 +107,7 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
+                 .get("app_name")
+                 .and_then(Value::as_str)
+                 .unwrap_or("Conversation");
+-            if timestamp != at || !actual_app.eq_ignore_ascii_case(app) {
++            if !cites_capture(at, timestamp) || !actual_app.eq_ignore_ascii_case(app) {
+                 return None;
+             }
+             let detail = content
+@@ -132,6 +132,17 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
+         .collect()
+ }
+ 
++/// The recorder interval a citation names: its millisecond, or its whole second
++/// when cited without a fraction (see `cites_capture`).
++fn citation_span(at: DateTime<Utc>) -> ChronoDuration {
++    use chrono::Timelike;
++    if at.nanosecond() == 0 {
++        ChronoDuration::seconds(1)
++    } else {
++        ChronoDuration::milliseconds(1)
++    }
++}
++
+ #[derive(Debug)]
+ pub enum VerificationError {
+     Unavailable(&'static str),
+@@ -194,10 +205,7 @@ pub async fn resolve_references(
+                     .map_err(|e| e.to_string())?;
+                 url.query_pairs_mut()
+                     .append_pair("start_time", &at.to_rfc3339())
+-                    .append_pair(
+-                        "end_time",
+-                        &(at + ChronoDuration::milliseconds(1)).to_rfc3339(),
+-                    )
++                    .append_pair("end_time", &(at + citation_span(at)).to_rfc3339())
+                     .append_pair("app_name", &app)
+                     .append_pair("content_type", "all")
+                     .append_pair("include_frames", "false")
+@@ -247,7 +255,7 @@ pub async fn resolve_references(
+                             .into(),
+                     );
+                 }
+-                let frames: Vec<i64> = payload["data"]
++                let frames: Vec<(i64, DateTime<Utc>)> = payload["data"]
+                     .as_array()
+                     .into_iter()
+                     .flatten()
+@@ -255,13 +263,14 @@ pub async fn resolve_references(
+                         let content = &row["content"];
+                         let timestamp = content["timestamp"]
+                             .as_str()
+-                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?;
+-                        if timestamp != at
++                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?
++                            .with_timezone(&Utc);
++                        if !cites_capture(at, timestamp)
+                             || !content["app_name"].as_str()?.eq_ignore_ascii_case(&app)
+                         {
+                             return None;
+                         }
+-                        content["frame_id"].as_i64().filter(|id| *id > 0)
++                        Some((content["frame_id"].as_i64().filter(|id| *id > 0)?, timestamp))
+                     })
+                     .collect();
+                 Ok((at, app.clone(), source_points(&payload, at, &app), frames))
+@@ -274,12 +283,12 @@ pub async fn resolve_references(
+     // revoked sources cannot survive merely because they were in the index.
+     for result in results {
+         let (at, app, points, frames) = result?;
+-        for id in frames {
+-            catalog.frames.insert(id, (at, app.clone()));
++        for (id, captured) in frames {
++            catalog.frames.insert(id, (captured, app.clone()));
+         }
+         catalog
+             .points
+-            .retain(|p| p.timestamp != at || !p.app.eq_ignore_ascii_case(&app));
++            .retain(|p| !cites_capture(at, p.timestamp) || !p.app.eq_ignore_ascii_case(&app));
+         for point in points {
+             catalog.remember_app(&point.app);
+             catalog.points.push(point);
+@@ -332,7 +341,7 @@ mod tests {
+             health: json!({}),
+         };
+         let activity = vec![json!({"start":"2026-08-01T00:00:00Z","end":"2026-08-03T00:00:00Z"})];
+-        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00Z","app":"Editor","detail":"Invented result"}]}]});
++        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00.250Z","app":"Editor","detail":"Invented result"}]}]});
+         let (catalog, reads) =
+             resolve_references(&endpoint, &value, EvidenceCatalog::default(), &activity)
+                 .await
+@@ -349,6 +358,20 @@ mod tests {
+             .is_err());
+     }
+ 
++    #[test]
++    fn whole_second_citations_read_their_whole_second() {
++        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
++        assert_eq!(citation_span(at("2026-08-01T10:00:00Z")), ChronoDuration::seconds(1));
++        assert_eq!(citation_span(at("2026-08-01T10:00:00.250Z")), ChronoDuration::milliseconds(1));
++        let payload = json!({"data":[
++            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:00.725Z","app_name":"Editor","text":"in that second"}},
++            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:01.000Z","app_name":"Editor","text":"next second"}}]});
++        let points = source_points(&payload, at("2026-08-01T10:00:00Z"), "editor");
++        assert_eq!(points.len(), 1);
++        assert_eq!(points[0].timestamp, at("2026-08-01T10:00:00.725Z"));
++        assert!(source_points(&payload, at("2026-08-01T10:00:00.500Z"), "Editor").is_empty());
++    }
++
+     #[tokio::test]
+     async fn unavailable_recorder_is_retryable_but_access_denial_is_not() {
+         use tokio::io::{AsyncReadExt, AsyncWriteExt};
+diff --git a/crates/screenpipe-core/src/workflows/mod.rs b/crates/screenpipe-core/src/workflows/mod.rs
+index 036f28668..ca0ee0673 100644
+--- a/crates/screenpipe-core/src/workflows/mod.rs
++++ b/crates/screenpipe-core/src/workflows/mod.rs
+@@ -215,11 +215,29 @@ impl EvidenceCatalog {
+     }
+ 
+     pub fn resolve(&self, timestamp: DateTime<Utc>, requested_app: &str) -> Option<&EvidencePoint> {
+-        self.points.iter().find(|point| {
+-            point.timestamp == timestamp
+-                && !requested_app.trim().is_empty()
+-                && point.app.eq_ignore_ascii_case(requested_app.trim())
+-        })
++        let app = requested_app.trim();
++        if app.is_empty() {
++            return None;
++        }
++        let same_app = |point: &&EvidencePoint| point.app.eq_ignore_ascii_case(app);
++        if let Some(point) = self
++            .points
++            .iter()
++            .filter(same_app)
++            .find(|point| point.timestamp == timestamp)
++        {
++            return Some(point);
++        }
++        // A whole-second citation of the only capture of that app in that second.
++        let mut within = self
++            .points
++            .iter()
++            .filter(same_app)
++            .filter(|point| cites_capture(timestamp, point.timestamp));
++        match (within.next(), within.next()) {
++            (Some(point), None) => Some(point),
++            _ => None,
++        }
+     }
+ 
+     pub fn meeting_minutes(&self, timestamp: DateTime<Utc>, app: &str) -> Option<u64> {
+@@ -464,6 +482,14 @@ pub fn normalized_frequency(repetitions: u64, days: u16) -> String {
+     )
+ }
+ 
++/// Whether a cited time names this capture. Agents often cite whole seconds
++/// (copied from drafts and summaries) while captures carry milliseconds; a
++/// whole-second citation names a capture in that second. Never nearer seconds.
++pub fn cites_capture(cited: DateTime<Utc>, capture: DateTime<Utc>) -> bool {
++    use chrono::{SubsecRound, Timelike};
++    cited == capture || (cited.nanosecond() == 0 && capture.trunc_subsecs(0) == cited)
++}
++
+ // Exact quote/reference validation is a traceability gate, not semantic proof.
+ // Semantic correctness is evaluated separately; the UI still labels drafts.
+ // Accessibility layouts and compact parsed views can wrap the same words
+@@ -505,7 +531,9 @@ pub fn normalize_procedure(stage: &Value, evidence: &[Value]) -> Vec<Value> {
+                     .get("timestamp")
+                     .and_then(Value::as_str)
+                     .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
+-                    == Some(timestamp)
++                    .is_some_and(|time| {
++                        cites_capture(timestamp.with_timezone(&Utc), time.with_timezone(&Utc))
++                    })
+                     && source
+                         .get("app")
+                         .and_then(Value::as_str)
+@@ -1811,4 +1839,34 @@ mod quote_tests {
+         audio[0]["source"] = json!("audio");
+         assert!(normalize_procedure(&stage, &audio).is_empty());
+     }
++
++    #[test]
++    fn whole_second_citations_name_the_capture_in_that_second_only() {
++        let evidence = vec![json!({
++            "timestamp":"2026-09-18T10:00:00.725+00:00", "app":"Receipts", "source":"screen",
++            "detail":"Receipt saved successfully."
++        })];
++        let step = |at: &str| json!({"procedure":[{"kind":"check", "text":"Check the save",
++            "timestamp":at, "app":"Receipts", "quote":"Receipt saved successfully."}]});
++        let kept = normalize_procedure(&step("2026-09-18T10:00:00Z"), &evidence);
++        assert_eq!(kept.len(), 1);
++        assert_eq!(kept[0]["timestamp"], "2026-09-18T10:00:00.725+00:00");
++        for other in ["2026-09-18T10:00:01Z", "2026-09-18T09:59:59Z", "2026-09-18T10:00:00.500Z"] {
++            assert!(normalize_procedure(&step(other), &evidence).is_empty(), "{other}");
++        }
++
++        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
++        let point = |s: &str| EvidencePoint {
++            timestamp: at(s), app: "Receipts".into(), detail: "Receipt".into(),
++            source: "screen".into(), speaker: None,
++        };
++        let mut catalog = EvidenceCatalog::default();
++        catalog.points.push(point("2026-09-18T10:00:00.725Z"));
++        let resolved = catalog.resolve(at("2026-09-18T10:00:00Z"), "receipts").unwrap();
++        assert_eq!(resolved.timestamp, at("2026-09-18T10:00:00.725Z"));
++        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Mail").is_none());
++        catalog.points.push(point("2026-09-18T10:00:00.900Z"));
++        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Receipts").is_none(), "ambiguous");
++        assert!(catalog.resolve(at("2026-09-18T10:00:00.900Z"), "Receipts").is_some());
++    }
+ }
+diff --git a/crates/screenpipe-core/src/workflows/timing.rs b/crates/screenpipe-core/src/workflows/timing.rs
+index 2186f6698..132862b8b 100644
+--- a/crates/screenpipe-core/src/workflows/timing.rs
++++ b/crates/screenpipe-core/src/workflows/timing.rs
+@@ -32,15 +32,15 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
+             .points
+             .iter()
+             .find(|p| {
+-                p.timestamp == at
++                cites_capture(at, p.timestamp)
+                     && p.app.eq_ignore_ascii_case(app)
+                     && matches!(p.source.as_str(), "screen" | "parsed")
+                     && contains_source_quote(&p.detail, quote)
+             })
+             .ok_or("Timing boundary does not match captured source text")?;
+         Ok((
+-            at,
+-            json!({"timestamp":at.to_rfc3339(),"app":point.app,"quote":quote}),
++            point.timestamp,
++            json!({"timestamp":point.timestamp.to_rfc3339(),"app":point.app,"quote":quote}),
+         ))
+     };
+     let mut runs = Vec::new();
+@@ -112,6 +112,24 @@ mod tests {
+         assert_eq!(result["sampleCount"], 3);
+     }
+     #[test]
++    fn whole_second_boundaries_name_the_capture_in_that_second() {
++        let (input, mut catalog) = fixture();
++        for point in &mut catalog.points {
++            point.timestamp += ChronoDuration::milliseconds(250);
++        }
++        let result = normalize_timing(&input, &catalog).unwrap();
++        assert_eq!(result["averageMinutes"], 30.0);
++        let stored = result["runs"][0]["start"]["timestamp"].as_str().unwrap();
++        assert_eq!(
++            DateTime::parse_from_rfc3339(stored).unwrap(),
++            catalog.points[0].timestamp
++        );
++        // A citation with its own fraction still has to match exactly.
++        let mut off = input;
++        off["timingRuns"][0]["start"]["timestamp"] = json!("2026-09-01T09:00:00.500Z");
++        assert!(normalize_timing(&off, &catalog).is_err());
++    }
++    #[test]
+     fn sparse_evidence_without_explicit_runs_is_not_a_duration() {
+         let (_, catalog) = fixture();
+         assert!(normalize_timing(&json!({"totalMinutes":9999}), &catalog)
