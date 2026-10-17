@@ -7,11 +7,17 @@ of a long run's stdout, so they undercount; they remain the source of agent runs
 tokens for runs made before the extension logged usage. Pi reports cost 0 for
 model `auto` (the gateway picks the model), so dollars come only from `prices.json`
 when it names a price; tokens are the measurement, dollars an estimate on top.
+
+The extension also logs each Workflows call and the engine's reply (`workspace` lines):
+`workspace` in the totals counts calls by action and failures by message, numbers and
+ids masked, so a run shows what its agents retried on.
 """
 
 from __future__ import annotations
 
 import json
+import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
@@ -73,13 +79,21 @@ def request_log_usage(path: Path | None, since: str, until: str) -> dict | None:
     lo, hi = when(since), when(until)
     total = {k: 0 for k in TOKENS} | {"requests": 0, "tool_calls": 0, "peak_context": 0}
     by_task: dict[str, dict] = {}
+    calls: dict[str, Counter] = {}
+    failures: Counter = Counter()
     found = False
     for line in path.read_text().splitlines():
         try:
             e = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if e.get("type") not in ("usage", "tool") or not e.get("at") or not lo <= when(e["at"]) <= hi:
+        if e.get("type") not in ("usage", "tool", "workspace") or not e.get("at") or not lo <= when(e["at"]) <= hi:
+            continue
+        if e["type"] == "workspace":
+            action, failure = e.get("action") or "?", workspace_failure(e)
+            calls.setdefault(action, Counter())["failed" if failure else "ok"] += 1
+            if failure:
+                failures[failure] += 1
             continue
         task = by_task.setdefault(e.get("task") or "?", {k: 0 for k in TOKENS} | {"requests": 0, "tool_calls": 0})
         if e["type"] == "tool":
@@ -94,7 +108,25 @@ def request_log_usage(path: Path | None, since: str, until: str) -> dict | None:
         total["requests"] += 1
         task["requests"] += 1
         total["peak_context"] = max(total["peak_context"], (u.get("input") or 0) + (u.get("cacheRead") or 0))
+    if calls:
+        total["workspace"] = {"calls": {a: dict(c) for a, c in sorted(calls.items())},
+                              "failed": sum(failures.values()), "failures": dict(failures.most_common())}
     return {**total, "by_task": by_task} if found else None
+
+
+FAILED = "Workflow operation failed: "
+
+
+def workspace_failure(entry: dict) -> str | None:
+    """A failed Workflows call's reply as a kind: its first sentence, with numbers and ids
+    masked so that the same rule counts once. None when the call succeeded."""
+    reply = (entry.get("reply") or "").strip()
+    if entry.get("ok", True) and not reply.startswith(FAILED):
+        return None
+    reply = reply.removeprefix(FAILED)
+    first = re.split(r"(?<=[.!?])\s", reply, maxsplit=1)[0]
+    first = re.sub(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", "<id>", first)
+    return re.sub(r"\d+", "N", first)[:200]
 
 
 def phase_usage(logs: list[Path], model: str | None = None, request_log: Path | None = None,

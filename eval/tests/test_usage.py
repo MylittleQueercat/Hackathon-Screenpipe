@@ -42,3 +42,34 @@ def test_request_log_is_the_full_record(tmp_path):
         ("request_log", 10, 90, 5, 1, 1)
     assert u["peak_context"] == 100 and u["by_task"]["workflow-review"]["requests"] == 1
     assert phase_usage([], None, log, "2026-10-18T00:00:00+00:00", "2026-10-18T01:00:00+00:00")["source"] == "pipe_logs"
+
+
+def test_workspace_rejections_are_counted_by_kind(tmp_path):
+    from wfeval.usage import phase_usage
+    log = tmp_path / "requests.jsonl"
+    at = "2026-10-17T11:00:0{}Z".format
+    rows = [{"type": "usage", "at": at(1), "task": "workflow-review", "usage": {"input": 1}},
+            {"type": "workspace", "at": at(2), "action": "publish", "ok": False,
+             "reply": "Workflow operation failed: 422: Stage 2 retained 1 of 2 proposed procedure items. Check exact"},
+            {"type": "workspace", "at": at(3), "action": "publish", "ok": False,
+             "reply": "Workflow operation failed: 422: Stage 1 retained 0 of 3 proposed procedure items. Check"},
+            {"type": "workspace", "at": at(4), "action": "handoff", "ok": True, "reply": '{"saved":true}'},
+            {"type": "workspace", "at": at(5), "action": "publish", "ok": True, "reply": '{"revision":2}'}]
+    log.write_text("\n".join(json.dumps(r) for r in rows))
+    w = phase_usage([], None, log, "2026-10-17T11:00:00+00:00", "2026-10-17T11:01:00+00:00")["workspace"]
+    assert w["calls"] == {"handoff": {"ok": 1}, "publish": {"failed": 2, "ok": 1}}
+    assert w["failures"] == {"N: Stage N retained N of N proposed procedure items.": 2} and w["failed"] == 2
+
+
+def test_tool_definitions_are_part_of_what_the_model_is_given(tmp_path):
+    from wfeval.run import prompts
+    tools = [{"type": "function", "name": "bash", "parameters": {"properties": {"command": {"type": "string"}}}}]
+    (tmp_path / "requests.jsonl").write_text(json.dumps(
+        {"type": "request", "task": "workflow-review", "instructions": "be brief", "input": "go", "tools": tools}))
+    first = prompts(tmp_path)
+    assert set(first) == {"workflow-review.instructions", "workflow-review.input", "workflow-review.tools"}
+    assert '"command"' in (tmp_path / "prompts" / "workflow-review.tools.txt").read_text()
+    tools[0]["parameters"]["properties"] = {"cmd": {"type": "string"}}  # a renamed parameter
+    (tmp_path / "requests.jsonl").write_text(json.dumps(
+        {"type": "request", "task": "workflow-review", "instructions": "be brief", "input": "go", "tools": tools}))
+    assert prompts(tmp_path)["workflow-review.tools"] != first["workflow-review.tools"]

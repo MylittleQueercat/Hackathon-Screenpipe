@@ -399,5 +399,6 @@ def main_stage(argv: list[str] | None = None) -> int:
     print(out)
     r = json.loads((out / "results.jsonl").read_text())
     print(json.dumps({k: r[k] for k in ("stage", "view", "status", "passed", "scored", "score", "mistakes",
-                                        "before", "seconds")} | {"requests": r["usage"]["requests"]}))
+                                        "before", "seconds")} | {"requests": r["usage"]["requests"]}
+                     | ({"workspace_failed": r["usage"]["workspace"]["failed"]} if "workspace" in r["usage"] else {})))
     return 0

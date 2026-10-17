@@ -55,18 +55,18 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
-def git(*args: str) -> str:
-    return subprocess.run(["git", "-C", str(ENGINES / "upstream"), *args], capture_output=True,
+def git(*args: str, src: Path | None = None) -> str:
+    return subprocess.run(["git", "-C", str(src or ENGINES / "upstream"), *args], capture_output=True,
                           text=True).stdout.strip()
 
 
-def changes() -> dict[str, str | None]:
+def changes(src: Path | None = None) -> dict[str, str | None]:
     """Each engine file that differs from the pinned commit, tracked or not, with its sha256
     (None: deleted). A hash of `git diff HEAD` missed files that `git apply` leaves
     untracked and changed with git's formatting, so it differed between Macs."""
-    src = ENGINES / "upstream"
-    paths = set(git("diff", "HEAD", "--name-only", "--no-renames").splitlines())
-    paths |= set(git("ls-files", "--others", "--exclude-standard").splitlines())
+    src = src or ENGINES / "upstream"
+    paths = set(git("diff", "HEAD", "--name-only", "--no-renames", src=src).splitlines())
+    paths |= set(git("ls-files", "--others", "--exclude-standard", src=src).splitlines())
     return {p: sha256_file(src / p) if (src / p).is_file() else None for p in sorted(paths) if p}
 
 
@@ -78,8 +78,9 @@ def provenance(variant: dict, variant_path: Path, data: Path, binary: Path, run_
         "pipe_overrides_sha256": {t: sha256_file(ROOT / p) for t, p in variant.get("pipes", {}).items()},
         "data": json.loads((data / "manifest.json").read_text()),
         "engine": {"binary": str(binary), "binary_sha256": sha256_file(binary),
-                   "commit": git("rev-parse", "HEAD"),
-                   "changes": changes()},
+                   "source": str(source := ROOT / variant.get("source", ".engines/upstream")),
+                   "commit": git("rev-parse", "HEAD", src=source),
+                   "changes": changes(source)},
         "pi_version": json.loads(pi.read_text())["version"] if pi.exists() else None,
         "pi_lock_sha256": sha256_file(pi_lock) if (pi_lock := run_dir / "home/.screenpipe/pi-agent/bun.lock").exists() else None,
         "bun_version": subprocess.run([str(APP / "bun"), "--version"], capture_output=True, text=True).stdout.strip(),
@@ -282,8 +283,9 @@ def masked(text: str, k: int = 0) -> str:
 
 
 def prompts(run_dir: Path) -> dict[str, str]:
-    """Each agent's first instructions and task prompt, masked, kept under prompts/ and
-    hashed: two runs of one variant must give the same hashes on any machine and slot."""
+    """Each agent's first instructions, task prompt and tool definitions, masked, kept
+    under prompts/ and hashed: everything the model is given before any tool result. Two
+    runs of one variant must give the same hashes on any machine and slot."""
     out, log = {}, run_dir / "requests.jsonl"
     if not log.exists():
         return out
@@ -294,10 +296,11 @@ def prompts(run_dir: Path) -> dict[str, str]:
     (run_dir / "prompts").mkdir(exist_ok=True)
     for line in log.read_text().splitlines():
         r = json.loads(line)
-        for key in ("instructions", "input"):
+        for key in ("instructions", "input", "tools"):
             name = f"{r.get('task')}.{key}"
             if r.get("type") == "request" and key in r and name not in out:
-                text = masked(flatten(r[key]), k)
+                # Tool schemas keep their keys (parameter names); prose is flattened.
+                text = masked(json.dumps(r[key], indent=1, sort_keys=True) if key == "tools" else flatten(r[key]), k)
                 (run_dir / "prompts" / f"{name}.txt").write_text(text)
                 out[name] = hashlib.sha256(text.encode()).hexdigest()
     return dict(sorted(out.items()))

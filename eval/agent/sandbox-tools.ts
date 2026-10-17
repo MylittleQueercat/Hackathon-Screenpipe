@@ -162,6 +162,17 @@ function requestLogger() {
 		tool(name: string) {
 			write({ type: "tool", at: new Date().toISOString(), task: process.env.SCREENPIPE_PIPE_NAME, tool: name });
 		},
+		// Each Workflows call in full and the engine's reply: the engine does not log the
+		// rejections an agent retries on, and the pipe log drops the middle of a long run.
+		workspace(args: Record<string, unknown>, result: unknown, isError: boolean) {
+			const content = (result as { content?: { type?: string; text?: string }[] })?.content;
+			const reply = Array.isArray(content) ? content.map((c) => c?.text ?? "").join("\n") : JSON.stringify(result ?? null);
+			write({
+				type: "workspace", at: new Date().toISOString(), task: process.env.SCREENPIPE_PIPE_NAME,
+				action: args?.action ?? null, draft_id: args?.draft_id ?? null, ok: !isError, args,
+				reply: reply.slice(0, 4000),
+			});
+		},
 		response(status: number, headers: Record<string, string>) {
 			const kept = Object.fromEntries(Object.entries(headers ?? {}).filter(([k]) => !/cookie|authorization|token/i.test(k)));
 			write({ type: "response", seq, at: new Date().toISOString(), status, headers: kept });
@@ -188,7 +199,15 @@ export default function (pi: ExtensionAPI) {
 	pi.on("message_end", (event) => {
 		log.usage(event.message as { role?: string });
 	});
+	const workspaceArgs = new Map<string, Record<string, unknown>>();
 	pi.on("tool_execution_start", (event) => {
 		log.tool(event.toolName);
+		if (event.toolName === "workflow_workspace") workspaceArgs.set(event.toolCallId, event.args ?? {});
+	});
+	pi.on("tool_execution_end", (event) => {
+		const args = workspaceArgs.get(event.toolCallId);
+		if (!args) return;
+		workspaceArgs.delete(event.toolCallId);
+		log.workspace(args, event.result, event.isError);
 	});
 }

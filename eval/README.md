@@ -35,8 +35,10 @@ harness, eval-sketch (sandboxed tools, provenance, reruns, paired comparison).
 Each run keeps `run.json` (variant, data hashes, engine commit, patch and binary hashes, Pi
 version and lockfile, bun version, image id, contamination check, host-path leak scan,
 prompt hashes), the catalog, workspace, executions and pipe logs of every phase,
-`requests.jsonl` (every model request, its usage, every tool call), `prompts/`,
-`seeded.jsonl` and `results.jsonl`.
+`requests.jsonl` (every model request, its usage, every tool call, and each Workflows
+call in full with the engine's reply), `prompts/`, `seeded.jsonl` and `results.jsonl`.
+The usage in `results.jsonl` counts Workflows calls by action and failed calls by kind
+(`workspace.failures`): the engine logs none of the rejections its agents retry on.
 
 ## Needs
 
@@ -112,9 +114,10 @@ The harness never calls workflow code: it drives the engine's HTTP API and grade
 catalog the engine writes. Prompts, Rust logic, routing, the model and the number of
 calls can all change. Build your branch with `patches/harness.patch` applied (it
 touches the engine binary, the router and a new seed route, no workflow code), point a
-variant's `binary` at it, then run `uv run wfeval check-engine --variant <yours>`
-before spending anything. It fails, with what to do, when your branch breaks something
-the harness relies on:
+variant's `binary` at it and its `source` at the branch's checkout (so `run.json`
+records that branch's changed files), then run
+`uv run wfeval check-engine --variant <yours>` before spending anything. It fails, with
+what to do, when your branch breaks something the harness relies on:
 
 | The harness relies on | Adapt, if your change breaks it |
 |---|---|
@@ -160,6 +163,17 @@ needs full runs.
 A snapshot is shared, not retaken: taking one costs a cycle's worth of model calls (357
 requests for receipts seed 1), and the restored slot path is the same on every Mac.
 
+`uv run wfeval probe-publish snapshots/<id>/steps/<NN>-p1-workflow-review --variant <v>`
+costs nothing: it restores the step and asks the engine to publish each open draft as
+the agents left it, with no model. A variant that changes publication checks shows its
+effect there before a Review stage pays for the retries.
+
+`uv run wfeval why-rejected runs/<id>` also costs nothing: for each rejected publish in
+a run, it checks every stage evidence entry and procedure item the agent submitted
+against the seeded captures and says what failed (a capture missing from the stage's
+evidence, no capture at that exact time, a quote not in that capture). The engine's 422
+names none of this.
+
 ## Sharing a run or a snapshot
 
 Never zip `runs/<id>` or `snapshots/<id>` by hand: a run folder keeps the engine's home,
@@ -190,8 +204,9 @@ What the agents are given depends on the eval version and nothing else:
   earlier serial runs saw.
 - **No host files**: Pi adds every `AGENTS.md`/`CLAUDE.md` from the agent's directory up
   to `/` to its system prompt; the run refuses to start if one is there.
-- **Checked per run**: `prompts/` keeps each agent's system prompt and task prompt with
-  the clock and engine ids masked; `run.json` hashes them and lists any host path found in
+- **Checked per run**: `prompts/` keeps everything each agent is given before any tool
+  result (system prompt, task prompt, tool definitions) with the clock and engine ids
+  masked; `run.json` hashes them and lists any host path found in
   prompts or tool output (`host_path_leaks`). `compare` warns when an A/A pair's prompts
   differ or a run leaked. `run.json` also records the engine (its commit, and each file
   that differs from it: `changes`), Pi (and its lockfile), bun (from the installed
