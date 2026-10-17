@@ -12,7 +12,7 @@ that lets anyone see *what the agents produced and whether it was right*.
 > discovery of "what is worth automating" is only useful if you can trust it, so we made
 > it inspectable and measurable.
 
-![Agent Execution: what Screenpipe actually produced](docs/screenshots/03-agent-execution.png)
+![Agent Execution: what Screenpipe actually produced](docs/screenshots/light-agent-execution.png)
 
 ## What's in this repo
 
@@ -80,8 +80,8 @@ button switches dark and light.
 
 | | |
 |---|---|
-| ![Inspect evaluation](docs/screenshots/04-evidence.png) | ![Compare variants](docs/screenshots/05-compare.png) |
-| ![Load experiment](docs/screenshots/02-load.png) | ![Stage replay](docs/screenshots/06-stage-replay.png) |
+| ![Inspect evaluation](docs/screenshots/light-evidence.png) | ![Compare variants](docs/screenshots/light-compare.png) |
+| ![Load experiment](docs/screenshots/light-load.png) | ![Stage replay](docs/screenshots/light-stage-replay.png) |
 
 ## What we found
 
@@ -131,16 +131,6 @@ Exports are allowlisted (metrics, checks, workflows, provenance hashes), exclude
 credentials, scan for secrets and host paths, and are refused if invalid. Two runs are only compared
 when they share suite, seed, phases and data hashes, and stage results are never shown as full-evaluation
 scores. See [`CONTRIBUTING.md`](pipeops/demo-data/CONTRIBUTING.md).
-
-## Honest limits
-
-- The history is **synthetic and clean** (accessibility text only; no OCR fallback, screenshots or audio).
-  Results show how a change moves Workflows on controlled evidence, not how often it finds real work.
-- The bundled demo contains two full runs on one suite and seed; differences between single runs can be noise
-  (the same history produced different catalogs across repeats), so we don't claim more than one pair shows.
-- Stage runs (for example clearer-rejection) are not yet exportable to Demo runs; run them live from the
-  Stage Replay step on a machine with a snapshot and the variant's engine built.
-- Token usage is measured; dollar cost is not (`cost_usd` is `null`, never estimated).
 
 ## Repository layout
 
