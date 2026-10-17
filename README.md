@@ -1,16 +1,27 @@
-# PipeOps: prove it before you ship it
+# PipeOps: Prove It Before You Ship It
 
-**PipeOps is a testing ground for screenpipe Workflows.** Workflows reads your recorded
-screen history and discovers the repeatable work in it: what triggers a task, what the
-steps are, what it produces. We built the measurement layer that was missing: an
-evaluation harness that scores how good that discovery is, and an interface
-that lets anyone see *what the agents produced and whether it was right*.
+> Code tests tell you if your software works. **PipeOps tells you if your agents found the right work.**
 
-**Team PipeOps**
+**Team PipeOps** · Hackathon · Build Agents That Remember · Track 01, *Find what to automate*
 
-> Hackathon · Build Agents That Remember. Track 01, *Find what to automate*: the
-> discovery of "what is worth automating" is only useful if you can trust it, so we made
-> it inspectable and measurable.
+screenpipe Workflows turns your screen history into potential automations. But generating a workflow
+is not the same as discovering the right one:
+
+- Did the agent find the recurring task?
+- Did it miss the important exceptions?
+- Did it include irrelevant activity?
+- Is every step backed by real evidence?
+
+**PipeOps is an evaluation workbench built specifically for screenpipe Workflows.** It runs the real
+Workflows agents against controlled activity histories with known answers, then checks what they
+discovered, what they missed, and whether the evidence they cite actually exists. Developers can then
+put two agent versions side by side and see what a change did to **workflow quality, model requests,
+token usage and runtime**.
+
+Instead of guessing whether a change made Workflows better, you get evidence to decide.
+
+Finding repeatable work is only the first step. PipeOps helps developers verify that Workflows found the
+right tasks, so they can improve agent behavior with measurable results.
 
 ![Agent Execution: what Screenpipe actually produced](docs/screenshots/light-agent-execution.png)
 
