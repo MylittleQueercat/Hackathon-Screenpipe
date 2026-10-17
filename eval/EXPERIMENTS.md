@@ -165,3 +165,34 @@ in 11 of 15): the receipts
 description lost its list of exceptions mid-word ("a scan matching an existing amo").
 The checks still passed because the same words survive in other fields. Results now
 report `clipped`: each string Review published that the catalog saved shorter.
+
+## full-text (on parallel-publish)
+
+Keeps what Review writes: a workflow description up to 2,000 characters (agents write
+up to ~830; upstream cut at 400), each open question and limitation up to 600 (agents
+write up to ~370; upstream cut at 180). Titles, triggers, outcomes, stage text and
+bottlenecks keep upstream's bounds; none was ever over them. Prompts, tools and replies
+to Review are unchanged: a publish receipt does not echo the text.
+`patches/variants/full-text.patch`.
+
+Free check: the probe that publishes r3's corrected payloads saves 9 fields shorter
+(956 characters lost) on parallel-publish, none on full-text.
+
+| Run | Requests | Seconds | Checks | Failed calls | Clipped |
+|---|---|---|---|---|---|
+| 20261017T224506Z r1 | 17 | 102 | 11/11 | 2 | 0 |
+| 20261017T224506Z r2 | 19 | 127 | 11/11 | 2 | 0 |
+| 20261017T224506Z r3 | 18 | 122 | 11/11 | 2 | 0 |
+
+Every earlier run lost 6 to 12 fields; these lose none, and the receipts description
+keeps its exceptions. Requests (17, 19, 18) are within the 13-20 of sequential-publish
+Review runs on the engines it builds on: no cost to Review measured. The cost is later:
+each catalog read by the next cycle's agents is about 950 characters longer. Checks cannot show the gain (11/11 either way);
+`clipped` does.
+
+What it likely improves, not measured here: people read whole descriptions, with the
+exceptions the agents put last, and whole open questions (73 of 89 were cut, and the
+question tends to come at the end). The next cycle's agents read the saved catalog, not
+the drafts, so they would no longer maintain workflows from cut text; that needs full
+runs (drift and churn in phase 2) to measure. Not checked: how longer descriptions
+render in the app.
