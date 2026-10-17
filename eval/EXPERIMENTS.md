@@ -45,3 +45,22 @@ No saving on its own. Free probe (`wfeval probe-publish`): drafts get past evide
 matching and fail on their real errors instead; a hand-corrected draft publishes here
 and is still rejected by baseline. Review's cost was the procedure rejections it could
 not diagnose, not this.
+
+## clearer-rejection (on second-precision)
+
+"Stage N retained X of Y proposed procedure items" now lists every failing stage and up
+to five items each, with the reason from the same check that dropped it ("procedure[1]:
+cites TextEdit at ..., which is not one of this stage's verified evidence entries; add
+that capture to this stage's evidence or cite one that is there"; "quote is not in the
+text of the Finder capture at ..."). `patches/variants/clearer-rejection.patch`.
+
+| Run | Requests | Seconds | Checks | Failed calls |
+|---|---|---|---|---|
+| 20261017T205455Z r1 | 19 | 152 | 11/11 | 4 |
+| 20261017T212357Z r2 | 18 | 132 | 10/11 | 5 |
+| 20261017T212402Z r3 | 19 | 131 | 11/11 | 3 |
+
+Each draft: one rejection, one edit, one publish. Review kept every procedure item and
+added the missing captures to the stage evidence. Cache-read tokens 0.5-0.7M (baseline
+2.3-3.5M), output 13-14k (baseline 43-49k). Remaining failures: 2 procedure rejections
+(one per draft) and a 409 after each rejected publish.
