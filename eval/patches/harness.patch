@@ -1,0 +1,212 @@
+diff --git a/crates/screenpipe-engine/src/bin/screenpipe-engine.rs b/crates/screenpipe-engine/src/bin/screenpipe-engine.rs
+index 1b74bfe89..fa68afe89 100644
+--- a/crates/screenpipe-engine/src/bin/screenpipe-engine.rs
++++ b/crates/screenpipe-engine/src/bin/screenpipe-engine.rs
+@@ -1173,7 +1173,12 @@ async fn main() -> anyhow::Result<()> {
+     let ignored_windows_clone = config.ignored_windows.clone();
+     let included_windows_clone = config.included_windows.clone();
+     // Create UI recorder config early before cli is moved
+-    let ui_recorder_config = config.to_ui_recorder_config();
++    let mut ui_recorder_config = config.to_ui_recorder_config();
++    // Eval harness: the history is seeded; the user's own clicks and app switches
++    // must not mix into it. No CLI flag turns the UI recorder off.
++    if std::env::var("SCREENPIPE_EVAL_SEED").as_deref() == Ok("1") {
++        ui_recorder_config.enabled = false;
++    }
+ 
+     // Meeting detection uses app focus + audio RMS only (no transcription needed).
+     // It still needs audio capture enabled; otherwise the UI scanner has no useful
+@@ -1465,6 +1470,9 @@ async fn main() -> anyhow::Result<()> {
+         eprintln!();
+     }
+ 
++    // Only the desktop app gave Workflows a catalog directory; without one every
++    // catalog read and write answers "Workflow storage is unavailable".
++    let workflow_catalog_dir = local_data_dir_clone_2.join("workflows");
+     let mut server = SCServer::new(
+         db_server,
+         SocketAddr::new(IpAddr::V4(config.listen_address), config.port),
+@@ -1487,6 +1495,7 @@ async fn main() -> anyhow::Result<()> {
+     server.manual_meeting = Some(manual_meeting.clone());
+     server.api_auth = config.api_auth;
+     server.api_auth_key = config.api_auth_key.clone();
++    server.workflow_catalog_dir = Some(workflow_catalog_dir);
+     // Cloud JWT for the /v1/chat/completions proxy. CLI/binary path reads
+     // SCREENPIPE_API_KEY directly; desktop path overrides via
+     // SCServer::cloud_token_handle after spawn.
+@@ -1566,7 +1575,13 @@ async fn main() -> anyhow::Result<()> {
+     let pipes_dir = local_data_dir.join("pipes");
+     std::fs::create_dir_all(&pipes_dir).ok();
+ 
+-    let user_token = std::env::var("SCREENPIPE_API_KEY").ok();
++    // Same resolution as `screenpipe pipe run`: an explicit cloud JWT wins, else the
++    // session `screenpipe login` stored. SCREENPIPE_API_KEY may be the local `sp-*` key.
++    let user_token = screenpipe_engine::auth_key::resolve_cloud_token(
++        &local_data_dir,
++        std::env::var("SCREENPIPE_API_KEY").ok(),
++    )
++    .await;
+     let pi_executor = std::sync::Arc::new(
+         screenpipe_core::agents::pi::PiExecutor::new(user_token.clone())
+             .with_api_auth_key(config.api_auth_key.clone()),
+diff --git a/crates/screenpipe-engine/src/routes/eval_seed.rs b/crates/screenpipe-engine/src/routes/eval_seed.rs
+new file mode 100644
+index 000000000..f18e3a203
+--- /dev/null
++++ b/crates/screenpipe-engine/src/routes/eval_seed.rs
+@@ -0,0 +1,128 @@
++// screenpipe — AI that knows everything you've seen, said, or heard
++// https://screenpipe.com
++
++//! Eval harness only: write synthetic history through the same DB calls as
++//! capture. `/add` encodes one image per frame and stores its text as OCR, so
++//! seeded work would be missing from `content_type=accessibility`.
++//! Answers 404 unless the engine runs with `SCREENPIPE_EVAL_SEED=1`.
++
++use crate::server::AppState;
++use axum::{extract::State, http::StatusCode, Json};
++use chrono::{DateTime, Utc};
++use screenpipe_db::{InsertUiEvent, UiEventType};
++use serde::Deserialize;
++use serde_json::{json, Value};
++use std::sync::Arc;
++
++type ApiError = (StatusCode, Json<Value>);
++
++#[derive(Deserialize)]
++pub(crate) struct SeedFrame {
++    timestamp: DateTime<Utc>,
++    app_name: String,
++    window_name: String,
++    browser_url: Option<String>,
++    #[serde(default = "focused")]
++    focused: bool,
++    capture_trigger: String,
++    accessibility_text: String,
++    #[serde(default)]
++    events: Vec<SeedEvent>,
++}
++
++fn focused() -> bool {
++    true
++}
++
++#[derive(Deserialize)]
++pub(crate) struct SeedEvent {
++    timestamp: DateTime<Utc>,
++    event_type: String,
++    element_role: Option<String>,
++    element_name: Option<String>,
++    element_value: Option<String>,
++    text_content: Option<String>,
++}
++
++#[derive(Deserialize)]
++pub(crate) struct SeedRequest {
++    device_name: String,
++    snapshot_path: String,
++    frames: Vec<SeedFrame>,
++}
++
++fn error(status: StatusCode, message: String) -> ApiError {
++    (status, Json(json!({ "error": message })))
++}
++
++pub(crate) async fn seed(
++    State(state): State<Arc<AppState>>,
++    Json(request): Json<SeedRequest>,
++) -> Result<Json<Value>, ApiError> {
++    if std::env::var("SCREENPIPE_EVAL_SEED").as_deref() != Ok("1") {
++        return Err(error(StatusCode::NOT_FOUND, "not found".into()));
++    }
++    let mut frame_ids = Vec::with_capacity(request.frames.len());
++    let mut events = Vec::new();
++    for frame in &request.frames {
++        let frame_id = state
++            .db
++            .insert_snapshot_frame(
++                &request.device_name,
++                frame.timestamp,
++                &request.snapshot_path,
++                Some(&frame.app_name),
++                Some(&frame.window_name),
++                frame.browser_url.as_deref(),
++                frame.focused,
++                Some(&frame.capture_trigger),
++                Some(&frame.accessibility_text),
++                Some("accessibility"),
++                None,
++                None,
++                None,
++            )
++            .await
++            .map_err(|e| error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
++        frame_ids.push(frame_id);
++        for event in &frame.events {
++            let event_type: UiEventType = event
++                .event_type
++                .parse()
++                .map_err(|_| error(StatusCode::BAD_REQUEST, format!("event_type {}", event.event_type)))?;
++            events.push(InsertUiEvent {
++                timestamp: event.timestamp,
++                session_id: None,
++                relative_ms: 0,
++                event_type,
++                x: None,
++                y: None,
++                delta_x: None,
++                delta_y: None,
++                button: None,
++                click_count: None,
++                key_code: None,
++                modifiers: None,
++                text_content: event.text_content.clone(),
++                app_name: Some(frame.app_name.clone()),
++                app_pid: None,
++                window_title: Some(frame.window_name.clone()),
++                browser_url: frame.browser_url.clone(),
++                element_role: event.element_role.clone(),
++                element_name: event.element_name.clone(),
++                element_value: event.element_value.clone(),
++                element_description: None,
++                element_automation_id: None,
++                element_bounds: None,
++                element_ancestors: None,
++                frame_id: Some(frame_id),
++            });
++        }
++    }
++    let event_ids = state
++        .db
++        .insert_ui_events_batch(&events)
++        .await
++        .map_err(|e| error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
++    Ok(Json(json!({ "frames": frame_ids, "events": event_ids.len() })))
++}
+diff --git a/crates/screenpipe-engine/src/routes/mod.rs b/crates/screenpipe-engine/src/routes/mod.rs
+index 32f22f19c..2994cae05 100644
+--- a/crates/screenpipe-engine/src/routes/mod.rs
++++ b/crates/screenpipe-engine/src/routes/mod.rs
+@@ -10,6 +10,7 @@ pub mod audio;
+ pub mod browser;
+ pub mod capture;
+ pub mod cloud_agents;
++pub mod eval_seed;
+ pub mod cloud_proxy;
+ pub mod connect_broker;
+ pub mod content;
+diff --git a/crates/screenpipe-engine/src/server.rs b/crates/screenpipe-engine/src/server.rs
+index 8bbab339a..8601ccb13 100644
+--- a/crates/screenpipe-engine/src/server.rs
++++ b/crates/screenpipe-engine/src/server.rs
+@@ -1539,6 +1539,10 @@ impl SCServer {
+                     }
+                 }),
+             )
++            .route(
++                "/eval/seed",
++                axum::routing::post(crate::routes::eval_seed::seed),
++            )
+             .layer(Extension(crate::routes::workflows::WorkflowCatalogSource(self.workflow_catalog_dir.clone())))
+             .with_state(app_state.clone())
+             .layer(axum::middleware::from_fn(crate::search_only::history_only))

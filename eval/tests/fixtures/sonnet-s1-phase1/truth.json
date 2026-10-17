@@ -1,0 +1,193 @@
+{
+ "checks": [
+  {
+   "id": "found",
+   "job": "receipts",
+   "kind": "published",
+   "phase": 1
+  },
+  {
+   "id": "no_duplicate",
+   "job": "receipts",
+   "kind": "single",
+   "phase": 1
+  },
+  {
+   "all": [
+    [
+     "rename",
+     "renamed",
+     "renaming"
+    ],
+    [
+     "tracker",
+     "tracker.csv",
+     "csv",
+     "log",
+     "spreadsheet"
+    ]
+   ],
+   "id": "steps",
+   "job": "receipts",
+   "kind": "keywords",
+   "on_screen": [
+    "2026-10-05_Acme-Office-Supplies_receipt.pdf",
+    "original_file,new_filename,date,amount,type,status,notes"
+   ],
+   "phase": 1
+  },
+  {
+   "any": [
+    "missing date",
+    "no date",
+    "unknown-date",
+    "unknown date",
+    "undated",
+    "without a date",
+    "date is missing",
+    "date missing",
+    "lacks a date"
+   ],
+   "id": "missing_date",
+   "job": "receipts",
+   "kind": "keywords",
+   "on_screen": [
+    "UNKNOWN-DATE_Green-Market_receipt.pdf",
+    "missing date"
+   ],
+   "phase": 1
+  },
+  {
+   "any": [
+    "duplicate",
+    "already filed",
+    "already been filed",
+    "same as",
+    "filed before",
+    "previously filed",
+    "compare",
+    "already exists"
+   ],
+   "id": "duplicate",
+   "job": "receipts",
+   "kind": "keywords",
+   "on_screen": [
+    "duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf"
+   ],
+   "phase": 1
+  },
+  {
+   "any": [
+    "review needed",
+    "needs review",
+    "over 500",
+    "above 500",
+    "high amount",
+    "high-value",
+    "high value",
+    "large amount",
+    "flag"
+   ],
+   "id": "high_value",
+   "job": "receipts",
+   "kind": "keywords",
+   "on_screen": [
+    "Amount: 780.00 EUR",
+    "review needed"
+   ],
+   "phase": 1
+  },
+  {
+   "any": [
+    "client-types",
+    "client types",
+    "client list",
+    "unknown type",
+    "type is unknown",
+    "type unknown",
+    "look up the type",
+    "looks up the type",
+    "lookup"
+   ],
+   "id": "type_lookup",
+   "job": "receipts",
+   "kind": "keywords",
+   "on_screen": [
+    "Type: UNKNOWN",
+    "Northwind: contract",
+    "2026-10-14_Northwind_contract.pdf"
+   ],
+   "phase": 1
+  },
+  {
+   "app": "Discord",
+   "id": "noise_excluded",
+   "job": "receipts",
+   "kind": "absent_app",
+   "phase": 1
+  },
+  {
+   "any": [
+    "TYPE_DATE_NAME",
+    "type first",
+    "type, date",
+    "type_date_name",
+    "receipt_2026-10-15_Hardware-Store.pdf"
+   ],
+   "id": "drift",
+   "job": "receipts",
+   "kind": "drift",
+   "on_screen": [
+    "New: TYPE_DATE_NAME.pdf",
+    "receipt_2026-10-15_Hardware-Store.pdf"
+   ],
+   "phase": 2
+  },
+  {
+   "from": "receipts",
+   "id": "email_separate",
+   "job": "email",
+   "kind": "separate",
+   "on_screen": [
+    "Atlas-project-brief.pdf",
+    "Beacon-budget-v2.pdf",
+    "Atlas-timeline.pdf"
+   ],
+   "phase": 1
+  },
+  {
+   "id": "one_off_unpublished",
+   "job": "printer",
+   "kind": "unpublished",
+   "on_screen": [
+    "Printers & Scanners"
+   ],
+   "phase": 1
+  },
+  {
+   "id": "evidence_resolves",
+   "kind": "evidence"
+  },
+  {
+   "id": "idle_cost",
+   "kind": "cost",
+   "phase": 3
+  }
+ ],
+ "jobs": {
+  "email": {
+   "expect": "published",
+   "summary": "Save an emailed attachment into the project folder and reply"
+  },
+  "printer": {
+   "expect": "unpublished",
+   "summary": "One-off printer driver setup"
+  },
+  "receipts": {
+   "expect": "published",
+   "summary": "Rename scanned receipts DATE_NAME_TYPE.pdf and log them in tracker.csv"
+  }
+ },
+ "seed": 1,
+ "suite": "receipts"
+}

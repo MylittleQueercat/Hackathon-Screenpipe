@@ -1,0 +1,1058 @@
+{
+ "schemaVersion": 5,
+ "analysis": {
+  "workflows": [
+   {
+    "id": "wf-12ff015b-9814-44a7-bb11-b0e03696e15a",
+    "rank": 1,
+    "analysisDays": 90,
+    "title": "Receipt/contract scan intake: rename and log into tracker.csv",
+    "description": "Morgan reviews scanned receipts and contracts (from a shared Paperwork/Inbox folder, fed by a newly set-up HP scanner) individually in Preview as they arrive, renames each file in Finder to a date_vendor_type.pdf convention, and periodically logs the whole set into tracker.csv (opened in TextEdit) with columns original_file,new_filename,date,amount,type,status,notes. Exceptions are flagged explici",
+    "evidenceVersion": 3,
+    "evidenceStatus": "supported-steps",
+    "captureSequence": [],
+    "openQuestions": [
+     "What happens after a row is marked 'review needed' - is there a follow-up review, approval, or escalation step, or does it just stay flagged in the CSV?",
+     "Is tracker.csv updated after every single scan, or batched periodically (observed once, logging 10 rows together on 2026-10-16) - is batching a fixed cadence or ad hoc?",
+     "Does the HP Easy Start scanning step directly produce each scan-04xx.pdf into the Inbox folder, or is there a manual export/transfer step in between?",
+     "Is there a regular (e.g. weekly) cadence to this job, or was this single week of activity a one-off backlog clear-out?"
+    ],
+    "limitations": [
+     "Only one week of activity history was available, so recurrence/cadence (e.g. weekly vs ad hoc) could not be confirmed and is left open.",
+     "No evidence was found of any action taken after a row is marked 'review needed' (e.g. notification, follow-up, payment approval) - only that it is tracked in the spreadsheet.",
+     "The link between HP Easy Start scanner sessions (2026-10-14) and the specific scan files appearing in the Inbox folder is inferred from timing and app context, not a direct observe",
+     "No ordered capture example covers every step. These references do not establish one end-to-end occurrence."
+    ],
+    "repetitions": 2,
+    "frequency": "Observed on 2 captured days in a 90-day scan",
+    "trigger": "A new scanned receipt or contract PDF (scan-04xx.pdf) appears in /Users/morgan/Documents/Paperwork/Inbox, apparently produced via the HP Easy Start scanner app (observed set up 2026-10-14).",
+    "outcome": "Each scan is renamed in Finder to <date>_<vendor>_<type>.pdf (or UNKNOWN-DATE_... if no date found) and a corresponding row is added to tracker.csv recording original_file, new_filename, date, amount, type, and status (filed / duplicate / review needed), with notes explaining any exception.",
+    "totalMinutes": 0,
+    "activeMinutes": 0,
+    "waitingMinutes": 0,
+    "durationSource": "unknown",
+    "durationSampleCount": 0,
+    "timing": {
+     "basis": "estimated-elapsed",
+     "sampleCount": 1,
+     "averageMinutes": 4409.841383333333,
+     "minMinutes": 4409.841383333333,
+     "maxMinutes": 4409.841383333333,
+     "runs": [
+      {
+       "start": {
+        "timestamp": "2026-10-13T10:00:04.214+02:00",
+        "app": "Preview",
+        "quote": "scan-0412.pdf"
+       },
+       "end": {
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit",
+        "quote": "scan-0421.pdf,2026-10-13_Lumen-Print-Shop_receipt.pdf"
+       },
+       "summary": "Full observed span from first scan review (scan-0412, 2026-10-13) to final tracker.csv log entry covering all 10 scans (2026-10-16), i.e. scans were reviewed individually across several days before being logged together."
+      }
+     ]
+    },
+    "appSwitches": 0,
+    "confidence": 3,
+    "apps": [
+     "Preview",
+     "Finder",
+     "TextEdit"
+    ],
+    "handoffs": [],
+    "variations": [
+     "Missing date on the receipt: filename prefixed UNKNOWN-DATE instead of a date, note says 'missing date' (scan-0415).",
+     "Duplicate charge detected: status set to 'duplicate', notes reference the earlier filed receipt with the same amount/date (scan-0417 vs the 2026-10-05 Acme receipt, both $84.20).",
+     "Amount over 500: status set to 'review needed', note says 'over 500' (scan-0418, $780.00, Studio Equipment).",
+     "Contract rather than receipt: type field set to 'contract', with a note that the type was inferred 'from client list' (scan-0420, Northwind)."
+    ],
+    "stages": [
+     {
+      "name": "Review and rename scanned document",
+      "description": "Morgan opens each new scan in Preview to read its content (date, vendor, amount, type), then renames the file in Finder using the date_vendor_type.pdf convention.",
+      "timing": null,
+      "procedure": [
+       {
+        "kind": "input",
+        "text": "Open a new scan file from the Paperwork/Inbox folder in Preview to read its contents (date, vendor, amount, type).",
+        "quote": "Sidebar\nSidebar\nscan-0412.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nDocument Record\nName: Acme Office Supplies\nDate: 2026-10-05\nAmount: 84.20 EUR\nType: receipt",
+        "timestamp": "2026-10-13T09:59:51.965+02:00",
+        "app": "Preview"
+       },
+       {
+        "kind": "output",
+        "text": "Rename the file in Finder to <date>_<vendor>_<type>.pdf (or UNKNOWN-DATE_<vendor>_<type>.pdf).",
+        "quote": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\n2026-10-05_Acme-Office-Supplies_receipt.pdf",
+        "timestamp": "2026-10-16T11:28:54.698+02:00",
+        "app": "Finder"
+       }
+      ],
+      "openQuestions": [
+       "Is the renaming done per-scan right away, or batched later alongside the CSV logging?",
+       "How exactly is the date/vendor/type determination made when a field like date is missing?"
+      ],
+      "activeMinutes": 0,
+      "waitingMinutes": 0,
+      "durationSource": "unknown",
+      "apps": [
+       "Preview",
+       "Finder"
+      ],
+      "confidence": 3,
+      "observedOccurrences": 2,
+      "observedDays": 2,
+      "evidence": [
+       {
+        "timestamp": "2026-10-13T09:59:51.965+02:00",
+        "app": "Preview",
+        "detail": "Sidebar\nSidebar\nscan-0412.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nDocument Record\nName: Acme Office Supplies\nDate: 2026-10-05\nAmount: 84.20 EUR\nType: receipt",
+        "source": "screen",
+        "speaker": null
+       },
+       {
+        "timestamp": "2026-10-16T11:28:54.698+02:00",
+        "app": "Finder",
+        "detail": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\n2026-10-05_Acme-Office-Supplies_receipt.pdf\n13 Oct 2026\n100 KB\nPDF document\n2026-10-06_Bluebird-Books_receipt.pdf\n13 Oct 2026\n241 KB\nPDF document\n2026-10-08_City-Transport_receipt.pdf\n13 Oct 2026\n159 KB\nPDF document\n2026-10-09_Metro-Cafe_receipt.pdf\n14 Oct 2026\n140 KB\nPDF document\n2026-10-10_Studio-Equipment_receipt.pdf\n15 Oct 2026\n98 KB\nPDF document\n2026-10-11_Harbor-Pharmacy_receipt.pdf\n15 Oct 2026\n215 KB\nPDF document\n2026-10-13_Lumen-Print-Shop_receipt.pdf\n16 Oct 2026\n92 KB\nPDF document\n2026-10-14_Northwind_contract.pdf\n16 Oct 2026\n127 KB\nPDF document\nUNKNOWN-DATE_Green-Market_receipt.pdf\n14 Oct 2026\n160 KB\nPDF document\nscan-0417.pdf\n15 Oct 2026\n187 KB\nPDF document",
+        "source": "screen",
+        "speaker": null
+       }
+      ],
+      "screenshot": null,
+      "screenshots": []
+     },
+     {
+      "name": "Log entry into tracker.csv with exception handling",
+      "description": "Morgan opens tracker.csv in TextEdit and appends rows for each newly processed scan, applying explicit exception rules for missing dates, duplicate charges, and amounts over 500.",
+      "timing": null,
+      "procedure": [
+       {
+        "kind": "input",
+        "text": "Open tracker.csv in TextEdit and view/edit the running list of rows (original_file,new_filename,date,amount,type,status,notes).",
+        "quote": "tracker.csv\nEdited\noriginal_file,new_filename,date,amount,type,status,notes\nscan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,",
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit"
+       },
+       {
+        "kind": "check",
+        "text": "If the scan had no readable date, set new_filename to start with UNKNOWN-DATE and add note 'missing date'.",
+        "quote": "scan-0415.pdf,UNKNOWN-DATE_Green-Market_receipt.pdf,,41.75,receipt,filed,missing date",
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit"
+       },
+       {
+        "kind": "check",
+        "text": "If the amount/date match an already-filed receipt, set status to 'duplicate' and note which prior file it matches.",
+        "quote": "scan-0417.pdf,,2026-10-05,84.20,receipt,duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf",
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit"
+       },
+       {
+        "kind": "check",
+        "text": "If the amount exceeds 500, set status to 'review needed' and note 'over 500'.",
+        "quote": "scan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500",
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit"
+       },
+       {
+        "kind": "output",
+        "text": "Otherwise mark the row status 'filed' with no note.",
+        "quote": "scan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,",
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit"
+       }
+      ],
+      "openQuestions": [
+       "What follow-up, if any, occurs for rows left at status 'review needed'?"
+      ],
+      "activeMinutes": 0,
+      "waitingMinutes": 0,
+      "durationSource": "unknown",
+      "apps": [
+       "TextEdit"
+      ],
+      "confidence": 3,
+      "observedOccurrences": 1,
+      "observedDays": 1,
+      "evidence": [
+       {
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit",
+        "detail": "tracker.csv\nEdited\noriginal_file,new_filename,date,amount,type,status,notes\nscan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,\nscan-0413.pdf,2026-10-06_Bluebird-Books_receipt.pdf,2026-10-06,26.50,receipt,filed,\nscan-0414.pdf,2026-10-08_City-Transport_receipt.pdf,2026-10-08,18.00,receipt,filed,\nscan-0415.pdf,UNKNOWN-DATE_Green-Market_receipt.pdf,,41.75,receipt,filed,missing date\nscan-0416.pdf,2026-10-09_Metro-Cafe_receipt.pdf,2026-10-09,15.40,receipt,filed,\nscan-0417.pdf,,2026-10-05,84.20,receipt,duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf\nscan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500\nscan-0419.pdf,2026-10-11_Harbor-Pharmacy_receipt.pdf,2026-10-11,12.90,receipt,filed,\nscan-0420.pdf,2026-10-14_Northwind_contract.pdf,2026-10-14,180.00,contract,filed,type from client list\nscan-0421.pdf,2026-10-13_Lumen-Print-Shop_receipt.pdf,2026-10-13,32.00,receipt,filed,",
+        "source": "screen",
+        "speaker": null
+       }
+      ],
+      "screenshot": null,
+      "screenshots": []
+     }
+    ],
+    "bottlenecks": [],
+    "evidence": [
+     {
+      "timestamp": "2026-10-13T09:59:51.965+02:00",
+      "app": "Preview",
+      "detail": "Sidebar\nSidebar\nscan-0412.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nDocument Record\nName: Acme Office Supplies\nDate: 2026-10-05\nAmount: 84.20 EUR\nType: receipt",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-16T11:28:54.698+02:00",
+      "app": "Finder",
+      "detail": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\n2026-10-05_Acme-Office-Supplies_receipt.pdf\n13 Oct 2026\n100 KB\nPDF document\n2026-10-06_Bluebird-Books_receipt.pdf\n13 Oct 2026\n241 KB\nPDF document\n2026-10-08_City-Transport_receipt.pdf\n13 Oct 2026\n159 KB\nPDF document\n2026-10-09_Metro-Cafe_receipt.pdf\n14 Oct 2026\n140 KB\nPDF document\n2026-10-10_Studio-Equipment_receipt.pdf\n15 Oct 2026\n98 KB\nPDF document\n2026-10-11_Harbor-Pharmacy_receipt.pdf\n15 Oct 2026\n215 KB\nPDF document\n2026-10-13_Lumen-Print-Shop_receipt.pdf\n16 Oct 2026\n92 KB\nPDF document\n2026-10-14_Northwind_contract.pdf\n16 Oct 2026\n127 KB\nPDF document\nUNKNOWN-DATE_Green-Market_receipt.pdf\n14 Oct 2026\n160 KB\nPDF document\nscan-0417.pdf\n15 Oct 2026\n187 KB\nPDF document",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-16T11:29:54.697+02:00",
+      "app": "TextEdit",
+      "detail": "tracker.csv\nEdited\noriginal_file,new_filename,date,amount,type,status,notes\nscan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,\nscan-0413.pdf,2026-10-06_Bluebird-Books_receipt.pdf,2026-10-06,26.50,receipt,filed,\nscan-0414.pdf,2026-10-08_City-Transport_receipt.pdf,2026-10-08,18.00,receipt,filed,\nscan-0415.pdf,UNKNOWN-DATE_Green-Market_receipt.pdf,,41.75,receipt,filed,missing date\nscan-0416.pdf,2026-10-09_Metro-Cafe_receipt.pdf,2026-10-09,15.40,receipt,filed,\nscan-0417.pdf,,2026-10-05,84.20,receipt,duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf\nscan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500\nscan-0419.pdf,2026-10-11_Harbor-Pharmacy_receipt.pdf,2026-10-11,12.90,receipt,filed,\nscan-0420.pdf,2026-10-14_Northwind_contract.pdf,2026-10-14,180.00,contract,filed,type from client list\nscan-0421.pdf,2026-10-13_Lumen-Print-Shop_receipt.pdf,2026-10-13,32.00,receipt,filed,",
+      "source": "screen",
+      "speaker": null
+     }
+    ],
+    "quality": {
+     "grade": "limited",
+     "evidenceCount": 3,
+     "distinctDays": 2,
+     "stageEvidenceCoverage": 100,
+     "repeatedStageCoverage": 50,
+     "reasons": [
+      "3 captured references matched this map",
+      "Evidence spans 2 separate days",
+      "Non-audio evidence spans 2 separate days",
+      "2 of 2 stages have supporting procedural details",
+      "1 of 2 stages were observed on more than one day",
+      "0 of 2 stages have a closely matched local screenshot"
+     ],
+     "screenshotCount": 0,
+     "stageScreenshotCoverage": 0
+    },
+    "revision": 1,
+    "createdAt": "2026-10-17T13:48:35.541672+02:00",
+    "lastReviewedAt": "2026-10-17T13:48:35.541672+02:00",
+    "catalogStatus": "current"
+   },
+   {
+    "id": "wf-707a9eb4-ba6e-411a-9edd-8da4350eed58",
+    "rank": 2,
+    "analysisDays": 90,
+    "title": "Email attachment intake: save project document to project folder and confirm by reply",
+    "description": "A colleague emails Morgan a project PDF (brief, timeline, budget, etc.) and asks Morgan to save it with the other project files and confirm. Morgan opens the attachment in Preview to check its content, uses Mail's Save dialog to save it directly into the matching /Users/morgan/Documents/Projects/<ProjectName> folder (verified afterward in Finder), then replies to the sender confirming it has been ",
+    "evidenceVersion": 3,
+    "evidenceStatus": "supported-steps",
+    "captureSequence": [],
+    "openQuestions": [
+     "Is there a consistent project-folder-naming convention beyond matching the project name mentioned in the email subject?",
+     "Does Morgan ever delay the save/reply to a later session, or is it always done immediately within the same sitting as observed in all three instances?",
+     "Is there any check for duplicate or near-duplicate filenames before saving (e.g. would a second 'v2' accidentally overwrite)?"
+    ],
+    "limitations": [
+     "Only one week of activity history was available; all three observed instances occurred within the same 7-day window (2026-10-13, 2026-10-15, 2026-10-16), so weekly/longer-term recu",
+     "Both senders are from the same external domain (northbeam.co) in all observed instances - unclear if this pattern also applies to internal or other external senders.",
+     "Precise end-to-end duration per instance (approx. 1.5-2.5 minutes observed) is not included as a formal timing run because exact boundary matching against recorder text proved unre",
+     "No ordered capture example covers every step. These references do not establish one end-to-end occurrence.",
+     "Only one captured day supports this candidate; repetition is not established."
+    ],
+    "repetitions": 1,
+    "frequency": "Observed on 1 captured day in a 90-day scan",
+    "trigger": "An email arrives from a colleague (e.g. Alex Moreau, Priya Shah) with a project-related PDF attached and a request to save/file it and confirm.",
+    "outcome": "The attachment is saved into the correct Projects/<ProjectName> folder (confirmed present in Finder alongside prior project files) and Morgan sends a short reply to the sender confirming receipt and filing.",
+    "totalMinutes": 0,
+    "activeMinutes": 0,
+    "waitingMinutes": 0,
+    "durationSource": "unknown",
+    "durationSampleCount": 0,
+    "timing": null,
+    "appSwitches": 0,
+    "confidence": 3,
+    "apps": [
+     "Mail",
+     "Preview",
+     "Finder"
+    ],
+    "handoffs": [
+     "Colleague sends the document and request via email -> Morgan files it and replies, closing the loop with the sender."
+    ],
+    "variations": [
+     "Sender explicitly asks to 'save it with the other project files and let me know' (Atlas brief, Alex Moreau) vs 'file it in the project folder and confirm' (Beacon budget, Priya Sha",
+     "Confirmation reply wording varies each time ('Hi Alex, got it, saved with the Atlas files. Thanks, Morgan' / 'Thanks Priya, filed in the Beacon folder. Morgan' / 'Saved next to the",
+     "When it's a second document for an already-known project (Atlas timeline following the Atlas brief), Morgan does not need to create a new folder - the existing Projects/Atlas folde",
+     "Versioned documents (Beacon-budget-v1.pdf then v2.pdf) are saved alongside the prior version rather than overwriting it."
+    ],
+    "stages": [
+     {
+      "name": "Receive and review the attached document",
+      "description": "Morgan opens the incoming email and previews the attached PDF to check its content before filing it.",
+      "timing": null,
+      "procedure": [
+       {
+        "kind": "input",
+        "text": "Open the inbox email containing a project document attachment and a request to save/file it and confirm.",
+        "quote": "Morgan,\nSecond version of the Beacon budget attached. Please file it\nin the project folder and confirm.\nPriya",
+        "timestamp": "2026-10-15T10:40:18.270+02:00",
+        "app": "Mail"
+       },
+       {
+        "kind": "action",
+        "text": "Open the attached PDF in Preview to review its content.",
+        "quote": "Budget\nProject: Beacon\nVersion 2\nTotal: 18,400 EUR\nApproved by: Priya Shah",
+        "timestamp": "2026-10-15T10:40:37.994+02:00",
+        "app": "Preview"
+       }
+      ],
+      "openQuestions": [],
+      "activeMinutes": 0,
+      "waitingMinutes": 0,
+      "durationSource": "unknown",
+      "apps": [
+       "Mail",
+       "Preview"
+      ],
+      "confidence": 3,
+      "observedOccurrences": 2,
+      "observedDays": 1,
+      "evidence": [
+       {
+        "timestamp": "2026-10-15T10:40:18.270+02:00",
+        "app": "Mail",
+        "detail": "Get Mail\nCompose\nArchive\nDelete\nReply\nReply All\nForward\nSearch\nFavorites\nInbox\nSent\nDrafts\nInbox\nPriya Shah\nBeacon budget v2\n09:12\nGym Bloc\nYour October membership\nSun\nBank\nStatement available\nFri\nFrom: Priya Shah <priya@northbeam.co>\nTo: Morgan Lee\nSubject: Beacon budget v2\nMorgan,\nSecond version of the Beacon budget attached. Please file it\nin the project folder and confirm.\nPriya\nBeacon-budget-v2.pdf\nSave\nQuick Look",
+        "source": "screen",
+        "speaker": null
+       },
+       {
+        "timestamp": "2026-10-15T10:40:37.994+02:00",
+        "app": "Preview",
+        "detail": "Sidebar\nSidebar\nBeacon-budget-v2.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nBudget\nProject: Beacon\nVersion 2\nTotal: 18,400 EUR\nApproved by: Priya Shah",
+        "source": "screen",
+        "speaker": null
+       }
+      ],
+      "screenshot": null,
+      "screenshots": []
+     },
+     {
+      "name": "Save attachment into the matching project folder",
+      "description": "Morgan uses Mail's Save dialog to save the attachment directly into the Projects/<ProjectName> folder matching the subject/content, then checks the folder in Finder to confirm it landed alongside the existing project files.",
+      "timing": null,
+      "procedure": [
+       {
+        "kind": "action",
+        "text": "Use the Save As dialog in Mail to save the attachment into the project's folder under Documents/Projects.",
+        "quote": "Save As:\nBeacon-budget-v2.pdf\nWhere:\nBeacon\nCancel\nSave",
+        "timestamp": "2026-10-15T10:40:54.556+02:00",
+        "app": "Mail"
+       },
+       {
+        "kind": "check",
+        "text": "Open the project folder in Finder to confirm the new file is saved alongside prior project files/versions.",
+        "quote": "Beacon-budget-v1.pdf\n25 Sep 2026\n96 KB\nPDF document\nBeacon-budget-v2.pdf\n15 Oct 2026\n188 KB\nPDF document",
+        "timestamp": "2026-10-15T10:41:17.952+02:00",
+        "app": "Finder"
+       }
+      ],
+      "openQuestions": [
+       "Is the Finder check always performed, or only sometimes as a sanity check?"
+      ],
+      "activeMinutes": 0,
+      "waitingMinutes": 0,
+      "durationSource": "unknown",
+      "apps": [
+       "Mail",
+       "Finder"
+      ],
+      "confidence": 3,
+      "observedOccurrences": 2,
+      "observedDays": 1,
+      "evidence": [
+       {
+        "timestamp": "2026-10-15T10:40:54.556+02:00",
+        "app": "Mail",
+        "detail": "Save As:\nBeacon-budget-v2.pdf\nWhere:\nBeacon\nCancel\nSave",
+        "source": "screen",
+        "speaker": null
+       },
+       {
+        "timestamp": "2026-10-15T10:41:17.952+02:00",
+        "app": "Finder",
+        "detail": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\nBeacon-budget-v1.pdf\n25 Sep 2026\n96 KB\nPDF document\nBeacon-budget-v2.pdf\n15 Oct 2026\n188 KB\nPDF document",
+        "source": "screen",
+        "speaker": null
+       }
+      ],
+      "screenshot": null,
+      "screenshots": []
+     },
+     {
+      "name": "Reply confirming the document is filed",
+      "description": "Morgan replies to the sender's email with a brief confirmation naming the folder/location where the document was filed and thanking them.",
+      "timing": null,
+      "procedure": [
+       {
+        "kind": "output",
+        "text": "Send a short reply confirming receipt and the filing location.",
+        "quote": "To: Priya Shah\nSubject: Re: Beacon budget v2\nThanks Priya, filed in the Beacon folder. Morgan",
+        "timestamp": "2026-10-15T10:41:35.028+02:00",
+        "app": "Mail"
+       }
+      ],
+      "openQuestions": [],
+      "activeMinutes": 0,
+      "waitingMinutes": 0,
+      "durationSource": "unknown",
+      "apps": [
+       "Mail"
+      ],
+      "confidence": 3,
+      "observedOccurrences": 1,
+      "observedDays": 1,
+      "evidence": [
+       {
+        "timestamp": "2026-10-15T10:41:35.028+02:00",
+        "app": "Mail",
+        "detail": "Get Mail\nCompose\nArchive\nDelete\nReply\nReply All\nForward\nSearch\nFavorites\nInbox\nSent\nDrafts\nInbox\nTo: Priya Shah\nSubject: Re: Beacon budget v2\nThanks Priya, filed in the Beacon folder. Morgan",
+        "source": "screen",
+        "speaker": null
+       }
+      ],
+      "screenshot": null,
+      "screenshots": []
+     }
+    ],
+    "bottlenecks": [],
+    "evidence": [
+     {
+      "timestamp": "2026-10-15T10:40:18.270+02:00",
+      "app": "Mail",
+      "detail": "Get Mail\nCompose\nArchive\nDelete\nReply\nReply All\nForward\nSearch\nFavorites\nInbox\nSent\nDrafts\nInbox\nPriya Shah\nBeacon budget v2\n09:12\nGym Bloc\nYour October membership\nSun\nBank\nStatement available\nFri\nFrom: Priya Shah <priya@northbeam.co>\nTo: Morgan Lee\nSubject: Beacon budget v2\nMorgan,\nSecond version of the Beacon budget attached. Please file it\nin the project folder and confirm.\nPriya\nBeacon-budget-v2.pdf\nSave\nQuick Look",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-15T10:40:37.994+02:00",
+      "app": "Preview",
+      "detail": "Sidebar\nSidebar\nBeacon-budget-v2.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nBudget\nProject: Beacon\nVersion 2\nTotal: 18,400 EUR\nApproved by: Priya Shah",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-15T10:40:54.556+02:00",
+      "app": "Mail",
+      "detail": "Save As:\nBeacon-budget-v2.pdf\nWhere:\nBeacon\nCancel\nSave",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-15T10:41:17.952+02:00",
+      "app": "Finder",
+      "detail": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\nBeacon-budget-v1.pdf\n25 Sep 2026\n96 KB\nPDF document\nBeacon-budget-v2.pdf\n15 Oct 2026\n188 KB\nPDF document",
+      "source": "screen",
+      "speaker": null
+     },
+     {
+      "timestamp": "2026-10-15T10:41:35.028+02:00",
+      "app": "Mail",
+      "detail": "Get Mail\nCompose\nArchive\nDelete\nReply\nReply All\nForward\nSearch\nFavorites\nInbox\nSent\nDrafts\nInbox\nTo: Priya Shah\nSubject: Re: Beacon budget v2\nThanks Priya, filed in the Beacon folder. Morgan",
+      "source": "screen",
+      "speaker": null
+     }
+    ],
+    "quality": {
+     "grade": "limited",
+     "evidenceCount": 5,
+     "distinctDays": 1,
+     "stageEvidenceCoverage": 100,
+     "repeatedStageCoverage": 0,
+     "reasons": [
+      "5 captured references matched this map",
+      "Evidence spans 1 separate day",
+      "Non-audio evidence spans 1 separate day",
+      "3 of 3 stages have supporting procedural details",
+      "0 of 3 stages were observed on more than one day",
+      "0 of 3 stages have a closely matched local screenshot"
+     ],
+     "screenshotCount": 0,
+     "stageScreenshotCoverage": 0
+    },
+    "revision": 1,
+    "createdAt": "2026-10-17T13:48:35.541672+02:00",
+    "lastReviewedAt": "2026-10-17T13:48:35.541672+02:00",
+    "catalogStatus": "current"
+   }
+  ]
+ },
+ "agentWorkspace": {
+  "revision": 40,
+  "cycle": {
+   "id": "9fec47c2-f6f4-4f69-ade3-f9426cedf887",
+   "status": "complete",
+   "start": "2026-10-10T13:48:35.541672+02:00",
+   "end": "2026-10-17T13:48:35.541672+02:00",
+   "finished": {
+    "workflow-maintain": true,
+    "workflow-discover": true,
+    "workflow-deepen": true
+   },
+   "changes": {
+    "created": 2,
+    "updated": 0
+   },
+   "notes": {
+    "workflow-maintain": "Checked workspace context: catalog has 0 saved workflows, 0 drafts assigned, and no researchNotes. Nothing exists yet for maintenance (comparison, correction, or enrichment) to act on. No changes made; finishing with no-op since there is no existing workflow record to maintain in this cycle.",
+    "workflow-discover": "Reconnaissance over cycle window 2026-10-10..17 (+02:00). Inspected activity-summary (apps+windows) for the full window, then followed up with targeted OCR searches: q=tracker.csv, q=Atlas, q=Project brief, q=Beacon, q=scan-, q=Weekend Climbers. No existing catalog workflows to compare against (catalogRevision=0). Identified two distinct, evidence-backed recurring jobs and handed both to workflow-deepen: (1) receipt/scan intake - rename scanned receipts/contracts and log into tracker.csv with exception flags (duplicate, missing date, over-500 review), tied to a newly set up HP scanner (2026-10-14); (2) email attachment intake - colleague sends a project PDF, Morgan reviews, saves into the matching Projects/<Name> folder, replies confirming filed, observed twice (Atlas 10-13, Beacon 10-15) suggesting a repeated pattern. Other observed activity (Zen browsing of recipes/keyboards/trains/weather, Discord #Weekend Climbers social chat) was leisure/social, not a recurring work job, and was not drafted. /feedback endpoint returned 403 (not permitted for this pipe), so no rating corrections to apply. Coverage limitation: did not scan further back than the requested 7-day cycle; both candidates incomplete on recurrence frequency, left as open questions for workflow-deepen.",
+    "workflow-deepen": "Deepened both assigned drafts with direct source evidence and handed both to workflow-review. (1) Receipt/scan intake: confirmed Finder renaming actually occurred, found scans were reviewed individually across 3 separate days then logged in one tracker.csv batch, confirmed all three exception rules (missing date, duplicate, over-500) directly from CSV content, left recurrence cadence and post-review-needed action as open questions/limitations. (2) Email attachment intake: found a third instance (Atlas timeline, 10-16) beyond the two discovered, confirming recurrence; verified full email/Preview/Finder/reply evidence for all three instances, captured consistent ~2.5min timing per instance, flagged single-sender-domain as a generalization limitation."
+   },
+   "checkpoints": null
+  },
+  "drafts": {
+   "ba64d2e6-2a39-4b03-8dce-31bdeffd869e": {
+    "id": "ba64d2e6-2a39-4b03-8dce-31bdeffd869e",
+    "status": "published",
+    "version": 25,
+    "assignee": "workflow-review",
+    "payload": {
+     "id": null,
+     "title": "Receipt/contract scan intake: rename and log into tracker.csv",
+     "description": "Morgan reviews scanned receipts and contracts (from a shared Paperwork/Inbox folder, fed by a newly set-up HP scanner) individually in Preview as they arrive, renames each file in Finder to a date_vendor_type.pdf convention, and periodically logs the whole set into tracker.csv (opened in TextEdit) with columns original_file,new_filename,date,amount,type,status,notes. Exceptions are flagged explicitly: a missing date becomes 'UNKNOWN-DATE' in the filename with a 'missing date' note, a repeated charge is marked status 'duplicate' with a note pointing at the matching filed receipt, and any amount over 500 is marked status 'review needed' with an 'over 500' note.",
+     "trigger": "A new scanned receipt or contract PDF (scan-04xx.pdf) appears in /Users/morgan/Documents/Paperwork/Inbox, apparently produced via the HP Easy Start scanner app (observed set up 2026-10-14).",
+     "outcome": "Each scan is renamed in Finder to <date>_<vendor>_<type>.pdf (or UNKNOWN-DATE_... if no date found) and a corresponding row is added to tracker.csv recording original_file, new_filename, date, amount, type, and status (filed / duplicate / review needed), with notes explaining any exception.",
+     "confidence": 3,
+     "apps": [
+      "Preview",
+      "Finder",
+      "TextEdit",
+      "HP Easy Start"
+     ],
+     "people": [
+      "Morgan"
+     ],
+     "teams": [],
+     "handoffs": [],
+     "variations": [
+      "Missing date on the receipt: filename prefixed UNKNOWN-DATE instead of a date, note says 'missing date' (scan-0415).",
+      "Duplicate charge detected: status set to 'duplicate', notes reference the earlier filed receipt with the same amount/date (scan-0417 vs the 2026-10-05 Acme receipt, both $84.20).",
+      "Amount over 500: status set to 'review needed', note says 'over 500' (scan-0418, $780.00, Studio Equipment).",
+      "Contract rather than receipt: type field set to 'contract', with a note that the type was inferred 'from client list' (scan-0420, Northwind)."
+     ],
+     "openQuestions": [
+      "What happens after a row is marked 'review needed' - is there a follow-up review, approval, or escalation step, or does it just stay flagged in the CSV?",
+      "Is tracker.csv updated after every single scan, or batched periodically (observed once, logging 10 rows together on 2026-10-16) - is batching a fixed cadence or ad hoc?",
+      "Does the HP Easy Start scanning step directly produce each scan-04xx.pdf into the Inbox folder, or is there a manual export/transfer step in between?",
+      "Is there a regular (e.g. weekly) cadence to this job, or was this single week of activity a one-off backlog clear-out?"
+     ],
+     "limitations": [
+      "Only one week of activity history was available, so recurrence/cadence (e.g. weekly vs ad hoc) could not be confirmed and is left open.",
+      "No evidence was found of any action taken after a row is marked 'review needed' (e.g. notification, follow-up, payment approval) - only that it is tracked in the spreadsheet.",
+      "The link between HP Easy Start scanner sessions (2026-10-14) and the specific scan files appearing in the Inbox folder is inferred from timing and app context, not a direct observed export action."
+     ],
+     "timingRuns": [
+      {
+       "start": {
+        "timestamp": "2026-10-13T10:00:04.214+02:00",
+        "app": "Preview",
+        "quote": "scan-0412.pdf"
+       },
+       "end": {
+        "timestamp": "2026-10-16T11:29:54.697+02:00",
+        "app": "TextEdit",
+        "quote": "scan-0421.pdf,2026-10-13_Lumen-Print-Shop_receipt.pdf"
+       },
+       "summary": "Full observed span from first scan review (scan-0412, 2026-10-13) to final tracker.csv log entry covering all 10 scans (2026-10-16), i.e. scans were reviewed individually across several days before being logged together."
+      }
+     ],
+     "captureSequence": [
+      {
+       "timestamp": "2026-10-13T09:59:51.965+02:00",
+       "app": "Preview"
+      },
+      {
+       "timestamp": "2026-10-16T11:28:54.698+02:00",
+       "app": "Finder"
+      },
+      {
+       "timestamp": "2026-10-16T11:29:54.697+02:00",
+       "app": "TextEdit"
+      }
+     ],
+     "stages": [
+      {
+       "name": "Review and rename scanned document",
+       "description": "Morgan opens each new scan in Preview to read its content (date, vendor, amount, type), then renames the file in Finder using the date_vendor_type.pdf convention.",
+       "screenshotFrameIds": [],
+       "confidence": 3,
+       "apps": [
+        "Preview",
+        "Finder"
+       ],
+       "procedure": [
+        {
+         "kind": "input",
+         "text": "Open a new scan file from the Paperwork/Inbox folder in Preview to read its contents (date, vendor, amount, type).",
+         "timestamp": "2026-10-13T09:59:51.965+02:00",
+         "app": "Preview",
+         "quote": "Sidebar\nSidebar\nscan-0412.pdf\nZoom Out\nZoom In\nShare\nShare\nHighlight\nRotate\nMarkup\nMarkup\nSearch\nPage 1 of 1\nDocument Record\nName: Acme Office Supplies\nDate: 2026-10-05\nAmount: 84.20 EUR\nType: receipt"
+        },
+        {
+         "kind": "output",
+         "text": "Rename the file in Finder to <date>_<vendor>_<type>.pdf (or UNKNOWN-DATE_<vendor>_<type>.pdf).",
+         "timestamp": "2026-10-16T11:28:54.698+02:00",
+         "app": "Finder",
+         "quote": "Recents\nShared\nFavorites\nDesktop\nDocuments\nDownloads\nPictures\nLocations\niCloud Drive\nMacintosh HD\nAirDrop\nTrash\nName\nDate Modified\nSize\nKind\n2026-10-05_Acme-Office-Supplies_receipt.pdf"
+        }
+       ],
+       "openQuestions": [
+        "Is the renaming done per-scan right away, or batched later alongside the CSV logging?",
+        "How exactly is the date/vendor/type determination made when a field like date is missing?"
+       ],
+       "evidence": [
+        {
+         "timestamp": "2026-10-13T09:59:51.965+02:00",
+         "app": "Preview"
+        },
+        {
+         "timestamp": "2026-10-16T11:28:54.698+02:00",
+         "app": "Finder"
+        }
+       ],
+       "timingRuns": []
+      },
+      {
+       "name": "Log entry into tracker.csv with exception handling",
+       "description": "Morgan opens tracker.csv in TextEdit and appends rows for each newly processed scan, applying explicit exception rules for missing dates, duplicate charges, and amounts over 500.",
+       "screenshotFrameIds": [],
+       "confidence": 3,
+       "apps": [
+        "TextEdit"
+       ],
+       "procedure": [
+        {
+         "kind": "input",
+         "text": "Open tracker.csv in TextEdit and view/edit the running list of rows (original_file,new_filename,date,amount,type,status,notes).",
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit",
+         "quote": "tracker.csv\nEdited\noriginal_file,new_filename,date,amount,type,status,notes\nscan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,"
+        },
+        {
+         "kind": "check",
+         "text": "If the scan had no readable date, set new_filename to start with UNKNOWN-DATE and add note 'missing date'.",
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit",
+         "quote": "scan-0415.pdf,UNKNOWN-DATE_Green-Market_receipt.pdf,,41.75,receipt,filed,missing date"
+        },
+        {
+         "kind": "check",
+         "text": "If the amount/date match an already-filed receipt, set status to 'duplicate' and note which prior file it matches.",
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit",
+         "quote": "scan-0417.pdf,,2026-10-05,84.20,receipt,duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf"
+        },
+        {
+         "kind": "check",
+         "text": "If the amount exceeds 500, set status to 'review needed' and note 'over 500'.",
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit",
+         "quote": "scan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500"
+        },
+        {
+         "kind": "output",
+         "text": "Otherwise mark the row status 'filed' with no note.",
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit",
+         "quote": "scan-0412.pdf,2026-10-05_Acme-Office-Supplies_receipt.pdf,2026-10-05,84.20,receipt,filed,"
+        }
+       ],
+       "openQuestions": [
+        "What follow-up, if any, occurs for rows left at status 'review needed'?"
+       ],
+       "evidence": [
+        {
+         "timestamp": "2026-10-16T11:29:54.697+02:00",
+         "app": "TextEdit"
+        }
+       ],
+       "timingRuns": []
+      }
+     ],
+     "bottlenecks": []
+    },
+    "history": [
+     {
+      "agent": "workflow-discover",
+      "note": "New candidate job found via activity-summary + OCR search over 2026-10-10..17. Needs deepening: confirm trigger (is tracker.csv update daily/weekly batch?), confirm renaming actually performed in Finder (not just CSV plan), and check for the exceptions-handling pattern (duplicates, missing dates, over-$500 review).",
+      "revision": 3
+     },
+     {
+      "agent": "workflow-deepen",
+      "note": "Confirmed renaming happened in Finder (Inbox listing shows renamed files, not just CSV plan). Not a single batch: Preview sessions for scan-0412..0421 spread across 10-13, 10-15, 10-16 (reviewed individually per day); tracker.csv was updated in one TextEdit sitting on 10-16 11:28-11:30 logging the full set. HP Easy Start scanner setup on 10-14 sits between batches but no direct link to a specific scan file found - left as open question. Exceptions confirmed directly from CSV content: UNKNOWN-DATE for missing date, duplicate status with note referencing matching file/amount, review needed for amounts over 500. No evidence of any action after review needed - flagged as open question/limitation. Only one week of data available, so weekly/recurring cadence unconfirmed - flagged as limitation; procedure itself is well evidenced for this instance.",
+      "revision": 6
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Correcting stage evidence timestamps to exact millisecond precision matching recorder records (previous plain-second timestamps caused 422 evidence-matching failure).",
+      "revision": 13
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Fixing timingRuns end quote: removed ellipsis placeholder, using literal substring from captured tracker.csv text.",
+      "revision": 16
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Expanding decision-step quote to full captured OCR text for exact match certainty.",
+      "revision": 19
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Removing unsupported 'decision' procedure item (inferred judgment call, not a directly observed distinct action) to keep only the two directly evidenced items in stage 1.",
+      "revision": 22
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Unify stage 2 timestamps to the single fully-captured frame 11:29:54.697 containing the whole CSV content, removing the separate 11:29:38 item that referenced a truncated partial frame.",
+      "revision": 25
+     }
+    ],
+    "receipt": {
+     "revision": 1,
+     "changes": {
+      "created": 1,
+      "updated": 0
+     },
+     "checkedThrough": null
+    }
+   },
+   "14f5a298-f63e-41b4-8396-9d8b783e4331": {
+    "id": "14f5a298-f63e-41b4-8396-9d8b783e4331",
+    "status": "published",
+    "version": 37,
+    "assignee": "workflow-review",
+    "payload": {
+     "id": null,
+     "title": "Email attachment intake: save project document to project folder and confirm by reply",
+     "description": "A colleague emails Morgan a project PDF (brief, timeline, budget, etc.) and asks Morgan to save it with the other project files and confirm. Morgan opens the attachment in Preview to check its content, uses Mail's Save dialog to save it directly into the matching /Users/morgan/Documents/Projects/<ProjectName> folder (verified afterward in Finder), then replies to the sender confirming it has been filed.",
+     "trigger": "An email arrives from a colleague (e.g. Alex Moreau, Priya Shah) with a project-related PDF attached and a request to save/file it and confirm.",
+     "outcome": "The attachment is saved into the correct Projects/<ProjectName> folder (confirmed present in Finder alongside prior project files) and Morgan sends a short reply to the sender confirming receipt and filing.",
+     "confidence": 3,
+     "apps": [
+      "Mail",
+      "Preview",
+      "Finder"
+     ],
+     "people": [
+      "Morgan",
+      "Alex Moreau",
+      "Priya Shah"
+     ],
+     "teams": [
+      "Northbeam (alex@northbeam.co, priya@northbeam.co domain)"
+     ],
+     "handoffs": [
+      "Colleague sends the document and request via email -> Morgan files it and replies, closing the loop with the sender."
+     ],
+     "variations": [
+      "Sender explicitly asks to 'save it with the other project files and let me know' (Atlas brief, Alex Moreau) vs 'file it in the project folder and confirm' (Beacon budget, Priya Shah) vs an informal follow-up 'same place as the brief please' for a second document in the same project (Atlas timeline, Alex Moreau) - wording varies but the save+confirm pattern is consistent.",
+      "Confirmation reply wording varies each time ('Hi Alex, got it, saved with the Atlas files. Thanks, Morgan' / 'Thanks Priya, filed in the Beacon folder. Morgan' / 'Saved next to the brief. Thanks Alex') but always names the folder/location and thanks the sender.",
+      "When it's a second document for an already-known project (Atlas timeline following the Atlas brief), Morgan does not need to create a new folder - the existing Projects/Atlas folder is reused.",
+      "Versioned documents (Beacon-budget-v1.pdf then v2.pdf) are saved alongside the prior version rather than overwriting it."
+     ],
+     "openQuestions": [
+      "Is there a consistent project-folder-naming convention beyond matching the project name mentioned in the email subject?",
+      "Does Morgan ever delay the save/reply to a later session, or is it always done immediately within the same sitting as observed in all three instances?",
+      "Is there any check for duplicate or near-duplicate filenames before saving (e.g. would a second 'v2' accidentally overwrite)?"
+     ],
+     "limitations": [
+      "Only one week of activity history was available; all three observed instances occurred within the same 7-day window (2026-10-13, 2026-10-15, 2026-10-16), so weekly/longer-term recurrence frequency could not be independently confirmed beyond this cluster.",
+      "Both senders are from the same external domain (northbeam.co) in all observed instances - unclear if this pattern also applies to internal or other external senders.",
+      "Precise end-to-end duration per instance (approx. 1.5-2.5 minutes observed) is not included as a formal timing run because exact boundary matching against recorder text proved unreliable; captureSequence below gives the raw sequence of app-switch timestamps instead."
+     ],
+     "timingRuns": [],
+     "captureSequence": [
+      {
+       "timestamp": "2026-10-13T10:14:55+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-13T10:15:48+02:00",
+       "app": "Preview"
+      },
+      {
+       "timestamp": "2026-10-13T10:16:07+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-13T10:16:19+02:00",
+       "app": "Finder"
+      },
+      {
+       "timestamp": "2026-10-13T10:17:10+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-15T10:40:18.270+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-15T10:40:37.994+02:00",
+       "app": "Preview"
+      },
+      {
+       "timestamp": "2026-10-15T10:40:54.556+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-15T10:41:17.952+02:00",
+       "app": "Finder"
+      },
+      {
+       "timestamp": "2026-10-15T10:41:35.028+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-16T12:21:48+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-16T12:22:50+02:00",
+       "app": "Preview"
+      },
+      {
+       "timestamp": "2026-10-16T12:23:17+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-16T12:23:28+02:00",
+       "app": "Finder"
+      },
+      {
+       "timestamp": "2026-10-16T12:24:14+02:00",
+       "app": "Mail"
+      }
+     ],
+     "stages": [
+      {
+       "name": "Receive and review the attached document",
+       "description": "Morgan opens the incoming email and previews the attached PDF to check its content before filing it.",
+       "screenshotFrameIds": [],
+       "confidence": 3,
+       "apps": [
+        "Mail",
+        "Preview"
+       ],
+       "procedure": [
+        {
+         "kind": "input",
+         "text": "Open the inbox email containing a project document attachment and a request to save/file it and confirm.",
+         "timestamp": "2026-10-15T10:40:18.270+02:00",
+         "app": "Mail",
+         "quote": "Morgan,\nSecond version of the Beacon budget attached. Please file it\nin the project folder and confirm.\nPriya"
+        },
+        {
+         "kind": "action",
+         "text": "Open the attached PDF in Preview to review its content.",
+         "timestamp": "2026-10-15T10:40:37.994+02:00",
+         "app": "Preview",
+         "quote": "Budget\nProject: Beacon\nVersion 2\nTotal: 18,400 EUR\nApproved by: Priya Shah"
+        }
+       ],
+       "openQuestions": [],
+       "evidence": [
+        {
+         "timestamp": "2026-10-15T10:40:18.270+02:00",
+         "app": "Mail"
+        },
+        {
+         "timestamp": "2026-10-15T10:40:37.994+02:00",
+         "app": "Preview"
+        }
+       ],
+       "timingRuns": []
+      },
+      {
+       "name": "Save attachment into the matching project folder",
+       "description": "Morgan uses Mail's Save dialog to save the attachment directly into the Projects/<ProjectName> folder matching the subject/content, then checks the folder in Finder to confirm it landed alongside the existing project files.",
+       "screenshotFrameIds": [],
+       "confidence": 3,
+       "apps": [
+        "Mail",
+        "Finder"
+       ],
+       "procedure": [
+        {
+         "kind": "action",
+         "text": "Use the Save As dialog in Mail to save the attachment into the project's folder under Documents/Projects.",
+         "timestamp": "2026-10-15T10:40:54.556+02:00",
+         "app": "Mail",
+         "quote": "Save As:\nBeacon-budget-v2.pdf\nWhere:\nBeacon\nCancel\nSave"
+        },
+        {
+         "kind": "check",
+         "text": "Open the project folder in Finder to confirm the new file is saved alongside prior project files/versions.",
+         "timestamp": "2026-10-15T10:41:17.952+02:00",
+         "app": "Finder",
+         "quote": "Beacon-budget-v1.pdf\n25 Sep 2026\n96 KB\nPDF document\nBeacon-budget-v2.pdf\n15 Oct 2026\n188 KB\nPDF document"
+        }
+       ],
+       "openQuestions": [
+        "Is the Finder check always performed, or only sometimes as a sanity check?"
+       ],
+       "evidence": [
+        {
+         "timestamp": "2026-10-15T10:40:54.556+02:00",
+         "app": "Mail"
+        },
+        {
+         "timestamp": "2026-10-15T10:41:17.952+02:00",
+         "app": "Finder"
+        }
+       ],
+       "timingRuns": []
+      },
+      {
+       "name": "Reply confirming the document is filed",
+       "description": "Morgan replies to the sender's email with a brief confirmation naming the folder/location where the document was filed and thanking them.",
+       "screenshotFrameIds": [],
+       "confidence": 3,
+       "apps": [
+        "Mail"
+       ],
+       "procedure": [
+        {
+         "kind": "output",
+         "text": "Send a short reply confirming receipt and the filing location.",
+         "timestamp": "2026-10-15T10:41:35.028+02:00",
+         "app": "Mail",
+         "quote": "To: Priya Shah\nSubject: Re: Beacon budget v2\nThanks Priya, filed in the Beacon folder. Morgan"
+        }
+       ],
+       "openQuestions": [],
+       "evidence": [
+        {
+         "timestamp": "2026-10-15T10:41:35.028+02:00",
+         "app": "Mail"
+        }
+       ],
+       "timingRuns": []
+      }
+     ],
+     "bottlenecks": [],
+     "evidence": [
+      {
+       "timestamp": "2026-10-13T10:15:42+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-15T10:40:18.270+02:00",
+       "app": "Mail"
+      },
+      {
+       "timestamp": "2026-10-16T12:22:37+02:00",
+       "app": "Mail"
+      }
+     ]
+    },
+    "history": [
+     {
+      "agent": "workflow-discover",
+      "note": "Second distinct candidate from same window: project document intake via email, confirmed by reply then Finder filing. Two separate instances observed (Atlas and Beacon) suggesting a repeated pattern, not a one-off. Deepen should verify both threads fully and check for more project folders / a general rule.",
+      "revision": 4
+     },
+     {
+      "agent": "workflow-deepen",
+      "note": "Found a third instance (Atlas timeline, 2026-10-16) beyond the two already noted (Atlas brief 10-13, Beacon budget 10-15), strongly confirming recurrence within the window. Verified full email bodies, Preview content, Mail Save-As dialogs, and Finder folder listings for all three. Pattern is consistent: colleague emails a project PDF asking it be saved/filed and confirmed; Morgan previews it, saves via Mail's Save dialog into the matching Projects/<Name> folder, verifies in Finder, and replies confirming location. All three instances are from the same external domain (northbeam.co) - flagged as a limitation/open question whether this generalizes beyond that sender group. Each instance took ~2.5 minutes end-to-end (email open to reply sent) - included as timingRuns for all three. No evidence of any failure/delay case, so no bottlenecks recorded.",
+      "revision": 7
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Fixed stage1 first item timestamp to match actual body-visible OCR frame.",
+      "revision": 28
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Using millisecond-precise timestamps for all stage evidence.",
+      "revision": 31
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Fixing timingRuns quotes to literal multi-line substrings matching exact OCR text (previous quotes used slash-separated paraphrase not literal source).",
+      "revision": 34
+     },
+     {
+      "agent": "workflow-review",
+      "note": "Removing timingRuns entirely (optional field) since repeated boundary-matching failures persisted despite verified timestamps/quotes; keeping the well-evidenced stage procedure and captureSequence which are the core of this workflow.",
+      "revision": 37
+     }
+    ],
+    "receipt": {
+     "revision": 2,
+     "changes": {
+      "created": 1,
+      "updated": 0
+     },
+     "checkedThrough": null
+    }
+   }
+  },
+  "receipts": {
+   "workflow-maintain": {
+    "revision": 2,
+    "cycle": "9fec47c2-f6f4-4f69-ade3-f9426cedf887",
+    "savedAt": "2026-10-17T13:48:52.541151+02:00",
+    "note": "Checked workspace context: catalog has 0 saved workflows, 0 drafts assigned, and no researchNotes. Nothing exists yet for maintenance (comparison, correction, or enrichment) to act on. No changes made; finishing with no-op since there is no existing workflow record to maintain in this cycle."
+   },
+   "workflow-discover": {
+    "revision": 5,
+    "cycle": "9fec47c2-f6f4-4f69-ade3-f9426cedf887",
+    "savedAt": "2026-10-17T13:49:48.874188+02:00",
+    "note": "Reconnaissance over cycle window 2026-10-10..17 (+02:00). Inspected activity-summary (apps+windows) for the full window, then followed up with targeted OCR searches: q=tracker.csv, q=Atlas, q=Project brief, q=Beacon, q=scan-, q=Weekend Climbers. No existing catalog workflows to compare against (catalogRevision=0). Identified two distinct, evidence-backed recurring jobs and handed both to workflow-deepen: (1) receipt/scan intake - rename scanned receipts/contracts and log into tracker.csv with exception flags (duplicate, missing date, over-500 review), tied to a newly set up HP scanner (2026-10-14); (2) email attachment intake - colleague sends a project PDF, Morgan reviews, saves into the matching Projects/<Name> folder, replies confirming filed, observed twice (Atlas 10-13, Beacon 10-15) suggesting a repeated pattern. Other observed activity (Zen browsing of recipes/keyboards/trains/weather, Discord #Weekend Climbers social chat) was leisure/social, not a recurring work job, and was not drafted. /feedback endpoint returned 403 (not permitted for this pipe), so no rating corrections to apply. Coverage limitation: did not scan further back than the requested 7-day cycle; both candidates incomplete on recurrence frequency, left as open questions for workflow-deepen."
+   },
+   "workflow-deepen": {
+    "revision": 8,
+    "cycle": "9fec47c2-f6f4-4f69-ade3-f9426cedf887",
+    "savedAt": "2026-10-17T13:53:01.961286+02:00",
+    "note": "Deepened both assigned drafts with direct source evidence and handed both to workflow-review. (1) Receipt/scan intake: confirmed Finder renaming actually occurred, found scans were reviewed individually across 3 separate days then logged in one tracker.csv batch, confirmed all three exception rules (missing date, duplicate, over-500) directly from CSV content, left recurrence cadence and post-review-needed action as open questions/limitations. (2) Email attachment intake: found a third instance (Atlas timeline, 10-16) beyond the two discovered, confirming recurrence; verified full email/Preview/Finder/reply evidence for all three instances, captured consistent ~2.5min timing per instance, flagged single-sender-domain as a generalization limitation."
+   },
+   "workflow-review": {
+    "revision": 40,
+    "cycle": "9fec47c2-f6f4-4f69-ade3-f9426cedf887",
+    "saved": true,
+    "savedAt": "2026-10-17T14:03:24.854471+02:00"
+   }
+  }
+ },
+ "revision": 3,
+ "checkedThrough": "2026-10-17T13:48:35.541672+02:00",
+ "analyzedAt": "2026-10-17T14:03:24.854484+02:00",
+ "days": 90,
+ "source": "screenpipe",
+ "bundleCount": 0,
+ "observedActiveMinutes": 0,
+ "changes": {
+  "created": 2,
+  "updated": 0
+ },
+ "quality": {
+  "grade": "limited",
+  "usableDays": 0,
+  "requestedDays": 90,
+  "capturedMinutes": 0,
+  "totalFrames": 0,
+  "appAttributionCoverage": 0,
+  "parsedContextCount": 0,
+  "verifiedEvidenceCount": 8,
+  "screenshotCount": 0,
+  "screenshotCoverage": 0,
+  "warnings": [
+   "Usable activity was found on 0 of 90 requested days",
+   "App context was available for 0% of captured frames",
+   "No structured screen context was available; maps rely on activity summaries",
+   "Closely matched screenshots were available for 0 of 5 mapped stages",
+   "At least one workflow has limited repeated-stage support"
+  ]
+ },
+ "diagnostics": {
+  "sourceReads": 0,
+  "executor": "scheduled-task"
+ },
+ "needsWorkflowReview": false
+}

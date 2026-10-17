@@ -1,0 +1,4 @@
+{
+  "_note": "USD per million tokens, Anthropic list prices. The screenpipe gateway bills the account allowance, which may differ; these give an API-equivalent cost.",
+  "claude-haiku-4-5": {"input": 1.0, "cache_read": 0.1, "cache_write": 1.25, "output": 5.0}
+}
