@@ -16,6 +16,7 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..'); // .../Hackathon-Screenpi
 const EVAL_DIR = path.join(REPO_ROOT, 'eval');
 const RUNS_DIR = path.join(EVAL_DIR, 'runs');
 const VARIANTS_DIR = path.join(EVAL_DIR, 'variants');
+const SNAPSHOTS_DIR = path.join(EVAL_DIR, 'snapshots');
 const PORT = process.env.PIPEOPS_SERVER_PORT ? Number(process.env.PIPEOPS_SERVER_PORT) : 8787;
 
 const app = express();
@@ -70,6 +71,32 @@ app.get('/api/experiment', async (req, res) => {
     res.json(bundle);
   } catch (e) {
     res.status(404).json({ error: String(e.message ?? e) });
+  }
+});
+
+// A snapshot (from `wfeval snapshot`) holds restorable engine state before each agent
+// step — `wfeval stage <step>` replays one agent from it. Listing is a pure file read.
+app.get('/api/snapshots', async (_req, res) => {
+  try {
+    const entries = (await readdir(SNAPSHOTS_DIR, { withFileTypes: true }).catch(() => [])).filter((e) => e.isDirectory());
+    const out = [];
+    for (const e of entries) {
+      const dir = path.join(SNAPSHOTS_DIR, e.name);
+      try {
+        const meta = JSON.parse(await readFile(path.join(dir, 'snapshot.json'), 'utf8'));
+        const stepEntries = (await readdir(path.join(dir, 'steps'), { withFileTypes: true })).filter((s) => s.isDirectory());
+        const steps = stepEntries
+          .map((s) => s.name.match(/^(\d+)-p(\d+)-(.+)$/))
+          .filter((m) => m && m[3] !== 'complete')
+          .map((m) => ({ step: m[0], phase: Number(m[2]), task: m[3] }));
+        out.push({ id: e.name, variant: meta.variant?.name ?? null, suite: meta.data?.suite ?? null, seed: meta.data?.seed ?? null, steps });
+      } catch {
+        // an incomplete or malformed snapshot dir — skip it, same as listRuns does for runs
+      }
+    }
+    res.json(out);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message ?? e) });
   }
 });
 
@@ -140,6 +167,45 @@ app.post('/api/wfeval/run', async (req, res) => {
   req.on('close', () => {
     // Client disconnected — let the harness keep running (it's a real model run with
     // real cost); status/log replay isn't implemented, so just leave `live` in place.
+  });
+});
+
+// Replays one agent from a saved snapshot step — a real model-calling run, just a much
+// shorter one than a full cycle. Same single-slot lock and streaming as /api/wfeval/run.
+app.post('/api/wfeval/stage', async (req, res) => {
+  if (live && !live.done) {
+    return res.status(409).json({ error: 'a run is already in progress' });
+  }
+  const { step, task, variant, repeat } = req.body ?? {};
+  if (!step || !variant) {
+    return res.status(400).json({ error: 'step and variant are required' });
+  }
+  const args = ['run', 'wfeval', 'stage', String(step), '--variant', String(variant)];
+  if (task) args.push('--task', String(task));
+  if (repeat) args.push('--repeat', String(repeat));
+
+  res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' });
+  const proc = spawn('uv', args, { cwd: EVAL_DIR });
+  live = { proc, done: false, runId: null, error: null };
+
+  const onData = (buf) => res.write(buf.toString('utf8'));
+  proc.stdout.on('data', onData);
+  proc.stderr.on('data', onData);
+
+  proc.on('close', (code) => {
+    live.done = true;
+    if (code !== 0) {
+      live.error = `wfeval stage exited with code ${code}`;
+      res.write(`\n[pipeops] ${live.error}\n`);
+    }
+    res.end();
+  });
+
+  proc.on('error', (err) => {
+    live.done = true;
+    live.error = String(err.message ?? err);
+    res.write(`\n[pipeops] failed to start: ${live.error}\n`);
+    res.end();
   });
 });
 

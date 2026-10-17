@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Experiment, Run, StageId } from '../data/schema';
-import { Badge, Eyebrow, Missing, PlayIcon, PrimaryButton } from '../components/ui';
+import { Badge, Eyebrow, GhostButton, Missing, PlayIcon, PrimaryButton } from '../components/ui';
 import { pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
+import { fetchSnapshots, streamWfevalStage, type SnapshotSummary } from '../data/live';
 
 /* graph geometry */
 const GW = 1680;
@@ -37,6 +38,21 @@ export function ReplayView({
   const upstream = stages.slice(0, selIdx);
   const lastSim = downstream.length + 2;
 
+  // Real execution, separate from the preview above: a saved snapshot step for this
+  // stage, if one exists, lets `wfeval stage` replay the actual agent.
+  const [snapshots, setSnapshots] = useState<SnapshotSummary[] | null>(null);
+  const [stageConfirming, setStageConfirming] = useState(false);
+  const [stageRunning, setStageRunning] = useState(false);
+  const [stageLog, setStageLog] = useState('');
+  const stageLogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchSnapshots().then(setSnapshots).catch(() => setSnapshots([]));
+  }, []);
+  useEffect(() => {
+    stageLogRef.current?.scrollTo({ top: stageLogRef.current.scrollHeight });
+  }, [stageLog]);
+
   const clear = () => {
     timers.current.forEach((t) => window.clearTimeout(t));
     timers.current = [];
@@ -58,6 +74,26 @@ export function ReplayView({
   const snapshotId = run.stages[sel.id]?.snapshotId ?? null;
   const upstreamReq = upstream.map((s) => run.stages[s.id]?.modelRequests ?? null);
   const reusedRequests = upstreamReq.every((v) => v !== null) ? upstreamReq.reduce<number>((t, v) => t + (v ?? 0), 0) : null;
+
+  const task = `workflow-${sel.id}`;
+  const match = (snapshots ?? []).flatMap((snap) => snap.steps.filter((s) => s.task === task).map((s) => ({ snap, s })))[0];
+
+  const runStageReplay = async () => {
+    if (!match) return;
+    setStageConfirming(false);
+    setStageRunning(true);
+    setStageLog('');
+    try {
+      await streamWfevalStage(
+        { step: `snapshots/${match.snap.id}/steps/${match.s.step}`, task, variant: `variants/${match.snap.variant}.json`, repeat: 1 },
+        (chunk) => setStageLog((l) => l + chunk),
+      );
+    } catch (e) {
+      setStageLog((l) => l + `\n[pipeops] ${(e as Error).message}\n`);
+    } finally {
+      setStageRunning(false);
+    }
+  };
 
   const forkX = snapX(selIdx);
   const branchPath = `M ${forkX} ${MAIN_Y} C ${forkX} ${BRANCH_Y - 40}, ${forkX + 40} ${BRANCH_Y}, ${forkX + 110} ${BRANCH_Y} L ${END_X} ${BRANCH_Y}`;
@@ -306,6 +342,47 @@ export function ReplayView({
           <PrimaryButton className="mt-auto self-start" onClick={preview}>
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
           </PrimaryButton>
+
+          {/* Real execution — separate action, separate confirmation, only when a saved
+              snapshot actually has a step for this stage. Never fabricated. */}
+          <div className="mt-6 border-t border-ink-800 pt-5">
+            <Eyebrow>Run it for real</Eyebrow>
+            {snapshots === null ? (
+              <p className="mt-2 text-[13px] text-ink-500">checking for a saved snapshot…</p>
+            ) : match ? (
+              <>
+                <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
+                  Snapshot <span className="text-ink-200">{match.snap.id}</span> has a saved state before{' '}
+                  {sel.name}. Running replays that one agent for real — a genuine model call, not a preview.
+                </p>
+                {!stageConfirming ? (
+                  <PrimaryButton className="mt-3" onClick={() => setStageConfirming(true)} disabled={stageRunning}>
+                    {stageRunning ? 'Running…' : 'Run Stage Replay'}
+                  </PrimaryButton>
+                ) : (
+                  <div className="mt-3 flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
+                    <span className="text-[12px] leading-snug text-cost">This spends real AI allowance. Continue?</span>
+                    <PrimaryButton className="shrink-0" onClick={runStageReplay}>
+                      Confirm
+                    </PrimaryButton>
+                    <GhostButton className="shrink-0" onClick={() => setStageConfirming(false)}>
+                      Cancel
+                    </GhostButton>
+                  </div>
+                )}
+                {stageLog && (
+                  <div
+                    ref={stageLogRef}
+                    className="mt-3 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[11px] text-ink-300"
+                  >
+                    <pre className="whitespace-pre-wrap">{stageLog}</pre>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-2 text-[13px] text-ink-500">No saved snapshot covers {sel.name} yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -20,6 +20,20 @@ export interface VariantSummary {
   description: string | null;
 }
 
+export interface SnapshotStep {
+  step: string;
+  phase: number;
+  task: string;
+}
+
+export interface SnapshotSummary {
+  id: string;
+  variant: string | null;
+  suite: string | null;
+  seed: number | null;
+  steps: SnapshotStep[];
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -46,12 +60,39 @@ export async function fetchStatus(): Promise<{ running: boolean; runId: string |
   return json(await fetch('/api/wfeval/status'));
 }
 
+export async function fetchSnapshots(): Promise<SnapshotSummary[]> {
+  return json(await fetch('/api/snapshots'));
+}
+
 /** Starts a live wfeval run and streams its stdout/stderr text as it arrives. Resolves when the stream ends. */
 export async function streamWfevalRun(
   params: { variant: string; suite: string; seed: number; phases?: number; repeat?: number },
   onChunk: (text: string) => void,
 ): Promise<void> {
   const res = await fetch('/api/wfeval/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok || !res.body) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? `${res.status} ${res.statusText}`);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onChunk(decoder.decode(value, { stream: true }));
+  }
+}
+
+/** Replays one agent from a saved snapshot step. Same streaming contract as streamWfevalRun. */
+export async function streamWfevalStage(
+  params: { step: string; task?: string; variant: string; repeat?: number },
+  onChunk: (text: string) => void,
+): Promise<void> {
+  const res = await fetch('/api/wfeval/stage', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(params),
