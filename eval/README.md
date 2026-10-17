@@ -39,14 +39,15 @@ executions and pipe logs of every phase, `seeded.jsonl` and `results.jsonl`.
 - A screenpipe account with Workflows (Business) whose tier offers `claude-sonnet-5`.
   The harness logs in its own copy of the data dir; your real one is never touched.
 - Rust (`rustup`), `uv`, Docker (OrbStack or Docker Desktop).
-- Nix with an `aarch64-linux` builder, to build the sandbox image.
+- Nix only to rebuild the sandbox image (`sandbox/load.sh --build`, needs an
+  `aarch64-linux` builder); otherwise the published image is pulled.
 
 ## Setup (once)
 
 ```sh
 cd eval
 ./setup-engine.sh          # clones screenpipe at a8aaee2d, applies patches/harness.patch, builds
-sandbox/load.sh            # builds the sandbox image with Nix, loads it into Docker
+sandbox/load.sh            # pulls the sandbox image (pinned by digest) into Docker
 uv run wfeval template     # warm data dir with Pi and the four workflow pipes
 SCREENPIPE_DATA_DIR=$PWD/.engines/template/home/.screenpipe .engines/target/debug/screenpipe login
 ```
