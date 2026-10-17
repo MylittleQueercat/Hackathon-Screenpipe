@@ -64,3 +64,24 @@ Each draft: one rejection, one edit, one publish. Review kept every procedure it
 added the missing captures to the stage evidence. Cache-read tokens 0.5-0.7M (baseline
 2.3-3.5M), output 13-14k (baseline 43-49k). Remaining failures: 2 procedure rejections
 (one per draft) and a 409 after each rejected publish.
+
+## rejection-keeps-revision (on clearer-rejection)
+
+A publish marks its draft in flight and clears the mark when it is rejected: two
+revision bumps the 422 never mentioned, so Review's next edit got 409. Restoring the old
+revision would reuse a revision number (an edit could then apply to state its author
+never read), and not bumping on the mark lets a parallel edit inherit it, so the
+rejection now says where the revision is: "Workspace revision is now N: use it as
+expected_revision for your next change." `patches/variants/rejection-keeps-revision.patch`.
+
+| Run | Requests | Seconds | Checks | Failed calls |
+|---|---|---|---|---|
+| 20261017T212825Z r1 | 14 | 101 | 10/11 | 3 |
+| 20261017T213817Z r2 | 20 | 147 | 11/11 | 2 |
+| 20261017T213822Z r3 | 36 | 216 | 10/11 | 3 |
+
+The failure it targets is gone: no 409 after a rejected publish in 3 runs
+(clearer-rejection: 3 in 3). Requests are not lower than clearer-rejection's. r3: Review
+sent both publishes in the same second, one got 409 instead of its detailed 422, and
+Review diagnosed that draft by hand (15 bash calls). Parallel publishes are the
+remaining variance.
