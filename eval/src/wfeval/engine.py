@@ -188,7 +188,7 @@ class Engine:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 raw = resp.read()
         except urllib.error.HTTPError as e:
-            raise EngineError(f"{method} {path}: {e.code} {e.read()[:500].decode(errors='replace')}") from e
+            raise EngineError(f"{method} {path}: {e.code} {e.read()[:4000].decode(errors='replace')}") from e
         return json.loads(raw) if raw else None
 
     def get(self, path: str, **kw):

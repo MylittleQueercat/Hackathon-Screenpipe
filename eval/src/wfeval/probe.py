@@ -46,7 +46,7 @@ def probe(step_dir: Path, variant_path: Path, slot_no: int | None) -> list[dict]
                         receipt = engine.post("/workflows/workspace", body)
                         out.append({"draft": did, "published": True, "changes": receipt.get("changes")})
                     except EngineError as e:
-                        out.append({"draft": did, "published": False, "error": str(e)[:300]})
+                        out.append({"draft": did, "published": False, "error": str(e)[:3000]})
             finally:
                 engine.stop()
         finally:
