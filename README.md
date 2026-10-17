@@ -29,8 +29,6 @@ With PipeOps a developer can:
 3. **Replay one stage** (say, only the Review agent) from a saved state instead of rerunning the whole cycle.
    A stage improvement is a lead, not proof: it does not by itself show the full pipeline got better.
 
-Instead of guessing whether a change made Workflows better, you get evidence to decide.
-
 > **Scope.** PipeOps evaluates how Workflows *discovers* workflows from activity (activity → agents →
 > workflows). It does not measure what an automation saves a user once it is executed, and it reports
 > tokens and runtime, not dollars, because we have no reliable price data to convert them.
@@ -41,9 +39,9 @@ Instead of guessing whether a change made Workflows better, you get evidence to 
 
 | Part | What it is |
 |---|---|
-| [`eval/`](eval/README.md) | **`wfeval`**, the evaluation harness. Seeds a synthetic history into a real screenpipe engine, runs the shipped Workflows agents, and grades the workflows they publish against hidden ground truth. Also runs one agent alone from a saved state ("stage runs") and compares variants. |
-| [`pipeops/`](pipeops/README.md) | **PipeOps**, the web workbench (React + TypeScript, small Express bridge). Load an experiment, see what each agent did, inspect every check, compare two variants, replay a stage. |
-| [`pipeops/demo-data/`](pipeops/demo-data/CONTRIBUTING.md) | Real, sanitized experiment results in a portable JSON format, so the demo runs on any laptop with no screenpipe account. |
+| [`eval/`](eval/README.md) | **`wfeval`**, the evaluation harness. Seeds a synthetic history into a real screenpipe engine, runs the shipped Workflows agents, and grades the workflows they publish against hidden ground truth. Also runs one agent alone from a saved state ("stage runs") and compares variants. Engine variants and what each measured are in `eval/variants/` and `eval/EXPERIMENTS.md`. |
+| [`pipeops/`](pipeops/README.md) | **PipeOps**, the web workbench (React + TypeScript, small Express bridge, dark and light themes). Load an experiment, see what each agent did, inspect every check, compare two variants, replay a stage. Includes the export and validate scripts and its offline tests. |
+| [`pipeops/demo-data/`](pipeops/demo-data/CONTRIBUTING.md) | Real, sanitized experiment results in a portable JSON format, so the demo runs on any laptop with no screenpipe account. Also holds `CONTRIBUTING.md`. |
 
 ## How screenpipe is used
 
@@ -91,9 +89,8 @@ Open <http://localhost:5173>. Nothing here calls a model: the app only reads rec
    workflow chip to read its trigger, outcome, steps, variations, limitations and confidence.
 3. **Step 03, Inspect evaluation.** Step through the 11 checks. Each one shows what was expected, what
    the agents produced and the evidence it traces to.
-4. **Step 04, Compare variants.** Press **Run reveal**. Both variants pass 11/11, but episode-routing
-   used 111 requests against 89 and took 1175 s against 650 s, so the verdict is *no improvement
-   demonstrated*. We report that as it is.
+4. **Step 04, Compare variants.** Press **Run reveal**: same quality, higher cost, so the verdict is
+   *no improvement demonstrated*. We report that as it is.
 5. **Step 05, Stage replay.** Pick a stage and press **Preview Replay Plan** (a simulation, no model
    calls). Running it for real is a separate button that needs a saved snapshot, a built engine and an
    explicit confirmation, and it spends AI allowance.
@@ -110,8 +107,8 @@ button switches dark and light.
 
 All runs: `receipts` suite, seed 1, Claude Sonnet 5. Full log in [`eval/EXPERIMENTS.md`](eval/EXPERIMENTS.md).
 
-- **Full cycle, baseline vs episode-routing** (the two bundled runs): the same 11/11, but the
-  variant costs more (111 vs 89 requests). A change that does not help is a result too.
+- **Full cycle, baseline vs episode-routing** (the bundled pair, above): no improvement. A change that
+  does not help is a result too.
 - **clearer-rejection** (the team's engine change, built on second-precision, that tells the Review
   agent *which* procedure items were rejected and why): on the Review stage, **18–19 requests and
   130–150 s against 38–56 requests and 390–470 s for baseline**, and 13–14k output tokens against 43–49k,
@@ -154,19 +151,3 @@ Exports are allowlisted (metrics, checks, workflows, provenance hashes), exclude
 credentials, scan for secrets and host paths, and are refused if invalid. Two runs are only compared
 when they share suite, seed, phases and data hashes, and stage results are never shown as full-evaluation
 scores. See [`CONTRIBUTING.md`](pipeops/demo-data/CONTRIBUTING.md).
-
-## Repository layout
-
-```
-eval/                 wfeval harness (Python): generator, engine driver, grader, compare, stage runs
-  patches/            harness patch and shareable engine variants
-  variants/           variant definitions (baseline, episode-routing, clearer-rejection, ...)
-  EXPERIMENTS.md      what each change measured
-pipeops/              the workbench
-  src/                React UI (five steps, dark and light themes)
-  server/             Express bridge, run/demo converters, portable format (portable.mjs)
-  scripts/            export-run, validate-demo
-  demo-data/          bundled sanitized runs + CONTRIBUTING.md
-  tests/              non-LLM tests
-docs/screenshots/     images used in this README
-```
