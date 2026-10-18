@@ -150,6 +150,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
                   , at <DeltaWord dir={req.dir}>{req.pctLabel ?? req.abs} requests</DeltaWord> and{' '}
                   <DeltaWord dir={sec.dir}>{sec.pctLabel ?? `${sec.abs}s`} runtime</DeltaWord>.
                 </p>
+                <RejectedCalls a={a} b={b} />
                 {phases && <PhaseStrip a={a} b={b} />}
               </div>
               <motion.div
@@ -281,6 +282,36 @@ function DeltaChip({ children, tone }: { children: ReactNode; tone: Dir | 'neutr
 
 function DeltaWord({ dir, children }: { dir: Dir; children: ReactNode }) {
   return <span className={dir === 'win' ? 'text-signal' : dir === 'cost' ? 'text-cost' : 'text-ink-200'}>{children}</span>;
+}
+
+/** Workflows calls the engine refused (usage.workspace.failed). Each one is a retry the agent
+ *  has to pay for. Hidden when neither run logged it; "not logged" when only one did. */
+function RejectedCalls({ a, b }: { a: Run; b: Run }) {
+  const av = a.metrics.failedCalls ?? null;
+  const bv = b.metrics.failedCalls ?? null;
+  if (av === null && bv === null) return null;
+  const d = av !== null && bv !== null ? delta(av, bv) : null;
+  const side = (label: string, v: number | null) => (
+    <span>
+      <span className="text-ink-500">{label} </span>
+      {v === null ? <span className="text-ink-500">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
+    </span>
+  );
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]"
+      title="Workflows calls the engine refused (usage.workspace.failed); each one costs the agent a retry"
+    >
+      <span className="uppercase tracking-widest text-[11px] text-ink-500">Rejected calls</span>
+      {side(a.label, av)}
+      <span className="text-ink-600">→</span>
+      {side(b.label, bv)}
+      {d && <DeltaChip tone={d.dir}>{d.d === 0 ? '±0' : `${d.abs}${d.pctLabel ? ` · ${d.pctLabel}` : ''}`}</DeltaChip>}
+    </motion.div>
+  );
 }
 
 /** Per-phase request bars for the full three-phase story (phase 1: history, 2: a rule change,
