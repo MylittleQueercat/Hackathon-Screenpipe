@@ -1,160 +1,139 @@
-# PipeOps: Prove It Before You Ship It
+# PipeOps: prove it before you ship it
 
-> **Did your agent discover the right workflows? And how efficiently did it do so?**
+**Team PipeOps** · Build Agents That Remember · Track 01, *Find what to automate*
 
-**Team PipeOps** · Hackathon · Build Agents That Remember · Track 01, *Find what to automate*
+screenpipe Workflows reads your screen history and writes down the repeated work it finds,
+so you can decide what to automate. When someone changes its agents, nothing tells them
+whether discovery got better, worse, or just more expensive.
 
-Screenpipe Workflows discovers repeatable tasks from recorded activity. When a developer changes one of
-its agents, how can they know the change helped?
+**PipeOps is the instrument for that.** It runs screenpipe's own Workflows agents on a
+recorded week of work whose answers we know, grades what they publish, and measures what it
+cost. We used it on Workflows itself: it found waste, validated fixes, and stopped us from
+claiming more than the data shows.
 
-**PipeOps is an evaluation workbench for Screenpipe Workflows.** It runs the real Workflows agents against
-controlled activity histories with known answers and measures two things:
-
-- **Quality:** did the agents find the right tasks, keep the important exceptions, filter out noise, and
-  cite valid evidence?
-- **Efficiency:** how many model requests and how much runtime (token usage is recorded too) did it take?
-
-Developers can inspect results, compare variants and replay a single agent stage. **PipeOps gives Screenpipe
-developers the evidence to measure workflow quality, diagnose inefficient agent behavior, and validate
-improvements before release.** We used it on Workflows itself, and it found an inefficiency, validated a fix,
-and exposed blind spots in the evaluation (below).
-
-![Agent Execution: what Screenpipe actually produced](docs/screenshots/light-agent-execution.png)
+![The verdict screen](docs/screenshots/pipeops-verdict.png)
 
 ## What we found
 
-Receipts suite, seed 1, Claude Sonnet 5. The full log, with every run, is in
+One complete run per side on the same history (receipts suite, seed 1, Claude Sonnet 5 on
+both sides, engine `a8aaee2d6`), all three phases: a first week, a day where a naming rule
+changes, and a cycle with nothing new.
+
+| | Baseline | Our changes |
+|---|---:|---:|
+| Checks passed | 14/14 | **14/14** |
+| Model requests | 213 | **111** (−48%) |
+| Agent time | 1,538 s | **619 s** (−60%) |
+| Output tokens | 182k | **92k** (−49%) |
+| Requests when nothing was new | 56 | **0** |
+| Replies cut off at their length limit | 12 | **0** |
+
+- **The idle saving is certain:** with nothing new recorded, unchanged Workflows still ran 56
+  requests; ours runs no cycle at all.
+- **The rest is a direction, not a proof.** A second pair, stopped after the first week, went
+  48 → 60 requests (checks 10/11 → 11/11): first-week runs vary as much as the change.
+- **Quality is not settled.** A blind LLM judge read every published document, both orders.
+  On the complete pair it preferred baseline's 6 times out of 6; on the second pair's
+  receipts document it preferred ours. Two pairs, noise in both directions: this proves quality neither better
+  nor worse. The checks alone would not have shown it, which is why the judge is part of
+  the eval.
+
+The full log, with every run and every change tried, is in
 [`eval/EXPERIMENTS.md`](eval/EXPERIMENTS.md).
 
-**1. Not every change is an improvement.** Our `episode-routing` variant passed the same 11/11 checks as
-the baseline but used 111 model requests instead of 89 and 1175 s instead of 650 s (full cycle, one run
-each). **Result: no improvement demonstrated.**
+## Try it: no account, no model calls
 
-**2. Clearer rejection feedback cut the Review agent's retries.** Reading the runs with `wfeval why-rejected`
-showed that Review's publishes were rejected because items cited captures missing from the stage's
-evidence, and the engine's error never said which or why, so Review retried or dropped items. The
-`clearer-rejection` engine variant (applied on top of `second-precision`, which fixes whole-second
-citation matching) names each failing item and the reason. On the Review stage, from the same saved state:
-
-| | Baseline (2 runs) | Clearer-rejection (3 runs) |
-|---|---:|---:|
-| Model requests | 38–56 | **18–19** |
-| Runtime | 387–472 s | **131–152 s** |
-| Output tokens | 43–49k | **13–14k** |
-| Catalog checks | 11/11 | **11/11** |
-
-**Result: fewer requests and less runtime while passing all 11 existing checks.** These are stage-level
-runs, not proof of an end-to-end improvement, and removing `second-precision` raised the median back to 26 requests,
-so the two changes work together.
-
-**3. The evaluation has blind spots, and finding them is part of the job.** Two examples:
-
-- A stale ground-truth spelling made the `missing_date` check look failed in 10 of 15 Review runs. The
-  workflows were right and the grader was wrong; regraded, all 15 pass, and the harness now flags a stale truth.
-- The engine silently cut every workflow description at 400 characters (open questions and limitations at 180).
-  Every run lost 6 to 12 fields, one description stopped mid-word, and all 11 checks still passed. The harness
-  now reports this as `clipped`, and the `full-text` variant loses none (3 runs, no measurable cost to Review).
-  Whether keeping the full text improves later cycles has not been measured.
-
-**Result: passing every check does not mean every aspect of workflow quality is correct.**
-
-## Quick start: run the demo (no accounts, no model calls)
-
-Requires Node 18+ (tested on Node 20).
+Node 18 or newer, any OS.
 
 ```sh
 git clone https://github.com/MylittleQueercat/Hackathon-Screenpipe.git
 cd Hackathon-Screenpipe/pipeops
 npm install
-
-npm run server     # terminal 1: data bridge on http://127.0.0.1:8787
-npm run dev        # terminal 2: the UI on http://localhost:5173
+npm run dev        # http://localhost:5173
 ```
 
-Open <http://localhost:5173>. Nothing here calls a model: the app only reads recorded results.
+Four screens (`←` `→` or `1`–`4`):
 
-### Reproduce the demo
+1. **History.** The week of captures. *Show the planted jobs* reveals what Workflows should
+   find: receipt filing with four exceptions, email attachments, a one-off printer setup
+   that must not become a workflow, and noise.
+2. **Agents.** Discover, Maintain, Deepen and Review on both sides, replayed from their
+   request logs: every model request, every write the Workflows API refused, every reply
+   cut off. Switch to *Nothing new* to see the idle cycle disappear.
+3. **Findings.** The checks next to the documents the agents published. Click a step to open
+   the capture it cites. *Break it* damages the baseline's workflows four ways; the real
+   grader catches each one with exactly the check it should.
+4. **Verdict.** The numbers above, the judge, and what ships.
 
-1. **Enter the Lab.** At **Step 01** keep **Demo runs** selected and load `episode-routing`. It
-   is paired automatically with `baseline`, which saw exactly the same data.
-2. **Step 02, Agent execution.** Watch the pipeline Discover → Maintain → Deepen → Review with
-   the real request count and agent time per stage. Click a stage for the agent's own summary, or a
-   workflow chip to read its trigger, outcome, steps, variations, limitations and confidence.
-3. **Step 03, Inspect evaluation.** Step through the 11 checks. Each one shows the expected result, the
-   actual result and the evidence the run recorded for it.
-4. **Step 04, Compare variants.** Press **Run reveal**: the same checks pass, but there are more requests
-   and a longer runtime, so the verdict is *no improvement demonstrated*. We report that as it is.
-5. **Step 05, Stage replay.** Pick a stage and press **Preview Replay Plan** (a simulation, no model
-   calls). Running it for real is a separate button that needs a saved snapshot, a built engine and an
-   explicit confirmation, and it spends AI allowance.
-
-Keyboard: `←` `→` or `1`–`5` move between steps, `space` plays the current step, and the corner
-button switches dark and light.
-
-| | |
-|---|---|
-| ![Inspect evaluation](docs/screenshots/light-evidence.png) | ![Compare variants](docs/screenshots/light-compare.png) |
-| ![Load experiment](docs/screenshots/light-load.png) | ![Stage replay](docs/screenshots/light-stage-replay.png) |
+Everything shown is read from `pipeops/src/data/story.json`, built from the real run
+artifacts by `pipeops/scripts/build-story.py`.
 
 ## How screenpipe is used
 
-Without screenpipe's memory there would be nothing to evaluate; the whole project is built
-on top of it.
+Without screenpipe there is nothing to evaluate: the project measures screenpipe's memory
+turning into workflows.
 
-- **The real engine.** The harness builds screenpipe at a pinned commit (`a8aaee2d`) plus a
-  small patch (`eval/patches/harness.patch`) that adds one route, `/eval/seed`, enabled only
-  in eval mode. Nothing in the Workflows code is replaced.
-- **Recorded history, seeded.** A deterministic generator writes a synthetic week of work
-  (frames with accessibility text, UI events, app and window names, timestamps) into the engine
-  in the same form screen capture would. The agents therefore read what they would read from a
-  real recording, but there is no real user data in this repo.
-- **The shipped agents.** Four Workflows agents (`workflow-discover`, `-maintain`, `-deepen`,
-  `-review`) run against that history through screenpipe's own API (`/workflows/workspace`,
-  `/activity-summary`, `/search`, `/frames`, `/meetings`). We measure them; we don't reimplement them.
-- **The catalog it writes.** Each published workflow carries a trigger, an outcome, steps,
-  variations, limitations, a confidence rating and cited evidence (`timestamp`, `app`). The
-  harness checks that evidence resolves to real captured frames and that the right jobs were found,
-  the one-offs were not, noise was ignored, and a changed naming rule updated the existing workflow.
-- **Isolated by design.** Runs use their own data dir and port, tools run in a container with no
-  network, and your real screenpipe history is never read.
+- **The real engine and agents.** The harness builds screenpipe at `a8aaee2d6` and runs the
+  four shipped Workflows agents (Pi, Claude Sonnet 5 through screenpipe cloud) against it.
+  They search the history and publish through screenpipe's own API. We measure them; we
+  don't reimplement them.
+- **Recorded history, seeded.** A deterministic generator writes a synthetic week (frames with
+  accessibility text, UI events, apps, windows, timestamps) into the engine through one
+  added route, `/eval/seed`, which answers 404 unless the engine runs with
+  `SCREENPIPE_EVAL_SEED=1`. The agents read what they would read from a real recording. No
+  real user data is in this repo.
+- **Graded against the truth.** Every published workflow's citations must resolve to real
+  captures; the right jobs and exceptions must be found, the one-off and the noise not.
+- **Isolated.** Runs use their own data dir and port, tools run in a container with no
+  network, and your own screenpipe history is never read.
 
-## What's in this repo
+## Changes to screenpipe
+
+The engine with our changes is in [`screenpipe/`](screenpipe/), one commit per change, in
+the order they were measured. We plan to offer them to screenpipe as separate pull
+requests so each can be taken alone:
+
+| Pull request | What it changes |
+|---|---|
+| Eval harness | `wfeval` (in `eval/`) and the `/eval/seed` route |
+| Workflows bug fixes | Agents cite whole seconds, captures carry milliseconds: such citations were refused. Descriptions were cut at 400 characters, open questions at 180 |
+| Agent feedback | A refused write names the failing item, the revision to use and what the recorder holds at that time; Review handoffs are checked as publication would; quotes match window titles; drafts publish independently |
+| Idle skip | No Discover cycle when nothing new was recorded (56 → 0 requests when idle) |
+| Cut replies fix + cloud report | Pi's adapter sends `max_completion_tokens`, which screenpipe cloud ignores, so replies stop at 4,096 tokens; send `max_tokens` (12 → 0 cut replies) |
+
+Only the two numbers in the table are attributed to a single change. The other savings
+are measured for the whole stack; per-change runs are in `eval/EXPERIMENTS.md`, several
+within run-to-run spread.
+
+They were built and measured in sequence on `a8aaee2d6`; each will be rebased and re-tested
+on current screenpipe before it is proposed.
+
+## What works, what doesn't
+
+- **Works:** the harness end to end on an Apple Silicon Mac (seed, run all four agents,
+  grade, compare); stage replays of one agent from a saved state; the negative controls;
+  the PipeOps app offline on any machine.
+- **Prototype limits:** one synthetic suite (receipts) is fully measured, a second (`busy`)
+  is built but not run live; the history is clean (no OCR noise, no audio, no meetings);
+  two pairs of runs is too few to settle quality; the judge is one model family, the same
+  one that wrote both sides.
+- **Not reproduced outside the team yet.**
+
+## Run a real evaluation (spends AI allowance)
+
+An Apple Silicon Mac with the screenpipe desktop app (quit while running), a screenpipe
+account with Workflows, Rust, `uv` and Docker. A full three-phase run is about 200 model
+requests (about 8 points of our weekly AI allowance) and 10 to 26 minutes of agent
+time. Setup and commands: [`eval/README.md`](eval/README.md).
+
+## Repo
 
 | Part | What it is |
 |---|---|
-| [`eval/`](eval/README.md) | **`wfeval`**, the evaluation harness. Seeds a synthetic history into a real screenpipe engine, runs the shipped Workflows agents, and grades the workflows they publish against hidden ground truth. Also runs one agent alone from a saved state ("stage runs") and compares variants. Engine variants and what each measured are in `eval/variants/` and `eval/EXPERIMENTS.md`. |
-| [`pipeops/`](pipeops/README.md) | **PipeOps**, the web workbench (React + TypeScript, small Express bridge, dark and light themes). Load an experiment, see what each agent did, inspect every check, compare two variants, replay a stage. Includes the export and validate scripts and its offline tests. |
-| [`pipeops/demo-data/`](pipeops/demo-data/CONTRIBUTING.md) | Real, sanitized experiment results in a portable JSON format, so the demo runs on any laptop with no screenpipe account. Also holds `CONTRIBUTING.md`. |
+| [`pipeops/`](pipeops/) | The four-screen app (React, TypeScript, Tailwind, screenpipe's design system) |
+| [`eval/`](eval/README.md) | `wfeval`: generator, seeding, runs, grader, stage replays, comparisons; `eval/judge/` the LLM judge |
+| [`screenpipe/`](screenpipe/) | screenpipe at `a8aaee2d6` plus our changes |
 
-## Run the tests (offline, no model calls)
+## Team
 
-```sh
-cd pipeops && npm run typecheck && npm test            # exporter, validator, API safety, comparability
-cd eval && uv run --group dev pytest -q                # generator, grader, negative controls, sandbox
-```
-
-If `uv run` fails with `No module named 'wfeval'` on macOS, run it as
-`PYTHONPATH=src uv run …` (details in [`pipeops/README.md`](pipeops/README.md#troubleshooting)).
-
-## Run a real evaluation (optional, spends AI allowance)
-
-This needs an Apple Silicon Mac with the screenpipe desktop app (quit while running), a screenpipe
-account with Workflows, Rust, `uv` and Docker. Setup and commands are in
-[`eval/README.md`](eval/README.md). From PipeOps, Step 01 → *Run new experiment* starts a real run
-behind a confirmation. A full cycle takes roughly 8–15 minutes per phase.
-
-## Share your own experiment
-
-Every `*.json` in [`pipeops/demo-data/`](pipeops/demo-data/) that passes validation appears under
-**Demo runs** automatically.
-
-```sh
-cd pipeops
-npm run export-run -- <runId>      # eval/runs/<runId> -> demo-data/<runId>.json
-npm run validate-demo
-```
-
-Exports are allowlisted (metrics, checks, workflows, provenance hashes), exclude logs, prompts and
-credentials, scan for secrets and host paths, and are refused if invalid. Two runs are only compared
-when they share suite, seed, phases and data hashes, and stage results are never shown as full-evaluation
-scores. See [`CONTRIBUTING.md`](pipeops/demo-data/CONTRIBUTING.md).
+<!-- TODO before submitting: one line per teammate, what they built. -->

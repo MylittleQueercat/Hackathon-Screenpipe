@@ -51,7 +51,7 @@ export default function Findings() {
           </ul>
           <div className="mt-auto pt-4">
             {phase === 1 && !breaking && (
-              <Button onClick={() => setBreaking(true)}>Break it: would the checks notice?</Button>
+              <Button onClick={() => pick(() => { setBreaking(true); setSide('base'); })}>Break it: would the checks notice?</Button>
             )}
             {breaking && (
               <div>
