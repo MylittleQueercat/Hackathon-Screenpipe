@@ -554,7 +554,8 @@ each phase, not the hour of waiting between cycles.
 
 On the complete pair, the stack took 111 requests against 213 (−48%), 4.0M input
 tokens against 7.8M (cached included, −48%), 92k output tokens against 182k (−49%) and
-619 s of agent time against 1,538 s (−60%), and lost no check. The earlier full baseline
+619 s of agent time against 1,538 s (−60%), and lost no check; the documents
+themselves were judged worse (see LLM judge). The earlier full baseline
 run r4 (17 October, the same engine binary, before the latest harness changes) took 195 requests,
 6.8M input and 200k output tokens and 1,569 s, with the same checks as r5 except the
 email job in phase 1.
@@ -575,5 +576,105 @@ email job in phase 1.
   `missing_date` and `steps` in 1 of 2 (baseline 2 of 2).
 
 One complete pair and two phase-1 pairs: the idle saving is certain, the rest is a
-consistent direction that more runs would have to confirm. The weekly allowance (38%
-to 69% for these four runs) did not allow more before it resets on 2026-10-22.
+consistent direction that more runs would have to confirm. The LLM judge below found the
+stack's documents worse on the complete pair, for reasons traced to the model's choices
+in that run, and better on the second pair's phase-1 receipts. The weekly allowance went from 38% to 69% over these four runs and is now at the
+75% pause, so this project runs no more.
+
+## LLM judge: are the documents as good?
+
+The suite's checks ask whether the right jobs and exceptions are named. To see how good the
+documents themselves are, each published workflow of the complete pair (baseline r5 and
+the stack's r1) was judged against the recorded history: 2 workflows (receipts, email) ×
+3 phases = 6 pairs, each judged twice with the two documents swapped, by 12 fresh Claude
+Sonnet agents (`sonnet-high`; the agents that wrote the documents are Sonnet 5 on both
+sides). Each judge had only `/tmp/wfjudge/`: the brief, its two documents as X and Y, the
+generator's truth and the full history with its labels. Blinding: ids, revisions,
+timestamps of the catalog's own bookkeeping, the engine's `quality` grade and screenshot
+fields removed; the stack's timestamps moved onto baseline's clock (phase 2 was anchored
+40.5 s apart) so that every cited time is one in the history; no variant name or run path
+in any document. Scores are 1 to 5 on 8 metrics (faithful, procedure, exceptions,
+rule_change, usable, calibration, numbers, clarity), every deduction quoting the document.
+A preference counts only when both orders agree. `.engines/scratch/judge/` (local):
+`BRIEF.md`, `build.py`, `key.json`, `results/`, `tally.py`.
+
+| Pair | Order a | Order b | Verdict | Correctness, base → stack |
+|---|---|---|---|---|
+| phase 1, receipts | base, clear | base, clear | base | 4.00 → 2.50 |
+| phase 1, email | base, strong | base, strong | base | 3.00 → 2.50 |
+| phase 2, receipts | base, clear | base, clear | base | 3.75 → 3.00 |
+| phase 2, email | base, strong | base, strong | base | 3.38 → 2.12 |
+| phase 3, receipts | base, slight | base, slight | base | 3.62 → 3.50 |
+| phase 3, email | base, strong | base, strong | base | 4.12 → 2.25 |
+
+Correctness is the mean of faithful, procedure, exceptions and rule_change. Mean scores
+over all 12 judgments, base → stack: faithful 3.67 → 2.50, procedure 3.33 → 2.33,
+exceptions 3.67 → 2.75, rule_change 4.12 → 3.25, usable 3.58 → 2.33, calibration 3.33 →
+2.50, numbers 3.50 → 2.17, clarity 3.75 → 3.67.
+
+Baseline's documents won all six pairs, in both orders. What the judges named:
+
+- Email (strong in every phase): the stack's document finds 2 of the 3 occurrences, says
+  the Save As dialog and the Finder check were not captured (they were, on all three
+  days), times only the typing of the reply (about 15 s against 1.4 to 2 min), and gives
+  no folders or file names. Baseline's finds all three with the Save As dialogs, folders
+  and senders; its main error is placing the Preview step after the save.
+- Receipts (clear, then slight): the stack's document ties the job to the one-off HP
+  printer setup, which belongs to another planted job, keeps the missing date and the
+  high amount only in the description, and in phase 1 leaves out the Finder rename, then
+  asks whether it happens. It is better on the client-types lookup and has timings.
+- Phase 3: the stack's documents are its phase-2 ones unchanged. Baseline's receipts
+  document is also unchanged, so phase 3 receipts is the same pair as phase 2 judged again
+  by new judges: base both times, clear then slight (correctness gap 0.75 then 0.12). The
+  receipts margins are within that judge-to-judge spread; the email margins are not.
+  Baseline's email document was rewritten in phase 3 (the `idle_churn` the checks count
+  as a mistake), and the judges scored the rewrite higher than its phase-2 version
+  (correctness 3.38 → 4.12): that idle cycle, which idle-skip removes, improved a
+  weak document here.
+
+Where the gaps come from, traced through each agent's handoffs in phase 1
+(`.engines/scratch/publish-rewrites.py` and the request logs):
+
+- Email: Deepen's draft held all three occurrences and the Save As steps on both
+  sides. Baseline's Review handed it back 5 times, but only to fix timestamps and quotes,
+  then published it as Deepen wrote it. The stack's Review published its own rewrite
+  instead (4,808 characters for Deepen's 5,846), which dropped the 10-14 occurrence and
+  the Save As steps and added "not captured". Review rewriting at publish is the model's
+  choice and is not specific to the stack: baseline r5 did it twice in later phases and
+  r6 once; no stage run did.
+- Receipts: Review published Deepen's draft as handed off on both sides. The stack's
+  Discover folded the one-off printer setup into the receipts proposal (3 printer
+  mentions, no rename), and Deepen built on it; baseline's Discover proposed in 327
+  characters and its Deepen wrote the rename step (9 mentions, 10 of Finder).
+
+So on this pair the gaps start in one Discover framing and one Review rewrite, not in
+the rejections the stack changes or moves to Deepen: baseline's extra Review work
+corrected citations, not content. One stack change does reach Discover and Deepen
+(quote-hint puts window titles into the capture text they read); one pair can neither
+rule it in nor out.
+
+Second pair (baseline r6 and the stack's r2, both stopped in phase 2 at the allowance):
+only phase 1 receipts can be judged, since r6 published no separate email workflow. Same
+brief and blinding (phase 1 needed no clock shift), 2 new judges, `build.py pair2`,
+`key2.json`, `/tmp/wfjudge2`. The stack won in both orders, strong; correctness 2.67 →
+4.33 (base → stack), all metrics 2.71 → 3.93. Baseline r6's document has no rename stage
+and no mention of Finder, and adds a stage "Acknowledge emailed project files": the
+email job merged into receipts, the check r6 lost. The stack's document has review,
+rename and log stages and all four exceptions as actions; its faults are a passing
+mention of the printer setup as a trigger, and repetitions 2 for a job done on 4 days
+(both sides miscount). So on phase 1 receipts the two pairs split, one each, and each
+loss starts in that run's own Discover framing (printer setup folded in, email merged
+in).
+
+Caveats: one run per side; the judges are one model family, also the one that wrote both
+sides; a judge sees a document, not how it was made. The first round had two stack
+timestamps that the clock shift had moved off by a second or left unshifted (a range end);
+those four receipts judgments were rerun on fixed packets with the same outcome
+(`results-v1/` keeps the first round).
+
+What it means for the end-to-end numbers: on the complete pair the stack's documents are
+worse, and the suite's checks did not see it, but the causes traced so far are run-to-run
+choices of the model rather than the changes, and the second pair's phase 1 went the
+other way. The checks need a document-quality measure like
+this one beside them, and the cost savings need more pairs judged before quality can be
+called kept or lost.
