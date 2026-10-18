@@ -71,6 +71,7 @@ export function mountLive(app, { EVAL_DIR, RUNS_DIR, PY_ENV }) {
     proc.stderr.on('data', keep);
     proc.on('error', (e) => { run.phase = 'failed'; run.error = String(e.message ?? e); });
     proc.on('close', async (code) => {
+      run.endedAt = Date.now();
       await poll().catch(() => {});
       if (code !== 0) { run.phase = 'failed'; run.error = `wfeval stage exited with ${code}`; return; }
       run.phase = 'grading';
@@ -91,7 +92,7 @@ export function mountLive(app, { EVAL_DIR, RUNS_DIR, PY_ENV }) {
     if (run.phase === 'starting' && events.length) run.phase = 'running';
     res.json({
       phase: run.phase,
-      elapsed: (Date.now() - run.startedAt) / 1000,
+      elapsed: ((run.endedAt ?? Date.now()) - run.startedAt) / 1000,
       events,
       result: run.result,
       error: run.error ? `${run.error}${run.tail.length ? ` · ${short(run.tail[run.tail.length - 1], 200)}` : ''}` : null,

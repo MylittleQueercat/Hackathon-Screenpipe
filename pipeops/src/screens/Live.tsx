@@ -47,6 +47,8 @@ export default function Live() {
 
   useEffect(() => {
     fetch('/api/health').then((r) => setRunner(r.ok), () => setRunner(false));
+    // Started earlier in the talk: pick the live run back up when the slide is shown again.
+    fetch('/api/live/state').then((r) => r.json()).then((s) => { if (s.phase && s.phase !== 'idle') follow(); }, () => {});
     return () => clearInterval(timer.current);
   }, []);
 
@@ -76,6 +78,12 @@ export default function Live() {
     setPhase('starting');
     const r = await fetch('/api/live/start', { method: 'POST' }).catch(() => null);
     if (!r?.ok) { setPhase('failed'); setError('The live runner did not start.'); return; }
+    follow();
+  };
+
+  function follow() {
+    clearInterval(timer.current);
+    setMode('live');
     timer.current = window.setInterval(async () => {
       const s = await fetch('/api/live/state').then((x) => x.json()).catch(() => null);
       if (!s) return;
@@ -83,7 +91,7 @@ export default function Live() {
       if (s.phase === 'done') { setResult(s.result); clearInterval(timer.current); }
       if (s.phase === 'failed') { setError(s.error); clearInterval(timer.current); }
     }, 500);
-  };
+  }
 
   const last = (k: Ev['kind']) => [...events].reverse().find((e) => e.kind === k);
   const lit = (k: Ev['kind']) => phase === 'running' && !!last(k) && now - last(k)!.t < RECENT;
