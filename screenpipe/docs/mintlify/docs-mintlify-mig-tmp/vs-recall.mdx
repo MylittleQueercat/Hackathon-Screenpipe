@@ -1,0 +1,104 @@
+---
+title: "Screenpipe vs Microsoft Recall - privacy-focused alternative"
+sidebarTitle: "Vs. Microsoft Recall"
+description: "Compare Screenpipe and Microsoft Recall: a source-available Windows Recall alternative that runs on Mac, Windows, and Linux with no cloud dependency."
+icon: "scale"
+---
+
+Microsoft Recall is a Windows 11 feature that captures screenshots and makes them searchable. Screenpipe offers similar functionality but with complete privacy, auditable source, and cross-platform support.
+
+## Comparison
+
+| Feature | Screenpipe | Microsoft recall |
+|---------|-----------|------------------|
+| **Source access** | source-available, auditable | No |
+| **Platforms** | macOS, Windows, Linux | Windows 11 only |
+| **Data location** | 100% local | Local (with cloud concerns) |
+| **NPU required** | No | Yes (Copilot+ PCs) |
+| **Privacy** | Auditable source code | Closed source |
+| **AI provider** | Your choice (local or cloud) | Microsoft AI |
+| **Extensibility** | Plugins (scheduled tasks) | None |
+
+## Why choose Screenpipe?
+
+### True privacy
+
+- Source-available: you can audit the local capture and storage code
+- No Microsoft account required
+- No telemetry or data collection
+- Use completely local AI (Ollama)
+
+### Works everywhere
+
+- macOS, Windows, Linux
+- No special hardware required
+- Runs on any modern computer
+
+### You control the AI
+
+- Use Ollama for 100% local AI
+- Or connect to OpenAI, Claude, etc.
+- Your choice, not Microsoft's
+
+### Extensible
+
+Build custom integrations with the REST API or [scheduled tasks](/scheduled-tasks):
+
+```bash
+curl "http://localhost:3030/search?q=meeting+notes&content_type=all"
+```
+
+## Recall privacy concerns
+
+Microsoft Recall has faced criticism for:
+
+- Storing sensitive data (passwords, financial info)
+- Potential security vulnerabilities
+- Data being accessible to other apps
+- Unclear data handling policies
+
+Screenpipe addresses these:
+
+- **PII removal**: optional automatic redaction of sensitive data
+- **Window filtering**: exclude apps like password managers
+- **Local-only**: data never leaves your device
+- **Source-available**: security researchers can audit the local capture and storage code
+
+## Filtering sensitive content
+
+In the desktop app settings, you can exclude specific windows (like password managers and banking apps) and enable PII removal to automatically redact sensitive data.
+
+## Get started
+
+[Download the desktop app](https://screenpi.pe)
+
+---
+
+## More comparisons
+
+- [Vs Rewind](/vs-rewind) — local-first alternative
+- [Vs Limitless](/vs-limitless) — hardware vs software
+- [Vs Granola](/vs-granola) — meeting notepad vs full screen memory
+- [Vs Otter.ai](/vs-otter) — cloud transcription vs local capture
+- [Vs Fathom](/vs-fathom) — meeting bot vs 24/7 capture
+- [Vs Fireflies.ai](/vs-fireflies) — cloud meeting bot vs local-first
+
+## Resources
+
+- [AI recall tools guide](https://screenpi.pe/resources/use-cases/ai-recall-tools) - how screen memory works
+- [Local AI assistant setup](https://screenpi.pe/resources/use-cases/local-ai-assistant) - complete privacy with Ollama
+- [Screenpipe blog](https://screenpi.pe/blog) - latest updates and tutorials
+
+## Frequently asked questions
+
+### Is there a privacy-focused alternative to Windows Recall?
+
+Yes. Screenpipe is the privacy-focused, source-available alternative to Microsoft Recall. Unlike Recall, Screenpipe works on macOS, Windows, and Linux, requires no special hardware (no NPU needed), and stores all data locally by default with no cloud dependency. You can use local AI models (Ollama) for complete privacy and audit the local capture and storage code.
+
+### Does Screenpipe work on Windows without a Copilot+ PC?
+
+Yes. Screenpipe runs on any modern Windows computer — no NPU or Copilot+ hardware required. It uses Windows accessibility APIs for structured app text, with CPU-based OCR fallback, and works on Windows 10 and 11.
+
+### How is Screenpipe different from Windows Recall?
+
+Screenpipe is source-available, cross-platform, and has no cloud dependency by default. Recall is closed source, Windows 11 only, requires Copilot+ hardware, and has faced privacy concerns. Screenpipe also offers extensibility through scheduled tasks (scheduled AI agents) and a full REST API that Recall doesn't provide.

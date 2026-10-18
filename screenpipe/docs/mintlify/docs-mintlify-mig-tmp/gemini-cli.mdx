@@ -1,0 +1,103 @@
+---
+title: "Gemini CLI - Google's AI with screen context"
+sidebarTitle: "Gemini CLI"
+description: "Connect Screenpipe to Gemini CLI via MCP so Google's terminal AI assistant can reference your screen history and meeting transcriptions while you code."
+icon: "wand-sparkles"
+---
+
+[Gemini CLI](https://github.com/google/gemini-cli) is Google's terminal-based AI coding assistant. It supports MCP servers, so you can connect Screenpipe to give Gemini context about what you've been working on.
+
+## Setup
+
+Gemini CLI uses MCP for external tools. Add Screenpipe to your settings file (`~/.gemini/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "screenpipe": {
+      "command": "npx",
+      "args": ["-y", "screenpipe-mcp"]
+    }
+  }
+}
+```
+
+Restart Gemini CLI after configuration.
+
+## Usage
+
+Once configured, Gemini can search your screen history:
+
+```bash
+gemini
+
+> what was I working on this morning?
+
+> find the error message I saw in my terminal earlier
+
+> summarize the documentation I was reading about kubernetes
+```
+
+## Available tools
+
+Screenpipe provides these MCP tools to Gemini:
+
+| Tool | Description |
+|------|-------------|
+| `search-content` | Search screen text (accessibility-first, OCR fallback), audio transcriptions, and input |
+| `activity-summary` | Lightweight overview of app usage, speakers, and recent texts for a time range |
+| `search-elements` | Search structured UI elements from the accessibility tree |
+| `frame-context` | Full accessibility tree, URLs, and text for a specific frame |
+| `list-meetings` | List detected meetings with duration, app, and attendees |
+| `export-video` | Export screen recordings as MP4 for a time range |
+
+## Example workflows
+
+**Context-aware coding:**
+```
+> I was looking at a react component earlier that handled
+> form validation, find it and help me implement something similar
+```
+
+**Debug from memory:**
+```
+> there was an error in my build output, find it and help me fix it
+```
+
+**Recall documentation:**
+```
+> what did that API documentation say about rate limits?
+```
+
+## Requirements
+
+- Screenpipe running on localhost:3030
+- Gemini CLI installed
+- Node.js >= 18.0.0
+
+## Troubleshooting
+
+**MCP server not connecting?**
+
+1. **Verify Screenpipe is running:**
+   ```bash
+   curl http://localhost:3030/health
+   ```
+   you should see `{"status":"healthy"}`. If this fails, start Screenpipe first.
+
+2. **Check the settings file path:**
+   the config should be in `~/.gemini/settings.json`. Verify the file exists and contains valid JSON:
+   ```bash
+   cat ~/.gemini/settings.json | jq .
+   ```
+
+3. **Restart Gemini CLI:**
+   after adding or modifying the config, fully restart Gemini CLI. If it was running in a terminal, exit and reopen it.
+
+**Queries returning empty?**
+
+- Make sure Screenpipe has recorded data: `curl "http://localhost:3030/search?limit=1"`
+- If empty, let Screenpipe run for a minute and try again
+- Check screen recording is enabled (macOS: System Settings > Privacy & Security > Screen Recording)
+
+Need help? [join our Discord](https://discord.gg/screenpipe).

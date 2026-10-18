@@ -1,0 +1,56 @@
+// screenpipe — AI that knows everything you've seen, said, or heard
+// https://screenpipe.com
+"use client";
+import type { ReactNode } from "react";
+import { InlineText } from "./inline-text";
+import { WorkflowRichText } from "./rich-text";
+import styles from "./sop-document.module.css";
+
+/** Shared document surface; storage, evidence access and publication stay in adapters. */
+export function SopDocument({
+  title,
+  subtitle,
+  content,
+  onTitleChange,
+  onContentChange,
+  children,
+  kind = "sop",
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  content?: string;
+  onTitleChange?: (title: string) => void;
+  onContentChange?: (content: string) => void;
+  children?: ReactNode;
+  kind?: "sop" | "skill";
+}) {
+  return (
+    <article className={styles.document} aria-label={kind === "skill" ? "Skill document" : "SOP document"}>
+      <header className={styles.heading}>
+        <p className={styles.kind}>{kind === "skill" ? "Agent skill" : "Standard operating procedure"}</p>
+        {onTitleChange ? (
+          <InlineText
+            className={styles.title}
+            label={kind === "skill" ? "Name" : "SOP title"}
+            maxLength={kind === "skill" ? 64 : 300}
+            value={title}
+            onChange={onTitleChange}
+          />
+        ) : (
+          <h1 className={styles.title}>{title}</h1>
+        )}
+        {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
+      </header>
+      {content !== undefined && (
+        <WorkflowRichText
+          value={content}
+          onChange={onContentChange}
+          label={kind === "skill" ? "Instructions" : "SOP text"}
+          maxLength={kind === "skill" ? 20000 : 60000}
+          fullDocument
+        />
+      )}
+      {children}
+    </article>
+  );
+}

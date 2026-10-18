@@ -1,0 +1,112 @@
+---
+title: "Msty - privacy-first AI with screen context"
+sidebarTitle: "Msty"
+description: "Connect Screenpipe to Msty's Toolbox via MCP (STDIO or HTTP) so this privacy-first desktop AI can search your screen history and meeting transcripts."
+icon: "brain"
+---
+
+[Msty](https://msty.studio) is a privacy-first AI platform (desktop + web) that natively supports MCP via its Toolbox feature — both STDIO and HTTP modes. Screenpipe works out of the box with Msty, giving it access to your screen history, audio transcriptions, and more.
+
+## Setup
+
+### STDIO mode
+
+1. Make sure Screenpipe is running on your machine
+2. Open Msty and go to **Settings** → **Toolbox**
+3. Add a new tool with the following configuration:
+
+```json
+{
+  "mcpServers": {
+    "screenpipe": {
+      "command": "npx",
+      "args": ["-y", "screenpipe-mcp"]
+    }
+  }
+}
+```
+
+4. Save and enable the tool
+
+### HTTP mode
+
+For a client using HTTP transport on the same computer, start the HTTP MCP server:
+
+```bash
+npx -y --package screenpipe-mcp screenpipe-mcp-http --port 3031
+```
+
+Then point Msty's Toolbox at the HTTP endpoint:
+
+```json
+{
+  "mcpServers": {
+    "screenpipe": {
+      "url": "http://localhost:3031/mcp"
+    }
+  }
+}
+```
+
+The default server listens on loopback only. For another machine, use the authenticated [LAN setup](/mcp-server#expose-to-your-lan). Verify [a real retrieval](/mcp-server#verify-a-real-retrieval) after connecting.
+
+## Usage
+
+Once configured, Msty can search your screen history and get context about what you've been working on:
+
+```
+> what was I working on this morning?
+
+> find that documentation about async/await patterns I was reading earlier
+
+> what error messages have I seen in my terminal today?
+
+> search for the API response format I was looking at in the browser
+```
+
+## Example workflows
+
+**Recall context from earlier:**
+```
+> I was reading a blog post about rust macros earlier today,
+> search screenpipe and summarize the key points
+```
+
+**Reference meeting discussion:**
+```
+> search my audio transcriptions for what was discussed
+> about the deployment timeline, then help me plan next steps
+```
+
+**Debug from memory:**
+```
+> I saw an error message flash on screen, search screenpipe
+> to find it and help me fix the issue
+```
+
+**Find code examples:**
+```
+> search screenpipe for the python code I was looking at
+> in the browser yesterday about asyncio patterns
+```
+
+## Available tools
+
+Screenpipe provides these MCP tools to Msty:
+
+| Tool | Description |
+|------|-------------|
+| `search-content` | Search screen text (accessibility-first, OCR fallback), audio transcriptions, and input |
+| `activity-summary` | Lightweight overview of app usage, speakers, and recent texts for a time range |
+| `search-elements` | Search structured UI elements from the accessibility tree |
+| `frame-context` | Full accessibility tree, URLs, and text for a specific frame |
+| `list-meetings` | List detected meetings with duration, app, and attendees |
+| `export-video` | Export screen recordings as MP4 for a time range |
+
+## Requirements
+
+- Screenpipe running on localhost:3030 (or localhost:3031 for HTTP mode)
+- Msty desktop or web app
+- Node.js >= 18.0.0
+
+Need help? [join our Discord](https://discord.gg/screenpipe).

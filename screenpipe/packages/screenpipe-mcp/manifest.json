@@ -1,0 +1,100 @@
+{
+  "manifest_version": "0.3",
+  "name": "screenpipe",
+  "display_name": "Screenpipe Local",
+  "version": "0.0.0-injected-from-package-json",
+  "description": "Search your screen recordings and audio transcriptions with AI",
+  "long_description": "Connect Claude Desktop to Screenpipe running on this computer. Search recordings and audio, retrieve meeting notes, and use the tools exposed by your local Screenpipe server. Requested results are shared with Claude. This local extension does not require Data Sync.",
+  "author": {
+    "name": "screenpipe",
+    "url": "https://screenpi.pe"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/screenpipe/screenpipe"
+  },
+  "homepage": "https://screenpi.pe",
+  "documentation": "https://github.com/screenpipe/screenpipe/tree/main/packages/screenpipe-mcp",
+  "support": "https://github.com/screenpipe/screenpipe/issues",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {
+        "SCREENPIPE_API_URL": "${user_config.api_url}",
+        "SCREENPIPE_LOCAL_API_KEY": "${user_config.api_key}",
+        "SCREENPIPE_MCP_CLIENT": "claude"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "search-content",
+      "description": "Search recorded screen content, audio, memories, and parsed app data through one filtering surface"
+    },
+    {
+      "name": "export-video",
+      "description": "Export screen recordings as an MP4 for a time range — with synced audio by default (pass fps for a silent timelapse)"
+    },
+    {
+      "name": "list-meetings",
+      "description": "List detected meetings with id, duration, app, attendees, and note; q searches all history"
+    },
+    {
+      "name": "activity-summary",
+      "description": "Lightweight compressed activity overview for a time range (apps, recent texts, audio summary)"
+    },
+    {
+      "name": "search-elements",
+      "description": "Search structured UI elements (accessibility tree nodes and OCR text blocks)"
+    },
+    {
+      "name": "frame-context",
+      "description": "Get accessibility text, parsed tree nodes, and extracted URLs for a specific frame"
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  },
+  "keywords": [
+    "screen-recording",
+    "ocr",
+    "audio-transcription",
+    "automation",
+    "memory",
+    "search"
+  ],
+  "privacy_policies": [
+    "https://github.com/screenpipe/screenpipe/tree/main/packages/screenpipe-mcp#privacy-policy",
+    "https://screenpi.pe/privacy"
+  ],
+  "tools_generated": true,
+  "user_config": {
+    "api_url": {
+      "type": "string",
+      "title": "Screenpipe API URL",
+      "description": "Local Screenpipe API address. Keep the default unless you changed its port.",
+      "default": "http://127.0.0.1:3030",
+      "required": false
+    },
+    "api_key": {
+      "type": "string",
+      "title": "Local API key (optional)",
+      "description": "Leave blank to discover it through the Screenpipe CLI. If authentication fails, use the key returned by screenpipe auth token.",
+      "sensitive": true,
+      "required": false
+    }
+  }
+}

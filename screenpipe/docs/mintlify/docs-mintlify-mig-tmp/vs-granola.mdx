@@ -1,0 +1,42 @@
+---
+title: "Screenpipe vs Granola: private local meeting notes"
+sidebarTitle: "Vs. Granola"
+description: "Compare Screenpipe local transcription and summaries with Granola cloud meeting notes, botless capture, and shared-screen snapshots."
+icon: "scale"
+---
+
+{/* screenpipe — AI that knows everything you've seen, said, or heard */}
+{/* https://screenpipe.com */}
+
+Screenpipe supports local meeting transcription and summaries when configured with local Whisper and a local AI model. Granola captures meeting audio without a bot and uses cloud transcription and AI providers. Both can help with meeting notes; choose based on the data path and context you need.
+
+## Comparison
+
+| Criterion | Screenpipe | Granola |
+| --- | --- | --- |
+| Capture | Enabled screen and audio sources across apps | Meeting audio and notes; shared-screen snapshots on supported Mac setups |
+| Botless capture | Yes | Yes |
+| Transcription and summaries | Local engines and models available; hosted providers optional | Cloud transcription and AI providers |
+| Storage | Local history; sync and external exports are separate options | Cloud-stored notes and transcripts |
+| Screen context | Permitted app history before, during, and after calls | Supported shared meeting content |
+| Developer access | Local REST API and MCP | API and MCP for meeting context, with plan-dependent access |
+
+## When local processing matters
+
+If your requirement is to keep audio, transcripts, and summaries on the computer, follow [private meeting notes](/private-meeting-notes). Select a local model for each chat or task and keep cloud transcription, cloud fallbacks, sync, remote analysis, and external exports off for that workflow.
+
+Granola records without a bot, then uses cloud providers for transcription and summaries. Its security page explains those providers and their data handling. Review those terms against your team's requirements.
+
+## When Granola may fit better
+
+Granola focuses on meeting notes, templates, and shared meeting context. Screenpipe adds continuous screen and audio history while recording is enabled, but local AI needs setup and enough machine resources. Compare a representative transcript and summary before deciding.
+
+## Sources
+
+Privacy and shared-screen documentation checked October 12, 2026:
+
+- [Granola security](https://www.granola.ai/security): transcription, AI providers, and data handling.
+- [Granola shared-screen snapshots](https://docs.granola.ai/help-center/taking-notes/capture-shared-screens): supported capture scope.
+- [Screenpipe privacy data flow](/privacy-data-flow): local and external processing paths.
+
+See the [full Granola comparison](https://screenpipe.com/compare/granola), [Fireflies comparison](/vs-fireflies), and [Grain comparison](/vs-grain). Check each vendor's current plans for pricing and integration availability.

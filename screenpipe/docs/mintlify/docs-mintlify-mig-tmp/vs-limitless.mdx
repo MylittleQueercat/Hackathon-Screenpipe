@@ -1,0 +1,101 @@
+---
+title: "Screenpipe vs Limitless - self-hosted alternative"
+sidebarTitle: "Vs. Limitless"
+description: "Compare Screenpipe and Limitless.ai: a self-hosted, source-available desktop screen recorder vs the Limitless AI pendant. Data ownership and privacy compared."
+icon: "scale"
+---
+
+Limitless.ai offers an AI-powered pendant and app for recording meetings and conversations. Screenpipe provides similar AI memory capabilities but entirely self-hosted with auditable source.
+
+## Comparison
+
+| Feature | Screenpipe | Limitless |
+|---------|-----------|-----------|
+| **Hardware** | Uses your existing devices | Requires pendant |
+| **Source access** | source-available, auditable | No |
+| **Data location** | 100% local | cloud-based |
+| **Platforms** | macOS, Windows, Linux | iOS, web |
+| **Screen capture** | Yes | No |
+| **Audio capture** | Yes | Yes |
+| **self-hosted** | Yes | No |
+
+## Why choose Screenpipe?
+
+### No hardware purchase
+
+Use your existing computer, microphone, and webcam. No additional hardware required.
+
+### Screen + audio
+
+Limitless only captures audio. Screenpipe captures:
+- Screen content through accessibility APIs, with OCR fallback
+- Audio transcription
+- UI elements (experimental)
+
+### Complete privacy
+
+- All data stays on your device
+- Use local AI models (Ollama)
+- No cloud dependency
+- Audit the source code yourself
+
+### No cloud dependency
+
+Screenpipe runs entirely on your device. No cloud account required.
+
+### Extensible
+
+Build custom integrations with the REST API or [scheduled tasks](/scheduled-tasks):
+
+```bash
+# query your screen data
+curl "http://localhost:3030/search?content_type=all&limit=50"
+```
+
+## For meeting transcription
+
+Screenpipe handles meetings just as well — configure audio devices in the desktop app settings to capture system audio (meeting apps) and your microphone simultaneously.
+
+## Self-hosting benefits
+
+| Limitless cloud | Screenpipe local |
+|----------------|------------------|
+| Data on their servers | Data on your device |
+| Internet required | Works offline |
+| Cloud dependency | Works offline |
+| Vendor lock-in | Export anytime |
+
+## Get started
+
+[Download the desktop app](https://screenpi.pe)
+
+---
+
+## More comparisons
+
+- [Vs Rewind](/vs-rewind) — local-first alternative
+- [Vs Microsoft Recall](/vs-recall) — privacy-focused alternative
+- [Vs Granola](/vs-granola) — meeting notepad vs full screen memory
+- [Vs Otter.ai](/vs-otter) — cloud transcription vs local capture
+- [Vs Fathom](/vs-fathom) — meeting bot vs 24/7 capture
+- [Vs Fireflies.ai](/vs-fireflies) — cloud meeting bot vs local-first
+
+## Resources
+
+- [AI meeting notes guide](https://screenpi.pe/resources/use-cases/ai-meeting-notes) - automatic transcription setup
+- [Local AI assistant setup](https://screenpi.pe/resources/use-cases/local-ai-assistant) - run AI 100% locally
+- [Screenpipe blog](https://screenpi.pe/blog) - latest updates and tutorials
+
+## Frequently asked questions
+
+### How does Screenpipe compare to Limitless?
+
+Screenpipe captures both screen and audio on your existing devices, while Limitless requires purchasing a pendant and only captures audio. Screenpipe is source-available, runs entirely locally, and stores all data on your device by default. Limitless is cloud-based and closed source. Screenpipe also offers extensibility through scheduled tasks (AI agents) and a full REST API.
+
+### Do I need to buy hardware to use Screenpipe?
+
+No. Screenpipe uses your existing computer, microphone, and webcam. No pendant, wearable, or special hardware required. Just [download the desktop app](https://screenpi.pe/onboarding) and start recording.
+
+### Can Screenpipe replace Limitless for meeting transcription?
+
+Yes. Screenpipe captures system audio (Zoom, Meet, Teams) and your microphone simultaneously, with automatic transcription and speaker identification. Configure audio devices in the desktop app settings. Unlike Limitless, all transcriptions stay on your device.

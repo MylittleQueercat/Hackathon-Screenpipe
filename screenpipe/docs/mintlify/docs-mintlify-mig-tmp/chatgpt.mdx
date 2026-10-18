@@ -1,0 +1,86 @@
+---
+title: "ChatGPT — use your subscription with Screenpipe"
+sidebarTitle: "ChatGPT"
+description: "Connect your ChatGPT Plus or Pro subscription to power Screenpipe's AI chat and scheduled tasks with the latest OpenAI models — no API key required."
+icon: "bot"
+---
+
+<img src="/chatgpt-icon.svg" alt="ChatGPT" width="80" />
+
+If you have a ChatGPT Plus or Pro subscription, you can connect it directly to Screenpipe. This lets you use OpenAI's latest models for chat, summaries, and scheduled tasks without managing API keys or paying extra.
+
+## What you get
+
+- **AI chat** — ask questions about your screen history, meetings, and activity using GPT models
+- **Scheduled tasks** — run scheduled or on-demand automations (summaries, time tracking, etc.) powered by your subscription
+- **No API key needed** — sign in with your OpenAI account, that's it
+
+## How to connect
+
+1. Open Screenpipe
+2. Click the **model selector** next to the chat input (shows "OAI", "Ollama", etc.)
+3. Select **ChatGPT** as your provider
+4. Click **Sign in with ChatGPT**
+5. A browser window opens — log in with your OpenAI account and approve access
+6. Done — you'll see a green checkmark and your available models
+
+## Choosing a model
+
+After signing in, you can pick from the latest GPT models available in your ChatGPT plan. Higher tiers (Pro) unlock more capable models than Plus.
+
+The model list updates automatically based on what your subscription includes.
+
+## Using it for scheduled tasks
+
+Scheduled tasks are automations that run on a schedule or on demand. When you connect your ChatGPT subscription, scheduled tasks use it automatically.
+
+Examples:
+- **Toggl sync** — auto-track time in Toggl based on your screen activity, every 30 minutes
+- **Day recap** — one-click summary of what you accomplished today
+- **Meeting summary** — summarize meeting transcripts with action items
+
+To set up a scheduled task:
+1. Go to **Scheduled tasks** in the sidebar
+2. Pick a scheduled task or create your own
+3. In the scheduled task settings, select your ChatGPT preset
+4. Enable the scheduled task
+
+## How it's different from MCP
+
+Screenpipe also supports [MCP integrations](/mcp-server) with ChatGPT Desktop, Claude, and other apps. That's a different thing:
+
+| | ChatGPT subscription | MCP integration |
+|---|---|---|
+| **What it does** | Powers Screenpipe's built-in AI chat and scheduled tasks | Lets external apps (ChatGPT Desktop, Claude) query Screenpipe data |
+| **Setup** | Sign in with your OpenAI account inside Screenpipe | Add Screenpipe as an MCP server in the external app |
+| **Where you chat** | In Screenpipe's chat window | In the external app (ChatGPT Desktop, Claude, etc.) |
+| **Runs scheduled tasks** | Yes | No |
+
+You can use both at the same time.
+
+## Signing out
+
+To disconnect your ChatGPT account:
+1. Open the model selector
+2. Click the **Sign out** button next to your ChatGPT connection
+
+This removes the stored tokens from your machine. Your data stays local.
+
+## Troubleshooting
+
+**Sign-in window doesn't open?**
+- Make sure Screenpipe is running
+- Try restarting the app and signing in again
+
+**"Could not get token" error?**
+- Your session may have expired — sign out and sign back in
+- Check that your ChatGPT subscription is active at [openai.com](https://openai.com)
+
+**Models not showing up?**
+- Sign out and sign back in to refresh your token
+- Some models are only available on higher subscription tiers
+
+**Scheduled tasks failing with auth errors?**
+- Tokens refresh automatically, but if it persists, sign out and back in
+
+Still stuck? [ask in our Discord](https://discord.gg/screenpipe).

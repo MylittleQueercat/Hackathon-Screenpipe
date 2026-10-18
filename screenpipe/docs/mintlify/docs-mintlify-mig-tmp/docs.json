@@ -1,0 +1,287 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Screenpipe docs",
+  "colors": {
+    "primary": "#333333",
+    "light": "#B8B8B8",
+    "dark": "#333333"
+  },
+  "announcement": {
+    "title": "Get Screenpipe — AI that knows everything you've seen, said, or heard →",
+    "href": "https://screenpi.pe/onboarding"
+  },
+  "favicon": {
+    "light": "favicon.ico",
+    "dark": "favicon.ico"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "/"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "home",
+              "quickstart",
+              "first-useful-result",
+              "recording-memory-and-automation",
+              "getting-started",
+              "use-cases",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Recording and data",
+            "pages": [
+              "recording-controls",
+              "missing-recordings",
+              "storage-and-retention",
+              "local-or-cloud-ai",
+              "connect-your-assistant"
+            ]
+          },
+          {
+            "group": "Scheduled tasks",
+            "pages": [
+              "task-library",
+              "scheduled-tasks",
+              "reliable-reports",
+              "ai-usage-and-controls",
+              "task-troubleshooting",
+              "task-permissions"
+            ]
+          },
+          {
+            "group": "Connect",
+            "pages": [
+              "mcp-server",
+              "connections",
+              "connection-reference",
+              "privacy-data-flow",
+              "privacy-filter",
+              "teams"
+            ]
+          },
+          {
+            "group": "Use cases",
+            "pages": [
+              "consultant-time-tracking",
+              "remote-support-job-reports",
+              "client-weekly-report",
+              "workflow-discovery",
+              "workflow-handoff",
+              "daily-work-review",
+              "daily-project-brief",
+              "research-brief",
+              "relationship-follow-up",
+              "meeting-follow-up",
+              "backup-memory",
+              "meeting-to-crm",
+              "incident-reconstruction",
+              "focused-monitoring",
+              "agent-memory-workflow",
+              "team-sop-capture",
+              "search-screen-history",
+              "meeting-intelligence",
+              "meeting-transcription",
+              "private-meeting-notes",
+              "meeting-recovery",
+              "ai-memory",
+              "second-brain",
+              "for-developers"
+            ]
+          },
+          {
+            "group": "Personal and team knowledge",
+            "pages": [
+              "meeting-preparation",
+              "weekly-work-review",
+              "engineering-decision-log",
+              "share-team-knowledge",
+              "role-handoffs",
+              "support-knowledge-base"
+            ]
+          },
+          {
+            "group": "Workflow playbooks",
+            "pages": [
+              "spreadsheet-workflow-documentation",
+              "browser-workflow-documentation",
+              "meeting-to-engineering-tickets",
+              "automation-prioritization",
+              "automation-validation"
+            ]
+          },
+          {
+            "group": "Enterprise guides",
+            "pages": [
+              "enterprise-pilot",
+              "enterprise-device-coverage",
+              "enterprise-security-review"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "chatgpt",
+              "ollama",
+              "claude-code",
+              "opencode",
+              "openclaw",
+              "hermes",
+              "cline",
+              "continue",
+              "gemini-cli",
+              "copilot-cli",
+              "obsidian",
+              "msty"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "api-recipes",
+              "cli-reference"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "intune-deployment"
+            ]
+          },
+          {
+            "group": "Compare",
+            "pages": [
+              "vs-pieces",
+              "vs-littlebird",
+              "vs-omi",
+              "vs-granola",
+              "vs-grain",
+              "vs-rewind",
+              "vs-recall",
+              "vs-limitless",
+              "vs-otter",
+              "vs-fathom",
+              "vs-fireflies"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "troubleshooting",
+              "permissions",
+              "faq",
+              "contributing",
+              "docs-maintenance",
+              "changelog"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "openapi": "openapi.yaml"
+      }
+    ]
+  },
+  "seo": {
+    "indexHiddenPages": false
+  },
+  "api": {
+    "playground": {
+      "display": "none"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Pricing",
+        "href": "https://screenpi.pe/onboarding"
+      },
+      {
+        "label": "Discord",
+        "href": "https://discord.gg/screenpipe"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/screenpipe/screenpipe"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Download",
+      "href": "https://screenpi.pe/onboarding"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/screenpipe/screenpipe",
+      "x": "https://x.com/screenpipe",
+      "discord": "https://discord.gg/screenpipe"
+    }
+  },
+  "search": {
+    "prompt": "Search Screenpipe docs..."
+  },
+  "metadata": {
+    "og:site_name": "Screenpipe docs",
+    "og:image": "https://screenpi.pe/og-image.png",
+    "twitter:site": "@screenpipe"
+  },
+  "integrations": {
+    "posthog": {
+      "apiKey": "phc_Bt8GoTBPgkCpDrbaIZzJIEYt0CrJjhBiuLaBck1clce",
+      "apiHost": "https://eu.i.posthog.com"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/pipes",
+      "destination": "/scheduled-tasks"
+    },
+    {
+      "source": "/pipe-store",
+      "destination": "/task-library"
+    },
+    {
+      "source": "/pipe-debugging",
+      "destination": "/task-troubleshooting"
+    },
+    {
+      "source": "/pipe-permissions",
+      "destination": "/task-permissions"
+    }
+  ],
+  "icons": {
+    "library": "lucide"
+  },
+  "background": {
+    "color": {
+      "light": "#F6F6F3",
+      "dark": "#0A0A0A"
+    }
+  },
+  "fonts": {
+    "family": "Space Grotesk",
+    "heading": {
+      "family": "Space Grotesk"
+    },
+    "body": {
+      "family": "Crimson Text"
+    }
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "styling": {
+    "codeblocks": "system"
+  }
+}

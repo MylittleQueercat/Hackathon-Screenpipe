@@ -1,0 +1,64 @@
+# screenpipe — AI that knows everything you've seen, said, or heard
+# https://screenpipe.com
+
+# Security fixes only. Keep the repository's Dependabot security updates enabled.
+# A zero PR limit disables scheduled version updates; security fixes are event
+# driven and are not subject to that limit or the required schedule below.
+# Group across directories to avoid one PR per workspace for the same advisory.
+# Security fixes may require a breaking upgrade, so normal review and CI still
+# apply. Do not ignore major versions or compatibility pins here: that would
+# also suppress a security fix when a pinned dependency becomes vulnerable.
+version: 2
+
+updates:
+  - package-ecosystem: cargo
+    # Independent workspaces with consumed lockfiles. The SDK's tauri/rust
+    # manifest is a workspace member; livetext-stress is an unshipped harness.
+    directories:
+      - "/"
+      - "/apps/screenpipe-app-tauri/src-tauri"
+      - "/packages/sdk"
+      - "/packages/sdk/examples/tauri-app/src-tauri"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      cargo-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "fix(deps)"
+
+  # Bun does not support Dependabot security updates. Keep npm for package.json
+  # security fixes; autofix.yml refreshes the tracked bun.lock files
+  # with Bun. Frozen-lockfile CI remains the merge gate.
+  - package-ecosystem: npm
+    directories:
+      - "/apps/screenpipe-app-tauri"
+      - "/apps/screenpipe-workflows-web"
+      - "/packages/screenpipe-mcp"
+      - "/packages/sdk"
+      - "/packages/sdk/examples/electron-app"
+      - "/packages/sdk/examples/tauri-app"
+      - "/crates/screenpipe-gateway/e2e/conformance"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "fix(deps)"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      actions-security:
+        applies-to: security-updates
+        patterns: ["*"]
+    commit-message:
+      prefix: "fix(ci)"
