@@ -22,9 +22,9 @@ import { StageRunsTable } from '../components/StageRunsTable';
 
 /* graph geometry */
 const GW = 1680;
-const GH = 330;
-const MAIN_Y = 110;
-const BRANCH_Y = 250;
+const GH = 296;
+const MAIN_Y = 80;
+const BRANCH_Y = 216;
 const ORIGIN_X = 40;
 const END_X = 1630;
 const stageX = (i: number) => 310 + i * 375;
@@ -390,10 +390,10 @@ export function ReplayView({
         {/* 3. outcome */}
         <div className="flex flex-col">
           <Eyebrow size="xl">3 · Outcome</Eyebrow>
-          <div className="mt-6 space-y-8">
+          <div className="mt-3 space-y-3">
             <OutcomeRow label="Model requests reused">
               {reusedRequests !== null ? (
-                <span className="tnum text-[52px] font-semibold leading-none text-signal">{reusedRequests}</span>
+                <span className="tnum text-[44px] font-semibold leading-none text-signal">{reusedRequests}</span>
               ) : (
                 <Missing size="sm" path="stages.*.modelRequests" />
               )}
@@ -419,34 +419,37 @@ export function ReplayView({
               )}
             </OutcomeRow>
           </div>
-          <PrimaryButton size="xl" className="mb-4 mt-auto self-start" onClick={preview}>
-            <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
-          </PrimaryButton>
-          {/* Real execution: hidden until asked for. The button only reveals the panel; nothing
-              runs until the explicit Confirm inside it, and only when a saved snapshot has a
-              step for this stage. Never fabricated. */}
-          {snapshots === null ? null : !realOpen ? (
-            <div className="mt-4 flex items-center gap-3">
+          {/* Both buttons stay in view at any type size; what "Run Stage Replay" opens is a drawer over the
+              page, not more height in this column. Nothing runs until the explicit Confirm inside it, and only
+              when a saved snapshot has a step for this stage. Never fabricated. */}
+          <div className="mt-auto flex flex-wrap items-center gap-3">
+            <PrimaryButton size="xl" onClick={preview}>
+              <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
+            </PrimaryButton>
+            {snapshots !== null && (
               <button
                 onClick={() => {
                   loadSnapshots(); // re-check on every open, so a snapshot just added is picked up
                   setRealOpen(true);
                 }}
-                className="rounded-full border border-cost/60 px-4 py-2 text-[15.5px] font-semibold text-cost transition hover:bg-cost/10"
+                className="rounded-full border border-cost/60 px-5 py-3 text-[17px] font-semibold text-cost transition hover:bg-cost/10"
               >
                 Run Stage Replay
               </button>
-              <span className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-400">spends AI allowance</span>
-            </div>
-          ) : backendDown ? (
-            <MissingPanel
+            )}
+          </div>
+          <p className="mt-2 font-mono text-[12px] uppercase tracking-[0.12em] text-ink-400">preview: simulation only · run: spends AI allowance</p>
+          {snapshots !== null && realOpen && (
+            <div className="absolute bottom-3 right-[120px] z-30 max-h-[880px] w-[600px] overflow-y-auto rounded-2xl bg-ink-950 p-3 shadow-2xl ring-1 ring-ink-700">
+              {backendDown ? (
+                <MissingPanel
               title="The pipeops server isn't reachable"
               onRecheck={loadSnapshots}
               onClose={() => setRealOpen(false)}
             >
               Run <code className="font-mono">npm run server</code> in <code className="font-mono">pipeops/</code>, then check again.
             </MissingPanel>
-          ) : !match ? (
+              ) : !match ? (
             <MissingPanel
               title={snapshots.length === 0 ? 'No saved snapshot on this machine' : `No saved snapshot has a step for ${sel.name}`}
               onRecheck={loadSnapshots}
@@ -465,7 +468,7 @@ export function ReplayView({
                 </li>
               </ul>
             </MissingPanel>
-          ) : (
+              ) : (
             <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
               <div className="flex items-center justify-between">
                 <Eyebrow size="lg">Real execution</Eyebrow>
@@ -534,6 +537,8 @@ export function ReplayView({
                     <pre className="whitespace-pre-wrap">{stageLog}</pre>
                   </div>
                 </details>
+              )}
+            </div>
               )}
             </div>
           )}
