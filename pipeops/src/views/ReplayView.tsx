@@ -363,10 +363,10 @@ export function ReplayView({
         {/* 3. outcome */}
         <div className="flex flex-col">
           <Eyebrow size="xl">3 · Outcome</Eyebrow>
-          <div className="mt-5 space-y-7">
+          <div className="mt-6 space-y-8">
             <OutcomeRow label="Model requests reused">
               {reusedRequests !== null ? (
-                <span className="tnum text-[32px] font-semibold text-ink-50">{reusedRequests}</span>
+                <span className="tnum text-[52px] font-semibold leading-none text-signal">{reusedRequests}</span>
               ) : (
                 <Missing size="sm" path="stages.*.modelRequests" />
               )}
@@ -377,14 +377,13 @@ export function ReplayView({
               ) : recorded.length ? (
                 <StageRunTable runs={recorded} />
               ) : (
-                <span className="text-[16.5px] text-ink-300">Replay not yet executed. This is a preview of the plan.</span>
+                <span className="text-[20px] leading-snug text-ink-200">Not run yet: this is a preview.</span>
               )}
             </OutcomeRow>
           </div>
-          <PrimaryButton size="lg" className="mt-auto self-start" onClick={preview}>
+          <PrimaryButton size="xl" className="mb-4 mt-auto self-start" onClick={preview}>
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
           </PrimaryButton>
-          <p className="mt-1.5 font-mono text-[13px] text-ink-400">simulation only · no model calls</p>
           {/* Real execution: hidden until asked for. The button only reveals the panel; nothing
               runs until the explicit Confirm inside it, and only when a saved snapshot has a
               step for this stage. Never fabricated. */}
@@ -393,17 +392,7 @@ export function ReplayView({
               Real execution unavailable: the pipeops server isn't reachable. Start it with{' '}
               <code className="font-mono">npm run server</code>. The preview above still works.
             </p>
-          ) : !match ? (
-            <p className="mt-4 text-[15.5px] leading-relaxed text-ink-400">
-              {snapshots.length === 0 ? (
-                <>
-                  Real execution needs a saved snapshot (<code className="font-mono">wfeval snapshot</code>); none on this machine.
-                </>
-              ) : (
-                <>No saved snapshot has a step for {sel.name}.</>
-              )}
-            </p>
-          ) : !realOpen ? (
+          ) : !match ? null : !realOpen ? (
             <div className="mt-4 flex items-center gap-3">
               <button
                 onClick={() => setRealOpen(true)}
@@ -565,9 +554,9 @@ function PlanStep({ n, title, active }: { n: number; title: string; active: bool
 
 function OutcomeRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="border-b border-ink-800 pb-5">
-      <div className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</div>
-      <div className="mt-1.5">{children}</div>
+    <div className="border-b border-ink-800 pb-6">
+      <div className="font-mono text-[15px] uppercase tracking-widest text-ink-400">{label}</div>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
@@ -590,8 +579,8 @@ function StageRunTable({ runs }: { runs: StageRunSummary[] }) {
   }
   const short = (t: string) => t.replace(/^workflow-/, '');
   return (
-    <div className="font-mono text-[13.5px]">
-      <div className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 pb-1 text-[12px] uppercase tracking-widest text-ink-400">
+    <div className="font-mono text-[15px]">
+      <div className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 pb-1.5 text-[13px] uppercase tracking-widest text-ink-400">
         <span>variant</span>
         <span title="checks passed in the graded view (drafts, or the catalog after Review)">checks</span>
         <span>requests</span>
@@ -603,7 +592,7 @@ function StageRunTable({ runs }: { runs: StageRunSummary[] }) {
         const r0 = g[0];
         const checks = g.every((r) => r.passed !== null && r.scored !== null) ? range(g.map((r) => r.passed)) + `/${r0.scored}` : '—';
         return (
-          <div key={r0.id} className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 border-t border-ink-800 py-1 text-ink-200">
+          <div key={r0.id} className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 border-t border-ink-800 py-1.5 text-ink-200">
             <span className="truncate" title={g.map((r) => r.id).join('\n')}>
               {r0.variant ?? '?'}
               {r0.tasks.length > 1 && <span className="text-ink-400"> · {r0.tasks.map(short).join('→')}</span>}
