@@ -411,14 +411,15 @@ function Inspector({
           />
         </div>
         <div className="mt-8">
-          <Eyebrow size="lg">Per-stage breakdown</Eyebrow>
-          <div className="mt-3 space-y-2">
+          <Eyebrow size="xl">Per-stage breakdown</Eyebrow>
+          <div className="mt-4 space-y-3.5">
             {experiment.stages.map((s) => (
-              <div key={s.id} className="flex items-center justify-between text-[16.5px]">
-                <span className="text-ink-200">{s.name}</span>
+              <div key={s.id} className="flex items-baseline justify-between text-[22px]">
+                <span className="text-ink-100">{s.name}</span>
                 {run.stages[s.id]?.modelRequests != null ? (
-                  <span className="tnum font-mono text-signal">
-                    {run.stages[s.id].modelRequests} <span className="text-ink-400">req</span>
+                  <span className="tnum font-mono">
+                    <span className="text-[26px] font-semibold text-signal">{run.stages[s.id].modelRequests}</span>{' '}
+                    <span className="text-[17px] text-ink-400">req</span>
                   </span>
                 ) : (
                   <Missing size="sm" path={`stages.${s.id}.modelRequests`} />
