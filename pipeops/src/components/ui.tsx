@@ -31,11 +31,11 @@ const BADGE: Record<Provenance, { label: string; cls: string; dot: ReactNode }> 
   },
 };
 
-export function Badge({ kind, label }: { kind: Provenance; label?: string }) {
+export function Badge({ kind, label, size = 'md' }: { kind: Provenance; label?: string; size?: 'md' | 'lg' }) {
   const b = BADGE[kind];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.12em] ${b.cls}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono ${size === 'lg' ? 'text-[12.5px]' : 'text-[10.5px]'} uppercase tracking-[0.12em] ${b.cls}`}
     >
       {b.dot}
       {label ?? b.label}
