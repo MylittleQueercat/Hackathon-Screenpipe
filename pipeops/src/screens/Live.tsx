@@ -15,7 +15,7 @@ type Result = { status: string; seconds: number; requests: number | null; checks
 type Phase = 'idle' | 'starting' | 'running' | 'grading' | 'done' | 'failed';
 type Mode = 'live' | 'recorded';
 
-const REPLAY_SPEED = 2;
+const REPLAY_SPEED = 5;
 const LIVE_LAG = 0.6; // seconds the live view runs behind the log, so packets start at the start
 const TRAVEL = 0.75; // seconds (on screen) a packet takes between two boxes
 const GLOW = 1.1; // seconds (on screen) a box keeps glowing after its event
