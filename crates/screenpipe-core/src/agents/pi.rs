@@ -557,7 +557,14 @@ fn gateway_models_to_pi_models(data: &[serde_json::Value]) -> Vec<serde_json::Va
                 // Pi sends its stable agent session ID as x-session-affinity.
                 // The hosted gateway uses that plus the user-message ordinal to
                 // count one visible turn once across a multi-call tool loop.
-                "compat": {"sendSessionAffinityHeaders": true},
+                // The gateway applies a Claude model's output budget from
+                // `max_tokens`; sent as `max_completion_tokens` (Pi's default),
+                // it is ignored and replies stop at 4,096 tokens.
+                "compat": if id.starts_with("claude-") {
+                    json!({"sendSessionAffinityHeaders": true, "maxTokensField": "max_tokens"})
+                } else {
+                    json!({"sendSessionAffinityHeaders": true})
+                },
             })
         })
         .collect()
@@ -6103,6 +6110,12 @@ mod tests {
         assert_eq!(models[1].get("maxTokens"), Some(&json!(32_000)));
         assert_eq!(models[2].get("maxTokens"), Some(&json!(32_000)));
         assert_eq!(models[3].get("maxTokens"), Some(&json!(64_000)));
+        // Claude's budget only applies when sent as max_tokens; others keep Pi's default.
+        assert_eq!(
+            models[0].pointer("/compat/maxTokensField"),
+            Some(&json!("max_tokens"))
+        );
+        assert!(models[1].pointer("/compat/maxTokensField").is_none());
     }
 
     #[tokio::test]
