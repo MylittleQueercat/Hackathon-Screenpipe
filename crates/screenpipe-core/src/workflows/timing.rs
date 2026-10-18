@@ -23,11 +23,21 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
             .map(|t| t.with_timezone(&Utc))
             .ok_or("Timing needs an exact source timestamp")?;
         let app = value["app"].as_str().ok_or("Timing needs a source app")?;
-        let quote = value["quote"]
-            .as_str()
-            .map(str::trim)
-            .filter(|q| (12..=1200).contains(&q.chars().count()))
-            .ok_or("Cite the source text supporting each timing boundary")?;
+        let quote = match value["quote"].as_str().map(str::trim) {
+            Some(q) if (12..=1200).contains(&q.chars().count()) => q,
+            Some(q) if !q.is_empty() => {
+                return Err(format!(
+                    "{at_key}: a timing quote needs 12 to 1,200 characters of the capture's text; \
+                     this one has {}",
+                    q.chars().count()
+                ))
+            }
+            _ => {
+                return Err(format!(
+                    "{at_key}: cite the source text supporting this timing boundary in quote"
+                ))
+            }
+        };
         let captures: Vec<_> = catalog
             .points
             .iter()
@@ -49,7 +59,8 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
                         "{at_key} cites {app} at {at_text}, which is not a recorded screen capture"
                     ),
                     (false, _) => format!(
-                        "{at_key}: the quote is not in the text of the {app} capture at {at_text}"
+                        "{at_key}: the {}",
+                        quote_mismatch(app, &at_text, &captures[0].detail, quote)
                     ),
                 },
             )?;
@@ -125,6 +136,16 @@ mod tests {
             .insert((at, "finder".into()), vec![(at, "Docs".into())]);
         let app = normalize_timing(&input, &catalog).unwrap_err();
         assert!(app.starts_with("[0].start cites Finder at 2026-09-01T09:00:00+00:00, but the capture at that time is Docs, not Finder"), "{app}");
+    }
+    #[test]
+    fn a_short_boundary_quote_says_how_long_it_must_be() {
+        let (mut input, catalog) = fixture();
+        input["timingRuns"][2]["start"]["quote"] = json!("Begin");
+        let why = normalize_timing(&input, &catalog).unwrap_err();
+        assert_eq!(why, "[2].start: a timing quote needs 12 to 1,200 characters of the capture's text; this one has 5");
+        input["timingRuns"][2]["start"]["quote"] = json!(" ");
+        let why = normalize_timing(&input, &catalog).unwrap_err();
+        assert!(why.starts_with("[2].start: cite the source text"), "{why}");
     }
     #[test]
     fn average_uses_distinct_runs_not_days_or_model_numbers() {

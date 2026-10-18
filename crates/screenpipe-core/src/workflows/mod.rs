@@ -126,6 +126,11 @@ impl EvidenceCatalog {
                     .filter(|value| !value.is_empty())
                     .map(|value| value.chars().take(180).collect());
                 catalog.remember_app(app);
+                let detail = if source == "audio" {
+                    detail.to_string()
+                } else {
+                    with_window_title(detail, snippet.get("window_name").and_then(Value::as_str))
+                };
                 let detail: String = detail.chars().take(1_200).collect();
                 let key = format!(
                     "{}|{}|{}",
@@ -575,6 +580,57 @@ fn contains_source_quote(text: &str, quote: &str) -> bool {
             .contains(&quote)
 }
 
+/// A screen capture's text as evidence: the window title is part of what was on
+/// screen and agents quote it, so it leads the text unless the text already has it.
+pub fn with_window_title(text: &str, window: Option<&str>) -> String {
+    match window.map(str::trim).filter(|w| !w.is_empty()) {
+        Some(window) if !contains_source_quote(text, window) => format!("{window}\n{text}"),
+        _ => text.to_string(),
+    }
+}
+
+/// Why a quote failed, with the capture's closest run of consecutive lines, so the
+/// agent can copy the words instead of guessing which part did not match.
+pub fn quote_mismatch(app: &str, at: &str, text: &str, quote: &str) -> String {
+    let words = |s: &str| -> Vec<String> {
+        s.split(|c: char| !c.is_alphanumeric())
+            .filter(|w| !w.is_empty())
+            .map(str::to_lowercase)
+            .collect()
+    };
+    let wanted = words(quote);
+    let lines: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    let mut best: Option<(usize, usize, usize)> = None; // (shared, start, end)
+    for start in 0..lines.len() {
+        for end in start + 1..=(start + 8).min(lines.len()) {
+            let found = words(&lines[start..end].join(" "));
+            let shared = wanted.iter().filter(|w| found.contains(w)).count();
+            // Most shared words; the shortest passage on a tie.
+            if best.is_none_or(|(s, a, b)| shared > s || (shared == s && end - start < b - a)) {
+                best = Some((shared, start, end));
+            }
+        }
+    }
+    let passage = match best {
+        Some((shared, start, end)) if shared * 3 >= wanted.len().max(1) => {
+            lines[start..end].join(" ")
+        }
+        _ => return format!(
+            "quote is not in the text of the {app} capture at {at}; that capture's text begins \"{}\"",
+            lines.join(" ").chars().take(160).collect::<String>()
+        ),
+    };
+    format!(
+        "quote is not in the text of the {app} capture at {at}; its closest passage is \"{}\". \
+         Quote consecutive words exactly as captured: skipped lines, added separators or edited words do not match",
+        passage.chars().take(240).collect::<String>()
+    )
+}
+
 pub fn normalize_procedure(stage: &Value, evidence: &[Value]) -> Vec<Value> {
     stage
         .get("procedure")
@@ -651,6 +707,11 @@ pub fn check_procedure_item(detail: &Value, evidence: &[Value]) -> Result<Value,
             "cites audio at {at}; cite a screen or input capture"
         ));
     }
+    let first = screen[0]
+        .get("detail")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
     let source = screen
         .into_iter()
         .find(|source| {
@@ -659,7 +720,7 @@ pub fn check_procedure_item(detail: &Value, evidence: &[Value]) -> Result<Value,
                 .and_then(Value::as_str)
                 .is_some_and(|body| contains_source_quote(body, &quote))
         })
-        .ok_or_else(|| format!("quote is not in the text of the {app} capture at {at}"))?;
+        .ok_or_else(|| quote_mismatch(app, &at, &first, &quote))?;
     Ok(
         json!({"kind": kind, "text": text.chars().take(800).collect::<String>(),
         "quote": quote, "timestamp": source["timestamp"], "app": source["app"]}),
@@ -2151,5 +2212,59 @@ mod quote_tests {
         assert!(catalog
             .resolve(at("2026-09-18T10:00:00.900Z"), "Receipts")
             .is_some());
+    }
+
+    #[test]
+    fn window_title_leads_screen_text_once() {
+        assert_eq!(
+            with_window_title("Sidebar\nPage 1 of 1", Some("Atlas-brief.pdf")),
+            "Atlas-brief.pdf\nSidebar\nPage 1 of 1"
+        );
+        assert_eq!(
+            with_window_title("Atlas-brief.pdf\nPage 1", Some("Atlas-brief.pdf")),
+            "Atlas-brief.pdf\nPage 1"
+        );
+        assert_eq!(with_window_title("Page 1", Some("  ")), "Page 1");
+    }
+
+    #[test]
+    fn quote_mismatch_shows_the_closest_consecutive_lines() {
+        let text =
+            "Get Mail\nCompose\nInbox\nAlex Moreau\nProject brief for Atlas\n09:12\nNorthbeam HR";
+        let why = quote_mismatch(
+            "Mail",
+            "2026-10-16T12:22:08.927+00:00",
+            text,
+            "Inbox / Alex Moreau / Project brief for Atlas",
+        );
+        assert!(
+            why.contains("closest passage is \"Inbox Alex Moreau Project brief for Atlas\""),
+            "{why}"
+        );
+        let copied = "Inbox Alex Moreau Project brief for Atlas";
+        assert!(contains_source_quote(text, copied));
+        let unrelated = quote_mismatch("Mail", "T", text, "Quarterly revenue forecast spreadsheet");
+        assert!(
+            unrelated.contains("that capture's text begins \"Get Mail Compose"),
+            "{unrelated}"
+        );
+    }
+
+    #[test]
+    fn procedure_quote_of_the_window_title_matches() {
+        let evidence = vec![
+            json!({"timestamp":"2026-10-16T11:29:54.697Z","app":"Finder","source":"screen",
+            "detail": with_window_title("Name\nscan-0415.pdf", Some("/Users/morgan/Documents/Paperwork/Inbox"))}),
+        ];
+        let item = json!({"kind":"action","text":"Open the inbox folder.","timestamp":"2026-10-16T11:29:54.697Z",
+            "app":"Finder","quote":"/Users/morgan/Documents/Paperwork/Inbox"});
+        assert!(check_procedure_item(&item, &evidence).is_ok());
+        let joined = json!({"kind":"action","text":"Open the inbox folder.","timestamp":"2026-10-16T11:29:54.697Z",
+            "app":"Finder","quote":"Name / scan-0415.pdf"});
+        let why = check_procedure_item(&joined, &evidence).unwrap_err();
+        assert!(
+            why.contains("closest passage is \"Name scan-0415.pdf\""),
+            "{why}"
+        );
     }
 }

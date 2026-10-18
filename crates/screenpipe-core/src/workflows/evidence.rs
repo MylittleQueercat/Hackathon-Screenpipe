@@ -123,6 +123,11 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
             if detail.is_empty() {
                 return None;
             }
+            let detail = if source == "audio" {
+                detail.to_string()
+            } else {
+                with_window_title(detail, content.get("window_name").and_then(Value::as_str))
+            };
             Some(EvidencePoint {
                 timestamp,
                 app: actual_app.to_string(),
