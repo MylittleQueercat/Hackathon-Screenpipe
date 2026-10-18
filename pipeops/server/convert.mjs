@@ -8,10 +8,10 @@ import path from 'node:path';
 import { conditionsKey, fullRunProblem } from './portable.mjs';
 
 const STAGES = [
-  { id: 'discover', name: 'Discover', summary: 'Finds candidate workflows in recorded activity.' },
-  { id: 'maintain', name: 'Maintain', summary: 'Updates and merges the workflow set.' },
-  { id: 'deepen', name: 'Deepen', summary: 'Adds steps, exceptions and evidence.' },
-  { id: 'review', name: 'Review', summary: 'Checks the workflows before output.' },
+  { id: 'discover', name: 'Discover', summary: 'Finds candidate workflows.' },
+  { id: 'maintain', name: 'Maintain', summary: 'Merges and updates workflows.' },
+  { id: 'deepen', name: 'Deepen', summary: 'Adds steps and exceptions.' },
+  { id: 'review', name: 'Review', summary: 'Checks before publishing.' },
 ];
 
 const EVIDENCE_LENSES = [

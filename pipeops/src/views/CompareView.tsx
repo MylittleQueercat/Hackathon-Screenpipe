@@ -65,17 +65,17 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
       <div className="flex items-end justify-between">
         {view === 'full' ? (
           <div>
-            <Eyebrow>Experiment comparison · {experiment.experiment.question}</Eyebrow>
-            <div className="mt-3 flex items-baseline gap-5 text-[52px] font-semibold leading-none tracking-tightest">
-              <span className={mode === 'B' ? 'text-ink-500 transition-colors' : 'text-ink-50 transition-colors'}>{a.label}</span>
-              <span className="text-[32px] font-normal text-ink-600">vs</span>
-              <span className={mode === 'A' ? 'text-ink-500 transition-colors' : 'text-ink-50 transition-colors'}>{b.label}</span>
+            <Eyebrow size="lg">Experiment comparison · {experiment.experiment.question}</Eyebrow>
+            <div className="mt-3 flex items-baseline gap-5 text-[56px] font-semibold leading-none tracking-tightest">
+              <span className={mode === 'B' ? 'text-ink-400 transition-colors' : 'text-ink-50 transition-colors'}>{a.label}</span>
+              <span className="text-[36px] font-normal text-ink-500">vs</span>
+              <span className={mode === 'A' ? 'text-ink-400 transition-colors' : 'text-ink-50 transition-colors'}>{b.label}</span>
             </div>
           </div>
         ) : (
           <div>
-            <Eyebrow>Variant comparison · one agent, from a saved snapshot</Eyebrow>
-            <div className="mt-3 text-[52px] font-semibold leading-none tracking-tightest text-ink-50">Stage runs</div>
+            <Eyebrow size="lg">Variant comparison · one agent, from a saved snapshot</Eyebrow>
+            <div className="mt-3 text-[56px] font-semibold leading-none tracking-tightest text-ink-50">Stage runs</div>
           </div>
         )}
         <div className="flex items-center gap-4">
@@ -83,7 +83,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           {view === 'full' && (
             <>
               <ModeSwitch mode={mode} a={a} b={b} onMode={(m) => { clear(); setRunning(false); setMode(m); if (m === 'AB') setRevealed(true); }} />
-              <PrimaryButton onClick={reveal}>
+              <PrimaryButton size="lg" onClick={reveal}>
                 <PlayIcon /> {running ? 'Running reveal…' : revealed ? 'Replay reveal' : 'Run reveal'}
               </PrimaryButton>
             </>
@@ -103,7 +103,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           value={
             <span className="tnum">
               {shown.metrics.qualityPassed}
-              <span className="text-ink-500">/{shown.metrics.qualityTotal}</span>
+              <span className="text-ink-400">/{shown.metrics.qualityTotal}</span>
             </span>
           }
           delta={
@@ -127,22 +127,26 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           }
           tone={mode !== 'A' && reqDelta > 0 ? 'cost' : undefined}
         />
-        <Lane
-          label="Token usage"
-          sub="input · cache · output"
-          viz={<TokensViz a={a} b={b} mode={mode} />}
-          value={tokShown === null ? <span className="text-ink-600">—</span> : <CountUp value={tokShown} duration={1.6} format={(n) => fmtCount(Math.round(n)) ?? '—'} />}
-          valueSub={tokShown === null ? 'not recorded' : 'total tokens'}
-          delta={
-            showDelta && tokA !== null && tokB !== null && tokA > 0 ? (
-              <DeltaChip tone={tokB > tokA ? 'cost' : 'neutral'}>
-                {sign(tokB - tokA)}
-                {fmtCount(Math.abs(tokB - tokA))} · {signedPct(tokA, tokB)}
-              </DeltaChip>
-            ) : null
-          }
-          tone={mode !== 'A' && tokShown !== null && tokA !== null && tokB !== null && tokB > tokA ? 'cost' : undefined}
-        />
+        {/* Hidden when neither run recorded usage: a row of dashes reads as a bug in a demo. */}
+        {(a.efficiency || b.efficiency) && (
+          <Lane
+            label="Token usage"
+            height={146}
+            sub="input · cache · output"
+            viz={<TokensViz a={a} b={b} mode={mode} />}
+            value={tokShown === null ? <span className="text-ink-500">—</span> : <CountUp value={tokShown} duration={1.6} format={(n) => fmtCount(Math.round(n)) ?? '—'} />}
+            valueSub={tokShown === null ? 'not recorded' : 'total tokens'}
+            delta={
+              showDelta && tokA !== null && tokB !== null && tokA > 0 ? (
+                <DeltaChip tone={tokB > tokA ? 'cost' : 'neutral'}>
+                  {sign(tokB - tokA)}
+                  {fmtCount(Math.abs(tokB - tokA))} · {signedPct(tokA, tokB)}
+                </DeltaChip>
+              ) : null
+            }
+            tone={mode !== 'A' && tokShown !== null && tokA !== null && tokB !== null && tokB > tokA ? 'cost' : undefined}
+          />
+        )}
         <Lane
           label="Runtime"
           sub="wall-clock seconds"
@@ -174,19 +178,19 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
-                  <Eyebrow className="text-signal">Conclusion</Eyebrow>
-                  <span className="rounded-full border border-ink-700 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-ink-400">
+                  <Eyebrow size="lg" className="text-signal">Conclusion</Eyebrow>
+                  <span className="rounded-full border border-ink-700 px-2.5 py-0.5 font-mono text-[12px] uppercase tracking-widest text-ink-400">
                     n = {experiment.comparison.pairing === 'single' ? 1 : '>1'} pair
                   </span>
                 </div>
                 <div
                   className={`mt-2 font-semibold tracking-tightest text-ink-50 ${
-                    extras ? 'text-[40px] leading-[1.05]' : experiment.comparison.verdict.length > 40 ? 'text-[52px] leading-[1]' : 'text-[84px] leading-[0.95]'
+                    extras ? 'text-[40px] leading-[1.05]' : experiment.comparison.verdict.length > 40 ? 'text-[56px] leading-[1]' : 'text-[84px] leading-[0.95]'
                   }`}
                 >
                   {experiment.comparison.verdict}
                 </div>
-                <p className={`mt-3 text-ink-300 ${extras ? 'text-[15px] leading-snug' : 'text-[18px]'}`}>
+                <p className={`mt-3 text-ink-300 ${extras ? 'text-[17.5px] leading-snug' : 'text-[21px]'}`}>
                   {a.metrics.qualityPassed === b.metrics.qualityPassed ? (
                     <>Same {b.metrics.qualityPassed}/{b.metrics.qualityTotal} checks</>
                   ) : (
@@ -205,7 +209,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
                     </>
                   )}
                 </p>
-                {!extras && <p className="mt-1 font-mono text-[12px] text-ink-500">{experiment.comparison.note}</p>}
+                {!extras && <p className="mt-1 font-mono text-[14.5px] text-ink-400">{experiment.comparison.note}</p>}
                 <RejectedCalls a={a} b={b} />
               </div>
               {phaseRows && <PhaseTable rows={phaseRows} a={a} b={b} />}
@@ -219,10 +223,10 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
               exit={{ opacity: 0, filter: 'blur(6px)' }}
               className="flex h-[150px] items-center justify-between rounded-2xl border border-dashed border-ink-700 px-10"
             >
-              <span className="text-[22px] text-ink-400">
+              <span className="text-[25px] text-ink-400">
                 Verdict sealed. <span className="text-ink-200">Run the reveal to compare both recorded runs.</span>
               </span>
-              <span className="flex items-center gap-2 font-mono text-[12px] text-ink-500">
+              <span className="flex items-center gap-2 font-mono text-[14.5px] text-ink-400">
                 <Kbd>space</Kbd> run reveal
               </span>
             </motion.div>
@@ -248,7 +252,7 @@ function ViewTabs({ view, onView }: { view: View; onView: (v: View) => void }) {
         <button
           key={t.v}
           onClick={() => onView(t.v)}
-          className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${view === t.v ? 'bg-ink-50 text-ink-950' : 'text-ink-300 hover:text-ink-100'}`}
+          className={`rounded-full px-4 py-1.5 text-[15.5px] font-medium transition-colors ${view === t.v ? 'bg-ink-50 text-ink-950' : 'text-ink-300 hover:text-ink-100'}`}
         >
           {t.label}
         </button>
@@ -368,7 +372,7 @@ function StageRunsView() {
   };
 
   const pill = (active: boolean) =>
-    `rounded-full border px-4 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.12em] transition-colors ${
+    `rounded-full border px-4 py-1.5 font-mono text-[13.5px] uppercase tracking-[0.12em] transition-colors ${
       active ? 'border-signal/70 text-signal' : 'border-ink-700 text-ink-400 hover:border-ink-500'
     }`;
   const showDelta = mode === 'AB';
@@ -422,9 +426,9 @@ function StageRunsView() {
       </div>
 
       {runs === null ? (
-        <p className="font-mono text-[13px] text-ink-500">loading stage runs…</p>
+        <p className="font-mono text-[15.5px] text-ink-400">loading stage runs…</p>
       ) : usable.length === 0 ? (
-        <p className="text-[15px] text-ink-400">
+        <p className="text-[17.5px] text-ink-400">
           No recorded {groupLabel} stage runs. They are read from <code className="font-mono">eval/runs/</code> on the machine running the pipeops server.
         </p>
       ) : sub === 'table' ? (
@@ -432,15 +436,15 @@ function StageRunsView() {
       ) : (
         <>
           <div className="flex items-center gap-3">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">A</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">A</span>
             <div className="w-[240px]"><Select value={aName} onChange={(v) => { setAPick(v); restart(); }} options={options} /></div>
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">B</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">B</span>
             <div className="w-[240px]"><Select value={bName} onChange={(v) => { setBPick(v); restart(); }} options={options} /></div>
             <div className="flex-1" />
             {ready && (
               <>
                 <ModeSwitch mode={mode} a={{ label: aName }} b={{ label: bName }} onMode={(m) => { clear(); setRunning(false); setMode(m); if (m === 'AB') setRevealed(true); }} />
-                <PrimaryButton onClick={reveal}>
+                <PrimaryButton size="lg" onClick={reveal}>
                   <PlayIcon /> {running ? 'Running reveal…' : revealed ? 'Replay reveal' : 'Run reveal'}
                 </PrimaryButton>
               </>
@@ -448,7 +452,7 @@ function StageRunsView() {
           </div>
 
           {!ready ? (
-            <p className="mt-8 text-[15px] text-ink-400">
+            <p className="mt-8 text-[17.5px] text-ink-400">
               {A && B && A.name !== B.name
                 ? 'One of these variants did not record requests, time or output tokens, so it cannot be drawn. It is in "All variants".'
                 : 'Pick two different variants.'}
@@ -498,13 +502,13 @@ function StageRunsView() {
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-3">
-                          <Eyebrow className="text-signal">Conclusion</Eyebrow>
-                          <span className="rounded-full border border-ink-700 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-ink-400">
+                          <Eyebrow size="lg" className="text-signal">Conclusion</Eyebrow>
+                          <span className="rounded-full border border-ink-700 px-2.5 py-0.5 font-mono text-[12px] uppercase tracking-widest text-ink-400">
                             stage runs · {B!.runs.length} vs {A!.runs.length} runs
                           </span>
                         </div>
                         <div className="mt-2 text-[40px] font-semibold leading-[1.05] tracking-tightest text-ink-50">{headline}</div>
-                        <p className="mt-3 text-[15px] leading-snug text-ink-300">
+                        <p className="mt-3 text-[17.5px] leading-snug text-ink-300">
                           {bName} vs {aName}:{' '}
                           {metrics.map((m, i) => (
                             <span key={m.key}>
@@ -516,13 +520,13 @@ function StageRunsView() {
                           ))}
                         </p>
                       </div>
-                      <div className="w-[560px] shrink-0 rounded-xl border border-ink-700 p-3.5 font-mono text-[12.5px] leading-relaxed text-ink-300">
-                        <div className="text-[10.5px] uppercase tracking-widest text-ink-500">One value per run</div>
-                        <div className="mt-1.5"><span className="text-ink-500">checks </span>{aName}: {checksOf(A!)}</div>
+                      <div className="w-[560px] shrink-0 rounded-xl border border-ink-700 p-3.5 font-mono text-[14.5px] leading-relaxed text-ink-300">
+                        <div className="text-[12.5px] uppercase tracking-widest text-ink-400">One value per run</div>
+                        <div className="mt-1.5"><span className="text-ink-400">checks </span>{aName}: {checksOf(A!)}</div>
                         <div className="pl-[52px]">{bName}: {checksOf(B!)}</div>
-                        <div className="mt-1.5"><span className="text-ink-500">failed calls </span>{aName}: {failedOf(A!)}</div>
+                        <div className="mt-1.5"><span className="text-ink-400">failed calls </span>{aName}: {failedOf(A!)}</div>
                         <div className="pl-[96px]">{bName}: {failedOf(B!)}</div>
-                        <div className="mt-2 font-sans text-[11.5px] leading-snug text-ink-500">
+                        <div className="mt-2 font-sans text-[13.5px] leading-snug text-ink-400">
                           Drawn: each variant's middle run, not an average. — = not recorded. Different only where the runs do not overlap. Not comparable to full-run scores.
                         </div>
                       </div>
@@ -535,10 +539,10 @@ function StageRunsView() {
                       exit={{ opacity: 0, filter: 'blur(6px)' }}
                       className="flex h-[110px] items-center justify-between rounded-2xl border border-dashed border-ink-700 px-10"
                     >
-                      <span className="text-[20px] text-ink-400">
+                      <span className="text-[23px] text-ink-400">
                         Verdict sealed. <span className="text-ink-200">Run the reveal to compare both variants on this stage.</span>
                       </span>
-                      <span className="flex items-center gap-2 font-mono text-[12px] text-ink-500">
+                      <span className="flex items-center gap-2 font-mono text-[14.5px] text-ink-400">
                         <Kbd>space</Kbd> run reveal
                       </span>
                     </motion.div>
@@ -598,7 +602,7 @@ function ModeSwitch({ mode, a, b, onMode }: { mode: Mode; a: { label: string }; 
         <button
           key={o.m}
           onClick={() => onMode(o.m)}
-          className={`relative z-10 rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
+          className={`relative z-10 rounded-full px-4 py-1.5 text-[15.5px] font-medium transition-colors ${
             mode === o.m ? 'text-ink-950' : 'text-ink-300 hover:text-ink-100'
           }`}
         >
@@ -624,6 +628,7 @@ function Lane({
   valueSub,
   delta,
   tone,
+  height = 124,
 }: {
   label: string;
   sub: string;
@@ -632,24 +637,26 @@ function Lane({
   valueSub?: string;
   delta: ReactNode;
   tone?: 'cost';
+  /** px; the token row has two lines of figures */
+  height?: number;
 }) {
   return (
-    <div className="flex h-[128px] items-center border-b border-ink-800">
+    <div className="flex items-center border-b border-ink-800" style={{ height }}>
       <div className="w-[230px] shrink-0">
-        <div className="text-[22px] font-medium text-ink-50">{label}</div>
-        <div className="mt-1 font-mono text-[11px] text-ink-500">{sub}</div>
+        <div className="text-[25px] font-medium text-ink-50">{label}</div>
+        <div className="mt-1 font-mono text-[15.5px] text-ink-400">{sub}</div>
       </div>
       <div className="flex-1">{viz}</div>
       <div className="flex w-[360px] shrink-0 flex-col items-end">
         <div
-          className={`text-[80px] font-semibold leading-none tracking-tightest transition-colors duration-700 ${
+          className={`text-[84px] font-semibold leading-none tracking-tightest transition-colors duration-700 ${
             tone === 'cost' ? 'text-cost' : 'text-ink-50'
           }`}
         >
           {value}
         </div>
         <div className="mt-1.5 flex h-8 items-center gap-3">
-          {valueSub && <span className="whitespace-nowrap font-mono text-[12px] text-ink-500">{valueSub}</span>}
+          {valueSub && <span className="whitespace-nowrap font-mono text-[14.5px] text-ink-400">{valueSub}</span>}
           <AnimatePresence>{delta}</AnimatePresence>
         </div>
       </div>
@@ -665,18 +672,18 @@ function RejectedCalls({ a, b }: { a: Run; b: Run }) {
   if (av === null && bv === null) return null;
   const side = (label: string, v: number | null) => (
     <span>
-      <span className="text-ink-500">{label} </span>
-      {v === null ? <span className="text-ink-500">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
+      <span className="text-ink-400">{label} </span>
+      {v === null ? <span className="text-ink-400">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
     </span>
   );
   return (
     <div
-      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]"
+      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[15.5px]"
       title="Workflows calls the engine refused (usage.workspace.failed); each one costs the agent a retry"
     >
-      <span className="text-[11px] uppercase tracking-widest text-ink-500">Rejected calls</span>
+      <span className="text-[13px] uppercase tracking-widest text-ink-400">Rejected calls</span>
       {side(a.label, av)}
-      <span className="text-ink-600">→</span>
+      <span className="text-ink-500">→</span>
       {side(b.label, bv)}
       {av !== null && bv !== null && av !== bv && av > 0 && (
         <span className={bv > av ? 'text-cost' : 'text-signal'}>{signedPct(av, bv)}</span>
@@ -706,11 +713,11 @@ function pairPhases(a: Run, b: Run): { a: PhaseResult; b: PhaseResult }[] | null
 
 const cellOf = (p: PhaseResult) =>
   p.requests === null ? (
-    <span className="text-ink-600" title="not recorded">—</span>
+    <span className="text-ink-500" title="not recorded">—</span>
   ) : (
     <span className="tnum">
-      {p.requests} <span className="text-ink-500">req</span>
-      {p.runtimeSeconds !== null && <span className="text-ink-500"> · {p.runtimeSeconds}s</span>}
+      {p.requests} <span className="text-ink-400">req</span>
+      {p.runtimeSeconds !== null && <span className="text-ink-400"> · {p.runtimeSeconds}s</span>}
     </span>
   );
 
@@ -719,9 +726,9 @@ function PhaseTable({ rows, a, b }: { rows: { a: PhaseResult; b: PhaseResult }[]
   return (
     <div className="w-[560px] shrink-0">
       <Eyebrow>By phase</Eyebrow>
-      <table className="mt-2 w-full border-collapse text-left font-mono text-[13px]">
+      <table className="mt-2 w-full border-collapse text-left font-mono text-[15.5px]">
         <thead>
-          <tr className="text-[10.5px] uppercase tracking-widest text-ink-500">
+          <tr className="text-[12.5px] uppercase tracking-widest text-ink-400">
             <th className="w-[70px] py-1 font-normal">Phase</th>
             <th className="font-normal">{a.label}</th>
             <th className="font-normal">{b.label}</th>
@@ -746,7 +753,7 @@ function PhaseTable({ rows, a, b }: { rows: { a: PhaseResult; b: PhaseResult }[]
                       {pa.requests} → {pb.requests}
                     </span>
                   ) : (
-                    <span className="text-ink-500">{pa.requests ?? '—'}</span>
+                    <span className="text-ink-400">{pa.requests ?? '—'}</span>
                   )}
                 </td>
               </tr>,
@@ -755,7 +762,7 @@ function PhaseTable({ rows, a, b }: { rows: { a: PhaseResult; b: PhaseResult }[]
               out.push(
                 <tr key={`${pa.phase}-note`} className={tint}>
                   <td />
-                  <td colSpan={3} className="pb-1.5 font-sans text-[12px] leading-snug text-ink-300">
+                  <td colSpan={3} className="pb-1.5 font-sans text-[14.5px] leading-snug text-ink-300">
                     Nothing new was recorded. {idleRun.label} ran no cycle
                     {churn > 0 ? `; ${idleRun === a ? b.label : a.label} rewrote a workflow anyway` : ''}.
                   </td>
@@ -781,7 +788,7 @@ function ReviewCard({ review, a, b }: { review: PairReview; a: Run; b: Run }) {
         <Eyebrow>LLM judge</Eyebrow>
         <span className="rounded-full border border-ink-600 px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink-400">not an automatic check</span>
       </div>
-      <p className="mt-2 text-[15px] font-medium leading-snug text-ink-100">
+      <p className="mt-2 text-[17.5px] font-medium leading-snug text-ink-100">
         {winner ? (
           <>
             {winner.run.label}'s documents preferred in {winner.wins} of {n} pairs.
@@ -790,13 +797,13 @@ function ReviewCard({ review, a, b }: { review: PairReview; a: Run; b: Run }) {
           <>No clear preference ({inconsistent} of {n} pairs disagree).</>
         )}
       </p>
-      <p className="mt-1.5 text-[12px] leading-snug text-ink-400">{review.judgments} judgments. The same model wrote and judged the documents.</p>
+      <p className="mt-1.5 text-[14.5px] leading-snug text-ink-400">{review.judgments} judgments. The same model wrote and judged the documents.</p>
     </div>
   );
 }
 
 const TOKEN_COLS: { label: string; get: (e: Efficiency) => number | null }[] = [
-  { label: 'Input (uncached)', get: (e) => e.input },
+  { label: 'Input', get: (e) => e.input },
   { label: 'Cache read', get: (e) => e.cacheRead },
   { label: 'Cache write', get: (e) => e.cacheWrite },
   { label: 'Output', get: (e) => e.output },
@@ -811,11 +818,11 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
   const rows: { tag: string; run: Run }[] = mode === 'AB' ? [{ tag: 'A', run: a }, { tag: 'B', run: b }] : [{ tag: mode, run: mode === 'A' ? a : b }];
   const cell = (n: number | null, base?: number | null) => (
     <div className="flex flex-col">
-      <span className={`tnum font-mono text-[20px] ${n === null ? 'text-ink-600' : 'text-ink-100'}`} title={n === null ? 'not recorded' : n.toLocaleString('en-US')}>
+      <span className={`tnum font-mono text-[21px] ${n === null ? 'text-ink-400' : 'text-ink-100'}`} title={n === null ? 'not recorded' : n.toLocaleString('en-US')}>
         {fmtCount(n) ?? '—'}
       </span>
       {base != null && n !== null && base > 0 && (
-        <span className={`tnum font-mono text-[11px] ${n > base ? 'text-cost' : 'text-ink-500'}`}>
+        <span className={`tnum font-mono text-[13px] ${n > base ? 'text-cost' : 'text-ink-400'}`}>
           {n >= base ? '+' : '−'}
           {Math.abs(pct(base, n)).toFixed(0)}%
         </span>
@@ -826,9 +833,11 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
     !e ? 'no usage recorded' : e.source === 'pipe_logs' ? 'partial: pipe logs undercount' : e.source === null ? 'source not recorded' : null;
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-end gap-4 pl-7 font-mono text-[10.5px] uppercase tracking-widest text-ink-500">
+      <div className="flex items-end gap-4 pl-7 font-mono text-[14.5px] uppercase tracking-widest text-ink-400">
         {TOKEN_COLS.map((c) => (
-          <span key={c.label} className="w-[150px]">{c.label}</span>
+          <span key={c.label} className="w-[150px]" title={c.label === 'Input' ? 'Uncached input only: cache reads and writes are separate columns' : undefined}>
+            {c.label}
+          </span>
         ))}
         <span className="w-[110px]">Cache hit</span>
       </div>
@@ -839,19 +848,19 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
         const baseHit = base ? cacheHitRate(base) : null;
         return (
           <div key={tag} className="flex items-center gap-4">
-            <span className="w-3 font-mono text-[11px] text-ink-500">{tag}</span>
+            <span className="w-3 font-mono text-[15.5px] text-ink-400">{tag}</span>
             {TOKEN_COLS.map((c) => (
               <div key={c.label} className="w-[150px]">{cell(e ? c.get(e) : null, base ? c.get(base) : null)}</div>
             ))}
             <div className="w-[110px]">
-              <span className={`tnum font-mono text-[20px] ${hit === null ? 'text-ink-600' : 'text-ink-100'}`}>
+              <span className={`tnum font-mono text-[21px] ${hit === null ? 'text-ink-400' : 'text-ink-100'}`}>
                 {hit === null ? '—' : `${(hit * 100).toFixed(1)}%`}
               </span>
               {baseHit !== null && hit !== null && (
-                <div className="tnum font-mono text-[11px] text-ink-500">{((hit - baseHit) * 100).toFixed(1)} pts</div>
+                <div className="tnum font-mono text-[15.5px] text-ink-400">{((hit - baseHit) * 100).toFixed(1)} pts</div>
               )}
             </div>
-            {note(e) && <span className="font-mono text-[11px] text-cost">{note(e)}</span>}
+            {note(e) && <span className="font-mono text-[15.5px] text-cost">{note(e)}</span>}
           </div>
         );
       })}
@@ -896,17 +905,17 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
         {mode === 'AB' ? (
           <>
             <div className="flex items-center gap-3">
-              <span className="w-4 font-mono text-[11px] text-ink-500">A</span>
+              <span className="w-4 font-mono text-[15.5px] text-ink-400">A</span>
               {row(a, true)}
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-4 font-mono text-[11px] text-ink-500">B</span>
+              <span className="w-4 font-mono text-[15.5px] text-ink-400">B</span>
               {row(b, true)}
             </div>
           </>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="w-4 font-mono text-[11px] text-ink-500">{mode}</span>
+            <span className="w-4 font-mono text-[15.5px] text-ink-400">{mode}</span>
             {row(mode === 'A' ? a : b)}
           </div>
         )}
@@ -918,7 +927,7 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
             animate={{ opacity: 1, scale: 1, rotate: -4 }}
             exit={{ opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-            className="rounded-md border-2 border-signal px-3 py-1 font-mono text-[14px] font-semibold uppercase tracking-[0.2em] text-signal"
+            className="rounded-md border-2 border-signal px-3 py-1 font-mono text-[16.5px] font-semibold uppercase tracking-[0.2em] text-signal"
           >
             unchanged
           </motion.span>
@@ -962,7 +971,7 @@ function RequestsViz({ ra, rb, mode }: { ra: number; rb: number; mode: Mode }) {
         {/* the shorter run's boundary */}
         <line x1={loX - 1.5} x2={loX - 1.5} y1={0} y2={72} stroke="rgb(var(--ink-400))" strokeDasharray="3 3" />
       </svg>
-      <span className="absolute -bottom-5 font-mono text-[10px] text-ink-500" style={{ left: loX - 60 }}>
+      <span className="absolute -bottom-5 font-mono text-[12px] text-ink-400" style={{ left: loX - 60 }}>
         {grew ? 'A' : 'B'} ends · {lo}
       </span>
       <AnimatePresence>
@@ -975,7 +984,7 @@ function RequestsViz({ ra, rb, mode }: { ra: number; rb: number; mode: Mode }) {
             style={{ left: loX, width: (max - lo) * pitch }}
           >
             <div className={`h-2 flex-1 border-x border-t ${grew ? 'border-cost/70' : 'border-signal/70'}`} />
-            <span className={`px-2 font-mono text-[11px] ${grew ? 'text-cost' : 'text-signal'}`}>
+            <span className={`px-2 font-mono text-[13px] ${grew ? 'text-cost' : 'text-signal'}`}>
               {sign(rb - ra)}
               {Math.abs(rb - ra)}
             </span>
@@ -1003,7 +1012,7 @@ function RuntimeViz({ sa, sb, mode }: { sa: number; sb: number; mode: Mode }) {
       {/* grid */}
       {ticks.map((t) => (
         <div key={t} className="absolute top-0 h-[52px] border-l border-ink-800" style={{ left: x(t) }}>
-          <span className="absolute -left-2 top-[56px] font-mono text-[10px] text-ink-600">{t / 60}m</span>
+          <span className="absolute -left-2 top-[56px] font-mono text-[14.5px] text-ink-400">{t / 60}m</span>
         </div>
       ))}
       {/* track */}
@@ -1036,7 +1045,7 @@ function RuntimeViz({ sa, sb, mode }: { sa: number; sb: number; mode: Mode }) {
             style={{ left: loX, width: hiX - loX }}
           >
             <div className={`h-2 flex-1 border-x border-t ${grew ? 'border-cost/70' : 'border-signal/70'}`} />
-            <span className={`px-2 font-mono text-[11px] ${grew ? 'text-cost' : 'text-signal'}`}>
+            <span className={`px-2 font-mono text-[13px] ${grew ? 'text-cost' : 'text-signal'}`}>
               {sign(sb - sa)}
               {Math.abs(sb - sa)}s
             </span>

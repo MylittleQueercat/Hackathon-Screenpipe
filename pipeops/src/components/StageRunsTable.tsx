@@ -50,7 +50,7 @@ export function StageRunsTable({
       <div className="flex items-start justify-between">
         <div>
           <Eyebrow>Recorded stage runs · {title} only</Eyebrow>
-          <p className="mt-2 text-[14px] text-ink-300">
+          <p className="mt-2 text-[16.5px] text-ink-300">
             Each run starts from the same saved snapshot{snapshots.length === 1 ? <span className="font-mono text-ink-400"> ({snapshots[0]})</span> : ''}
             . <span className="text-ink-100">Not comparable to full-evaluation scores.</span>
           </p>
@@ -60,8 +60,8 @@ export function StageRunsTable({
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
         <table className="w-full border-collapse text-left">
           <thead>
-            <tr className="font-mono text-[10.5px] uppercase tracking-widest text-ink-500">
-              <th className="w-[300px] py-1.5 font-normal">Variant</th>
+            <tr className="font-mono text-[12.5px] uppercase tracking-widest text-ink-400">
+              <th className="w-[250px] py-1.5 font-normal">Variant</th>
               {cols.map((c) => (
                 <th key={c.head} className="font-normal">
                   {c.head}
@@ -76,16 +76,16 @@ export function StageRunsTable({
                 <tr key={variant} className="border-t border-ink-800 align-top">
                   <td className="py-2 pr-4">
                     <div className="text-[15px] font-medium text-ink-50">
-                      {variant} <span className="font-mono text-[11px] font-normal text-ink-500">× {rs.length}</span>
+                      {variant} <span className="font-mono text-[13px] font-normal text-ink-400">× {rs.length}</span>
                     </div>
                     {desc && (
-                      <div className="mt-0.5 max-w-[290px] truncate text-[11.5px] text-ink-500" title={desc}>
+                      <div className="mt-0.5 max-w-[240px] truncate text-[13.5px] text-ink-400" title={desc}>
                         {desc}
                       </div>
                     )}
                   </td>
                   {cols.map((c) => (
-                    <td key={c.head} className="tnum py-2 pr-3 font-mono text-[13px] text-ink-200" title={c.head === 'Failed calls' ? 'null = not logged in older runs' : undefined}>
+                    <td key={c.head} className="tnum whitespace-nowrap py-2 pr-6 font-mono text-[15.5px] text-ink-200" title={c.head === 'Failed calls' ? 'null = not logged in older runs' : undefined}>
                       {listOf(rs.map(c.cell))}
                     </td>
                   ))}
@@ -95,7 +95,7 @@ export function StageRunsTable({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[12px] leading-snug text-ink-500">
+      <p className="mt-3 text-[14.5px] leading-snug text-ink-400">
         One value per run, in the order they were recorded. Checks are graded against the current truth (wfeval grade --truth); a run that could not be graded again shows the score in its own files.
         {excluded.length > 0 && (
           <span className="text-cost">
