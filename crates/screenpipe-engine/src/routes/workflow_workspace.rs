@@ -11,10 +11,15 @@ use axum::{
     http::{HeaderMap, StatusCode},
     Extension, Json,
 };
+use chrono::{DateTime, Utc};
 use oasgen::oasgen;
 use screenpipe_core::workflows::workspace;
 use serde_json::{json, Value};
-use std::sync::Arc;
+use std::{
+    collections::HashSet,
+    hash::{DefaultHasher, Hash, Hasher},
+    sync::{Arc, LazyLock, Mutex},
+};
 type ApiError = (StatusCode, Json<Value>);
 
 // Handoffs reuse the normal Pipe event scheduler. Idle pipe completions must not
@@ -33,6 +38,70 @@ pub(super) fn notify_ready(ws: &Value, sender: &str) {
         }
     }
 }
+// Drafts refused once at handoff, by draft and payload: the same handoff repeated
+// unchanged goes through, so Review can still decide on a draft nobody can fix.
+static REFUSED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(Default::default);
+
+/// A handoff to Review gets the check Review's publication will. A draft Review could
+/// not publish goes back to its author, who has the research, with each failing item.
+/// A temporary verification failure is not evidence against the draft: it passes.
+async fn handoff_check(
+    state: &AppState,
+    source: &WorkflowCatalogSource,
+    headers: &HeaderMap,
+    body: &Value,
+) -> Result<(), ApiError> {
+    let Some(token) = headers
+        .get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|h| h.strip_prefix("Bearer "))
+    else {
+        return Ok(());
+    };
+    let ws = workspace::state(&read_catalog(source).await?);
+    let id = body["draft_id"].as_str().unwrap_or_default();
+    let payload = match body.get("payload").filter(|p| !p.is_null()) {
+        Some(payload) => payload.clone(),
+        None => ws["drafts"][id]["payload"].clone(),
+    };
+    let through = ws["cycle"]["end"]
+        .as_str()
+        .and_then(|end| DateTime::parse_from_rfc3339(end).ok());
+    let (true, Some(through)) = (payload.is_object(), through) else {
+        return Ok(());
+    };
+    let checked = super::workflow_catalog::verify(
+        state,
+        token,
+        std::slice::from_ref(&payload),
+        through.with_timezone(&Utc),
+        true,
+    )
+    .await;
+    let Err((StatusCode::UNPROCESSABLE_ENTITY, Json(failure))) = checked else {
+        return Ok(());
+    };
+    let mut hasher = DefaultHasher::new();
+    payload.to_string().hash(&mut hasher);
+    let key = format!("{id}:{}", hasher.finish());
+    let mut refused = REFUSED.lock().unwrap();
+    if refused.remove(&key) {
+        return Ok(());
+    }
+    if refused.len() > 1000 {
+        refused.clear();
+    }
+    refused.insert(key);
+    let problems = failure["error"]
+        .as_str()
+        .unwrap_or_default()
+        .trim_end_matches(" No workflow was saved.");
+    Err(error(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        &format!("Review could not publish this draft as it is. {problems} The handoff was not saved: fix these items and hand it off again. To leave the decision to Review as it is, repeat this handoff unchanged."),
+    ))
+}
+
 fn error(status: StatusCode, message: &str) -> ApiError {
     (status, Json(json!({"error":message})))
 }
@@ -223,6 +292,12 @@ pub(crate) async fn update(
             }
         }
         return result;
+    }
+    if matches!(action, "propose" | "handoff")
+        && task != workspace::TASKS[2]
+        && body["assignee"] == workspace::TASKS[2]
+    {
+        handoff_check(&state, &source, &headers, &body).await?;
     }
     let _guard = super::workflow_catalog::WRITER.lock().await;
     if headers

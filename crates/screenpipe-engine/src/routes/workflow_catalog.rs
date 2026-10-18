@@ -391,13 +391,6 @@ pub(crate) async fn commit(
             "Checkpoint cannot move backwards.",
         ));
     }
-    let pm = state.pipe_manager.as_ref().ok_or_else(|| {
-        error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Scheduled tasks are unavailable.",
-        )
-    })?;
-    let port = pm.lock().await.api_port();
     let token = headers
         .get("authorization")
         .and_then(|h| h.to_str().ok())
@@ -408,58 +401,17 @@ pub(crate) async fn commit(
                 "Recorder authentication is required.",
             )
         })?;
-    let endpoint = RecorderEndpoint {
-        source: "screenpipe",
-        base_url: format!("http://127.0.0.1:{port}"),
-        api_key: Some(token.to_owned()),
-        health: Value::Null,
-    };
-    let raw = json!({"evidenceVersion":2,"workflows":body.workflows});
-    let bounds = vec![
-        json!({"start":(through-ChronoDuration::days(90)).to_rfc3339(),"end":through.to_rfc3339()}),
-    ];
-    let (evidence, reads) = tokio::time::timeout(
-        Duration::from_secs(120),
-        evidence::resolve_references(&endpoint, &raw, EvidenceCatalog::default(), &bounds),
+    let (mut normalized, evidence, reads) = verify(
+        &state,
+        token,
+        &body.workflows,
+        through,
+        body.workspace_revision.is_some(),
     )
-    .await
-    .map_err(|_| {
-        error(
-            StatusCode::GATEWAY_TIMEOUT,
-            "Source verification timed out.",
-        )
-    })?
-    .map_err(|e| {
-        error(
-            if e.retryable() {
-                StatusCode::SERVICE_UNAVAILABLE
-            } else {
-                StatusCode::UNPROCESSABLE_ENTITY
-            },
-            &e.to_string(),
-        )
-    })?;
-    let mut normalized = normalize_updates(raw.clone(), &evidence)
-        .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
-    if body.workspace_revision.is_some() {
-        workspace::validate_publication(&raw, &normalized, &evidence)
-            .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
-    }
-    let updates = normalized["workflows"].as_array_mut().unwrap();
-    if updates.len() != body.workflows.len()
-        || updates.iter().any(|w| {
-            !w["stages"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .any(|s| s["procedure"].as_array().is_some_and(|p| !p.is_empty()))
-        })
-    {
-        return Err(error(StatusCode::UNPROCESSABLE_ENTITY,"Only save useful steps supported by source quotes. Investigate further or leave the catalog unchanged."));
-    }
+    .await?;
     // The agent inspects images with the normal harness tools. Independently
     // enforce exact source/frame identity here; never guess a nearby frame.
-    for w in updates.iter_mut() {
+    for w in normalized["workflows"].as_array_mut().unwrap().iter_mut() {
         if let Some(proposed) = body.workflows.iter().find(|p| p["title"] == w["title"]) {
             for stage in w["stages"].as_array_mut().into_iter().flatten() {
                 let frames = proposed["stages"]
@@ -574,6 +526,75 @@ pub(crate) async fn commit(
     Ok(Json(
         json!({"revision":next["revision"],"changes":next["changes"],"checkedThrough":next["checkedThrough"]}),
     ))
+}
+
+/// What a commit checks before saving anything: every cited source resolves in the
+/// recorder, the proposal normalizes, and a reviewed draft keeps every proposed item.
+/// Review's publication and a handoff to Review use the same check.
+pub(super) async fn verify(
+    state: &AppState,
+    token: &str,
+    workflows: &[Value],
+    through: DateTime<Utc>,
+    reviewed: bool,
+) -> Result<(Value, EvidenceCatalog, usize), ApiError> {
+    let pm = state.pipe_manager.as_ref().ok_or_else(|| {
+        error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Scheduled tasks are unavailable.",
+        )
+    })?;
+    let port = pm.lock().await.api_port();
+    let endpoint = RecorderEndpoint {
+        source: "screenpipe",
+        base_url: format!("http://127.0.0.1:{port}"),
+        api_key: Some(token.to_owned()),
+        health: Value::Null,
+    };
+    let raw = json!({"evidenceVersion":2,"workflows":workflows});
+    let bounds = vec![
+        json!({"start":(through-ChronoDuration::days(90)).to_rfc3339(),"end":through.to_rfc3339()}),
+    ];
+    let (evidence, reads) = tokio::time::timeout(
+        Duration::from_secs(120),
+        evidence::resolve_references(&endpoint, &raw, EvidenceCatalog::default(), &bounds),
+    )
+    .await
+    .map_err(|_| {
+        error(
+            StatusCode::GATEWAY_TIMEOUT,
+            "Source verification timed out.",
+        )
+    })?
+    .map_err(|e| {
+        error(
+            if e.retryable() {
+                StatusCode::SERVICE_UNAVAILABLE
+            } else {
+                StatusCode::UNPROCESSABLE_ENTITY
+            },
+            &e.to_string(),
+        )
+    })?;
+    let mut normalized = normalize_updates(raw.clone(), &evidence)
+        .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
+    if reviewed {
+        workspace::validate_publication(&raw, &normalized, &evidence)
+            .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
+    }
+    let updates = normalized["workflows"].as_array_mut().unwrap();
+    if updates.len() != workflows.len()
+        || updates.iter().any(|w| {
+            !w["stages"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|s| s["procedure"].as_array().is_some_and(|p| !p.is_empty()))
+        })
+    {
+        return Err(error(StatusCode::UNPROCESSABLE_ENTITY,"Only save useful steps supported by source quotes. Investigate further or leave the catalog unchanged."));
+    }
+    Ok((normalized, evidence, reads))
 }
 
 // A catalog commit is incremental. An explicit empty proposal records a
