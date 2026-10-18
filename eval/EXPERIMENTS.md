@@ -289,3 +289,81 @@ Six chain runs are too few to credit handoff-check with it.
 So "11/11" means every exception is named in the published workflow, not that
 each one says what to do. `in_stages` is the closer measure, and it is still a keyword
 match.
+
+## explain-evidence (on handoff-check)
+
+Two handoff refusals in the runs above did not say what to fix ("Timing boundary does
+not match captured source text"), and one told Deepen to add a capture that was already
+in the stage's evidence: it cited Preview at 12:23:34.093, but the capture at that time is
+Finder. The engine knew this but said "add that capture to this stage's evidence", so
+Deepen tried again and again. Now:
+
+- A procedure item citing a capture the recorder does not have says what the recorder
+  holds there: another app at that time, several captures in that whole second, or the
+  app's captures within a minute. The engine reads the recorder around a citation only
+  when the citation found nothing.
+- A timing rejection names the boundary and why: "Workflow timingRuns: [0].start: the
+  quote is not in the text of the Finder capture at 2026-10-16T11:27:26.453+00:00".
+- Variations are kept up to 600 characters, like open questions and limitations.
+- A `workflow_workspace` write without `expected_revision` uses the latest revision the
+  agent was shown, which is what it is told to copy; a stale one still gets the conflict.
+
+Prompts and tool descriptions are unchanged; only the engine's replies and the tool's
+handling of an omitted revision differ. `patches/variants/explain-evidence.patch`.
+
+Free check (`.engines/scratch/probe-refusals.py`: the 8 refused handoffs of the
+handoff-check runs, replayed through this engine): the two "Timing boundary" ones now name
+the boundary, and the Preview one says the capture at that time is Finder.
+
+| Run | Requests | Seconds | Checks | In stages | Failed calls | Refused handoffs | Output tokens |
+|---|---|---|---|---|---|---|---|
+| explain-evidence r1 | 31 (19 + 12) | 283 | 11/11 | 4/5 | 1 | 3 | 29,040 |
+| explain-evidence r2 | 27 (18 + 9) | 258 | 10/11 | 4/5 | 1 | 3 | 27,288 |
+| explain-evidence r3 | 27 (18 + 9) | 248 | 10/11 | 4/5 | 0 | 4 | 26,955 |
+
+Runs `20261018T004056Z-…-r1` and `20261018T000646Z-…-r2/r3`. The first r1
+(`20261018T000646Z-…-r1`) is not a result: Deepen failed after 4 s with no model
+request, because the engine was reinstalling Pi when it started (see Harness fix below).
+
+- Deepen took 18 to 19 requests, against 20 to 33 on handoff-check; Review 9 to 12. Totals:
+  28 requests on average against 34 (handoff-check) and 35 (full-text). Output tokens did
+  not fall (27,800 on average against 25,400 and 26,900). Three runs each: the request
+  drop is in the direction expected, not proven.
+- No run got advice to add a capture that was already there. One timing rejection (r1)
+  still names no boundary: "Cite the source text supporting each timing boundary" (a
+  quote missing or outside 12 to 1,200 characters), a check this variant left as it was.
+  The other refusals are quotes that are not in the cited capture, which the agent has to
+  fix by reading the source.
+- The omitted revision was filled once (r1) and the write went through; the other
+  engines failed that write each time (4 of 6 runs).
+- `type_lookup` failed in 2 of 3 runs; it fails on every engine from time to time (see
+  Keyword audit), so 10/11 here is not a regression signal.
+
+Harness fix: the engine reinstalls Pi in the background each time it starts, and an agent
+started meanwhile loads half-replaced packages ("Cannot find package 'isexe'"). The harness
+now waits for the install to finish before it runs an agent (`Engine.wait_for_pi`). Of all
+runs so far, only that one was hit.
+
+## Output cap: replies cut at 4,096 tokens
+
+Every request asks for up to 128,000 output tokens (`max_completion_tokens`, from the
+gateway's own model list), yet 36 of the 1,077 replies in all runs so far stopped at
+exactly 4,096 ("length"). A cut reply is a tool call that never runs: the model is told to
+re-issue it and often writes the same call again (up to 4 cut replies in a row). Replies
+cut this way hold 16.7% of all output tokens across runs, and 55% in full baseline run r4.
+
+The harness does not change the request: its logger returns pi's payload unchanged, and
+pi's model settings are written by screenpipe's engine from the gateway's model list.
+Upstream `main` (engine and desktop app) sends the same field to the gateway.
+
+Probe, two requests to the screenpipe gateway with Claude Sonnet 5 and a 6,000-token budget:
+
+| Budget sent as | Finish | Output tokens |
+|---|---|---|
+| `max_completion_tokens` (pi's default) | length | 4,096 |
+| `max_tokens` | length | 6,000 |
+
+The gateway applies `max_tokens` and ignores `max_completion_tokens`; it also accepts
+`max_tokens` 128,000. `max-tokens` (on explain-evidence) has pi send the budget as
+`max_tokens` for Claude models on screenpipe cloud (`compat.maxTokensField`).
+`patches/variants/max-tokens.patch`. Built and tested, not yet run.

@@ -133,6 +133,7 @@ class Engine:
 
     def start(self, timeout: float = 180) -> None:
         prepare_home(self.home)
+        self.log_start = (self.run_dir / "engine.log").stat().st_size if (self.run_dir / "engine.log").exists() else 0
         log = open(self.run_dir / "engine.log", "ab")
         self.proc = subprocess.Popen(
             [str(self.binary), "record", "--port", str(self.port), "--data-dir", str(self.data),
@@ -146,10 +147,29 @@ class Engine:
             try:
                 self.get("/health")
                 self.key = self.local_key()
+                self.wait_for_pi(deadline)
                 return
             except (urllib.error.URLError, ConnectionError, TimeoutError):
                 time.sleep(1)
         raise EngineError("engine not healthy in time")
+
+    def wait_for_pi(self, deadline: float) -> None:
+        """The engine reinstalls Pi in the background when it starts. An agent started
+        meanwhile loads half-replaced packages and fails before any model request
+        ("Cannot find package ..."), so wait for the install to finish."""
+        def since_start() -> str:
+            with open(self.run_dir / "engine.log", "rb") as f:
+                f.seek(self.log_start)
+                return f.read().decode(errors="replace")
+        time.sleep(2)  # the install, when there is one, is logged right after health
+        while "installing pi into" in (text := since_start()):
+            if "pi installed successfully" in text:
+                return
+            if "pi installation failed" in text:
+                raise EngineError(f"Pi installation failed; see {self.run_dir / 'engine.log'}")
+            if time.monotonic() > deadline:
+                raise EngineError("Pi installation did not finish in time")
+            time.sleep(1)
 
     def local_key(self) -> str:
         r = subprocess.run([str(self.binary), "auth", "token"], env=self.env(), capture_output=True,
