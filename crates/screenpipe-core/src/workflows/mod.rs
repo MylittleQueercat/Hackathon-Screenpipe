@@ -215,11 +215,29 @@ impl EvidenceCatalog {
     }
 
     pub fn resolve(&self, timestamp: DateTime<Utc>, requested_app: &str) -> Option<&EvidencePoint> {
-        self.points.iter().find(|point| {
-            point.timestamp == timestamp
-                && !requested_app.trim().is_empty()
-                && point.app.eq_ignore_ascii_case(requested_app.trim())
-        })
+        let app = requested_app.trim();
+        if app.is_empty() {
+            return None;
+        }
+        let same_app = |point: &&EvidencePoint| point.app.eq_ignore_ascii_case(app);
+        if let Some(point) = self
+            .points
+            .iter()
+            .filter(same_app)
+            .find(|point| point.timestamp == timestamp)
+        {
+            return Some(point);
+        }
+        // A whole-second citation of the only capture of that app in that second.
+        let mut within = self
+            .points
+            .iter()
+            .filter(same_app)
+            .filter(|point| cites_capture(timestamp, point.timestamp));
+        match (within.next(), within.next()) {
+            (Some(point), None) => Some(point),
+            _ => None,
+        }
     }
 
     pub fn meeting_minutes(&self, timestamp: DateTime<Utc>, app: &str) -> Option<u64> {
@@ -464,6 +482,14 @@ pub fn normalized_frequency(repetitions: u64, days: u16) -> String {
     )
 }
 
+/// Whether a cited time names this capture. Agents often cite whole seconds
+/// (copied from drafts and summaries) while captures carry milliseconds; a
+/// whole-second citation names a capture in that second. Never nearer seconds.
+pub fn cites_capture(cited: DateTime<Utc>, capture: DateTime<Utc>) -> bool {
+    use chrono::{SubsecRound, Timelike};
+    cited == capture || (cited.nanosecond() == 0 && capture.trunc_subsecs(0) == cited)
+}
+
 // Exact quote/reference validation is a traceability gate, not semantic proof.
 // Semantic correctness is evaluated separately; the UI still labels drafts.
 // Accessibility layouts and compact parsed views can wrap the same words
@@ -505,7 +531,9 @@ pub fn normalize_procedure(stage: &Value, evidence: &[Value]) -> Vec<Value> {
                     .get("timestamp")
                     .and_then(Value::as_str)
                     .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
-                    == Some(timestamp)
+                    .is_some_and(|time| {
+                        cites_capture(timestamp.with_timezone(&Utc), time.with_timezone(&Utc))
+                    })
                     && source
                         .get("app")
                         .and_then(Value::as_str)
@@ -1810,5 +1838,35 @@ mod quote_tests {
         let mut audio = evidence.clone();
         audio[0]["source"] = json!("audio");
         assert!(normalize_procedure(&stage, &audio).is_empty());
+    }
+
+    #[test]
+    fn whole_second_citations_name_the_capture_in_that_second_only() {
+        let evidence = vec![json!({
+            "timestamp":"2026-09-18T10:00:00.725+00:00", "app":"Receipts", "source":"screen",
+            "detail":"Receipt saved successfully."
+        })];
+        let step = |at: &str| json!({"procedure":[{"kind":"check", "text":"Check the save",
+            "timestamp":at, "app":"Receipts", "quote":"Receipt saved successfully."}]});
+        let kept = normalize_procedure(&step("2026-09-18T10:00:00Z"), &evidence);
+        assert_eq!(kept.len(), 1);
+        assert_eq!(kept[0]["timestamp"], "2026-09-18T10:00:00.725+00:00");
+        for other in ["2026-09-18T10:00:01Z", "2026-09-18T09:59:59Z", "2026-09-18T10:00:00.500Z"] {
+            assert!(normalize_procedure(&step(other), &evidence).is_empty(), "{other}");
+        }
+
+        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
+        let point = |s: &str| EvidencePoint {
+            timestamp: at(s), app: "Receipts".into(), detail: "Receipt".into(),
+            source: "screen".into(), speaker: None,
+        };
+        let mut catalog = EvidenceCatalog::default();
+        catalog.points.push(point("2026-09-18T10:00:00.725Z"));
+        let resolved = catalog.resolve(at("2026-09-18T10:00:00Z"), "receipts").unwrap();
+        assert_eq!(resolved.timestamp, at("2026-09-18T10:00:00.725Z"));
+        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Mail").is_none());
+        catalog.points.push(point("2026-09-18T10:00:00.900Z"));
+        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Receipts").is_none(), "ambiguous");
+        assert!(catalog.resolve(at("2026-09-18T10:00:00.900Z"), "Receipts").is_some());
     }
 }

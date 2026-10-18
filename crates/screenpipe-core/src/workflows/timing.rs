@@ -32,15 +32,15 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
             .points
             .iter()
             .find(|p| {
-                p.timestamp == at
+                cites_capture(at, p.timestamp)
                     && p.app.eq_ignore_ascii_case(app)
                     && matches!(p.source.as_str(), "screen" | "parsed")
                     && contains_source_quote(&p.detail, quote)
             })
             .ok_or("Timing boundary does not match captured source text")?;
         Ok((
-            at,
-            json!({"timestamp":at.to_rfc3339(),"app":point.app,"quote":quote}),
+            point.timestamp,
+            json!({"timestamp":point.timestamp.to_rfc3339(),"app":point.app,"quote":quote}),
         ))
     };
     let mut runs = Vec::new();
@@ -110,6 +110,24 @@ mod tests {
         let result = normalize_timing(&input, &catalog).unwrap();
         assert_eq!(result["averageMinutes"], 30.0);
         assert_eq!(result["sampleCount"], 3);
+    }
+    #[test]
+    fn whole_second_boundaries_name_the_capture_in_that_second() {
+        let (input, mut catalog) = fixture();
+        for point in &mut catalog.points {
+            point.timestamp += ChronoDuration::milliseconds(250);
+        }
+        let result = normalize_timing(&input, &catalog).unwrap();
+        assert_eq!(result["averageMinutes"], 30.0);
+        let stored = result["runs"][0]["start"]["timestamp"].as_str().unwrap();
+        assert_eq!(
+            DateTime::parse_from_rfc3339(stored).unwrap(),
+            catalog.points[0].timestamp
+        );
+        // A citation with its own fraction still has to match exactly.
+        let mut off = input;
+        off["timingRuns"][0]["start"]["timestamp"] = json!("2026-09-01T09:00:00.500Z");
+        assert!(normalize_timing(&off, &catalog).is_err());
     }
     #[test]
     fn sparse_evidence_without_explicit_runs_is_not_a_duration() {

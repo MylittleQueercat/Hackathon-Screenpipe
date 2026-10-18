@@ -107,7 +107,7 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
                 .get("app_name")
                 .and_then(Value::as_str)
                 .unwrap_or("Conversation");
-            if timestamp != at || !actual_app.eq_ignore_ascii_case(app) {
+            if !cites_capture(at, timestamp) || !actual_app.eq_ignore_ascii_case(app) {
                 return None;
             }
             let detail = content
@@ -130,6 +130,17 @@ fn source_points(payload: &Value, at: DateTime<Utc>, app: &str) -> Vec<EvidenceP
             })
         })
         .collect()
+}
+
+/// The recorder interval a citation names: its millisecond, or its whole second
+/// when cited without a fraction (see `cites_capture`).
+fn citation_span(at: DateTime<Utc>) -> ChronoDuration {
+    use chrono::Timelike;
+    if at.nanosecond() == 0 {
+        ChronoDuration::seconds(1)
+    } else {
+        ChronoDuration::milliseconds(1)
+    }
 }
 
 #[derive(Debug)]
@@ -194,10 +205,7 @@ pub async fn resolve_references(
                     .map_err(|e| e.to_string())?;
                 url.query_pairs_mut()
                     .append_pair("start_time", &at.to_rfc3339())
-                    .append_pair(
-                        "end_time",
-                        &(at + ChronoDuration::milliseconds(1)).to_rfc3339(),
-                    )
+                    .append_pair("end_time", &(at + citation_span(at)).to_rfc3339())
                     .append_pair("app_name", &app)
                     .append_pair("content_type", "all")
                     .append_pair("include_frames", "false")
@@ -247,7 +255,7 @@ pub async fn resolve_references(
                             .into(),
                     );
                 }
-                let frames: Vec<i64> = payload["data"]
+                let frames: Vec<(i64, DateTime<Utc>)> = payload["data"]
                     .as_array()
                     .into_iter()
                     .flatten()
@@ -255,13 +263,14 @@ pub async fn resolve_references(
                         let content = &row["content"];
                         let timestamp = content["timestamp"]
                             .as_str()
-                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?;
-                        if timestamp != at
+                            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?
+                            .with_timezone(&Utc);
+                        if !cites_capture(at, timestamp)
                             || !content["app_name"].as_str()?.eq_ignore_ascii_case(&app)
                         {
                             return None;
                         }
-                        content["frame_id"].as_i64().filter(|id| *id > 0)
+                        Some((content["frame_id"].as_i64().filter(|id| *id > 0)?, timestamp))
                     })
                     .collect();
                 Ok((at, app.clone(), source_points(&payload, at, &app), frames))
@@ -274,12 +283,12 @@ pub async fn resolve_references(
     // revoked sources cannot survive merely because they were in the index.
     for result in results {
         let (at, app, points, frames) = result?;
-        for id in frames {
-            catalog.frames.insert(id, (at, app.clone()));
+        for (id, captured) in frames {
+            catalog.frames.insert(id, (captured, app.clone()));
         }
         catalog
             .points
-            .retain(|p| p.timestamp != at || !p.app.eq_ignore_ascii_case(&app));
+            .retain(|p| !cites_capture(at, p.timestamp) || !p.app.eq_ignore_ascii_case(&app));
         for point in points {
             catalog.remember_app(&point.app);
             catalog.points.push(point);
@@ -332,7 +341,7 @@ mod tests {
             health: json!({}),
         };
         let activity = vec![json!({"start":"2026-08-01T00:00:00Z","end":"2026-08-03T00:00:00Z"})];
-        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00Z","app":"Editor","detail":"Invented result"}]}]});
+        let value = json!({"workflows":[{"evidence":[{"timestamp":"2026-08-01T10:00:00.250Z","app":"Editor","detail":"Invented result"}]}]});
         let (catalog, reads) =
             resolve_references(&endpoint, &value, EvidenceCatalog::default(), &activity)
                 .await
@@ -347,6 +356,20 @@ mod tests {
         assert!(resolve_references(&endpoint, &value, catalog, &activity)
             .await
             .is_err());
+    }
+
+    #[test]
+    fn whole_second_citations_read_their_whole_second() {
+        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
+        assert_eq!(citation_span(at("2026-08-01T10:00:00Z")), ChronoDuration::seconds(1));
+        assert_eq!(citation_span(at("2026-08-01T10:00:00.250Z")), ChronoDuration::milliseconds(1));
+        let payload = json!({"data":[
+            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:00.725Z","app_name":"Editor","text":"in that second"}},
+            {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:01.000Z","app_name":"Editor","text":"next second"}}]});
+        let points = source_points(&payload, at("2026-08-01T10:00:00Z"), "editor");
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].timestamp, at("2026-08-01T10:00:00.725Z"));
+        assert!(source_points(&payload, at("2026-08-01T10:00:00.500Z"), "Editor").is_empty());
     }
 
     #[tokio::test]
