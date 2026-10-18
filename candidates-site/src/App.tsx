@@ -223,9 +223,9 @@ export default function App() {
       </Slide>
 
       <div id="slide-2" />
-      <Slide id="replay" title="Watch the runs, request by request." lead="Each tick is a model request, each dot a workspace call. Red is the engine saying no.">
+      <Slide id="replay" title="Watch the runs, request by request." lead="Each tick is a model request, each dot a workspace call. Red is the engine saying no. All three on the same time axis.">
         <Replay />
-        <p className="mt-3 text-xs text-faint">The upstream baseline has no replayable request log, so it is not drawn here.</p>
+        <p className="mt-3 text-xs text-faint">Baseline: requests and calls come from the saved snapshot’s request log, which does not record each call’s reply, so its dots are grey.</p>
       </Slide>
 
       <div id="slide-3" />

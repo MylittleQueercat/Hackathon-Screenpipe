@@ -7,12 +7,13 @@ export type Measured = Exclude<CandidateId, 'baseline'>
 export type TimelineEvent =
   | { t: number; k: 'req' }
   | { t: number; k: 'usage'; out: number; cache: number; in: number; stop?: string }
-  | { t: number; k: 'ws'; action: string; ok: boolean; msg?: string }
+  | { t: number; k: 'ws'; action: string; ok: boolean | null; msg?: string }
 
 export const timelines = {
+  baseline: (timelinesRaw as Record<string, TimelineEvent[]>)['upstream-baseline'],
   clearer: (timelinesRaw as Record<string, TimelineEvent[]>)['baseline'],
   preflight: (timelinesRaw as Record<string, TimelineEvent[]>)['preflight-conflict'],
-} satisfies Record<Measured, TimelineEvent[]>
+} satisfies Record<CandidateId, TimelineEvent[]>
 
 export const candidates: Record<
   CandidateId,

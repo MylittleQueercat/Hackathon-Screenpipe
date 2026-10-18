@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { candidates, sonnetReview, timelines, tone, type Measured, type TimelineEvent } from '../data'
+import { candidates, review, timelines, tone, type CandidateId, type TimelineEvent } from '../data'
 
-/** The upstream baseline has no replayable request log, so it is not drawn here. */
-const ORDER: Measured[] = ['clearer', 'preflight']
+const ORDER: CandidateId[] = ['baseline', 'clearer', 'preflight']
 const PLAY_MS = 14000
 
 type WsEvent = Extract<TimelineEvent, { k: 'ws' }>
 
-const lastT = (id: Measured) => Math.max(sonnetReview[id].seconds, ...timelines[id].map((e) => e.t))
+const lastT = (id: CandidateId) => Math.max(review[id].m.seconds![0], ...timelines[id].map((e) => e.t))
 
 /** Workspace calls that land within 2.5 s of each other are nudged apart so every dot stays clickable. */
 function clusterOffsets(evs: TimelineEvent[]) {
@@ -29,9 +28,10 @@ const shortMsg = (msg?: string) => (msg ? msg.replace('Workflow operation failed
 
 export function Replay() {
   const horizon = useMemo(() => Math.ceil(Math.max(...ORDER.map(lastT)) / 10) * 10 + 5, [])
+  const step = horizon > 200 ? 50 : 20
   const [t, setT] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [selected, setSelected] = useState<{ id: Measured; e: WsEvent } | null>(null)
+  const [selected, setSelected] = useState<{ id: CandidateId; e: WsEvent } | null>(null)
   const raf = useRef<number>()
   const started = useRef<number>()
   const root = useRef<HTMLDivElement>(null)
@@ -110,6 +110,7 @@ export function Replay() {
           <span className="flex items-center gap-1.5"><i className="h-3 w-0.5 bg-faint" />model request</span>
           <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-ours" />call accepted</span>
           <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-bad" />call refused</span>
+          <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-faint" />outcome not recorded</span>
         </div>
       </div>
 
@@ -119,7 +120,8 @@ export function Replay() {
           const evs = timelines[id]
           const end = lastT(id)
           const reqs = evs.filter((e) => e.k === 'req' && e.t <= t).length
-          const fails = evs.filter((e) => e.k === 'ws' && !e.ok && e.t <= t).length
+          const fails = evs.filter((e) => e.k === 'ws' && e.ok === false && e.t <= t).length
+          const unknown = evs.some((e) => e.k === 'ws' && e.ok === null)
           const done = t >= end
           const offsets = clusterOffsets(evs)
           return (
@@ -141,12 +143,12 @@ export function Replay() {
                         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
                         onClick={() => setSelected(isSel ? null : { id, e })}
                         className={`absolute top-[26px] flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full text-[10px] font-bold text-on-ours ${
-                          e.ok ? 'bg-ours' : 'bg-bad ring-4 ring-bad/25'
+                          e.ok === null ? 'bg-faint' : e.ok ? 'bg-ours' : 'bg-bad ring-4 ring-bad/25'
                         } ${isSel ? 'outline outline-2 outline-offset-2 outline-fg' : ''}`}
                         style={{ left: `calc(${x(e.t)} + ${offsets.get(e) ?? 0}px)` }}
-                        aria-label={`${e.action}, ${e.ok ? 'accepted' : 'refused'}, at ${e.t} seconds`}
+                        aria-label={`${e.action}, ${e.ok === null ? 'outcome not recorded' : e.ok ? 'accepted' : 'refused'}, at ${e.t} seconds`}
                       >
-                        {e.ok ? LETTER[e.action] ?? '·' : '✕'}
+                        {e.ok === null ? '·' : e.ok ? LETTER[e.action] ?? '·' : '✕'}
                       </motion.button>
                     )
                   }
@@ -157,13 +159,13 @@ export function Replay() {
               </div>
               <div className="num flex gap-5 text-sm md:justify-end">
                 <span><b className="text-lg font-semibold">{reqs}</b> <span className="text-xs text-muted">requests</span></span>
-                <span><b className={`text-lg font-semibold ${fails ? 'text-bad' : ''}`}>{fails}</b> <span className="text-xs text-muted">refused</span></span>
+                <span><b className={`text-lg font-semibold ${fails ? 'text-bad' : ''}`}>{unknown ? '—' : fails}</b> <span className="text-xs text-muted">{unknown ? 'refused, not recorded' : 'refused'}</span></span>
               </div>
             </div>
           )
         })}
         <div className="relative mt-1 h-5 md:ml-[206px] md:mr-[166px]">
-          {Array.from({ length: Math.floor(horizon / 20) + 1 }, (_, i) => i * 20).map((s) => (
+          {Array.from({ length: Math.floor(horizon / step) + 1 }, (_, i) => i * step).map((s) => (
             <span key={s} className="num absolute -translate-x-1/2 text-[11px] text-faint" style={{ left: x(s) }}>{s}s</span>
           ))}
         </div>
@@ -174,9 +176,9 @@ export function Replay() {
           {selected ? (
             <motion.div key={`${selected.id}-${selected.e.t}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <div className="text-xs text-muted">
-                {candidates[selected.id].name} · {selected.e.t} s · {selected.e.action} · {selected.e.ok ? 'accepted' : 'refused'}
+                {candidates[selected.id].name} · {selected.e.t} s · {selected.e.action} · {selected.e.ok === null ? 'outcome not recorded' : selected.e.ok ? 'accepted' : 'refused'}
               </div>
-              <div className={`mt-1 font-mono text-[12px] leading-relaxed ${selected.e.ok ? 'text-ours' : 'text-bad'}`}>
+              <div className={`mt-1 font-mono text-[12px] leading-relaxed ${selected.e.ok === null ? 'text-muted' : selected.e.ok ? 'text-ours' : 'text-bad'}`}>
                 {selected.e.ok ? `workflow_workspace.${selected.e.action} → ok` : shortMsg(selected.e.msg)}
               </div>
             </motion.div>
