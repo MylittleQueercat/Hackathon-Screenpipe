@@ -60,6 +60,31 @@ export async function fetchVariants(): Promise<VariantSummary[]> {
   return json(await fetch('/api/variants'));
 }
 
+export interface SuiteSummary {
+  name: string;
+  builtin: boolean;
+  description: string;
+  jobs?: number;
+  checks?: number;
+  broken?: boolean;
+}
+
+export async function fetchSuites(): Promise<SuiteSummary[]> {
+  return json(await fetch('/api/suites'));
+}
+
+export async function fetchSuiteSpec(name: string): Promise<unknown> {
+  return json(await fetch(`/api/suites/${name}`));
+}
+
+export async function saveSuite(name: string, spec: unknown): Promise<void> {
+  await json(await fetch(`/api/suites/${name}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ spec }) }));
+}
+
+export async function deleteSuite(name: string): Promise<void> {
+  await json(await fetch(`/api/suites/${name}`, { method: 'DELETE' }));
+}
+
 export async function fetchLiveExperiment(baseline: string, variant?: string, source: 'local' | 'demo' = 'local'): Promise<RawExperimentBundle> {
   const params = new URLSearchParams({ baseline });
   if (variant) params.set('variant', variant);

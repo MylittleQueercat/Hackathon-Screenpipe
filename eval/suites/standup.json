@@ -1,0 +1,186 @@
+{
+ "description": "Daily standup notes posted to Slack and logged in Notion",
+ "jobs": {
+  "standup": {
+   "expect": "published",
+   "summary": "Write the daily standup in Slack and log it in Notion"
+  },
+  "vpn": {
+   "expect": "unpublished",
+   "summary": "One-off VPN client reinstall"
+  }
+ },
+ "phases": {
+  "1": [
+   {
+    "offset": -4,
+    "runs": [
+     {
+      "job": "standup",
+      "steps": [
+       {
+        "app": "Slack",
+        "window": "#team-eng",
+        "text": [
+         "Channel",
+         "Draft: yesterday I fixed the login bug",
+         "Today: review PRs"
+        ],
+        "seconds": 40,
+        "trigger": "key_press"
+       },
+       {
+        "app": "Notion",
+        "window": "Standup log",
+        "text": [
+         "Standup log",
+         "Week entry 1",
+         "Posted to team"
+        ],
+        "seconds": 35
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "offset": -3,
+    "runs": [
+     {
+      "job": "standup",
+      "steps": [
+       {
+        "app": "Slack",
+        "window": "#team-eng",
+        "text": [
+         "Channel",
+         "Draft: yesterday I fixed the login bug",
+         "Today: review PRs"
+        ],
+        "seconds": 40,
+        "trigger": "key_press"
+       },
+       {
+        "app": "Notion",
+        "window": "Standup log",
+        "text": [
+         "Standup log",
+         "Week entry 2",
+         "Posted to team"
+        ],
+        "seconds": 35
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "offset": -2,
+    "runs": [
+     {
+      "job": "standup",
+      "steps": [
+       {
+        "app": "Slack",
+        "window": "#team-eng",
+        "text": [
+         "Channel",
+         "Draft: yesterday I fixed the login bug",
+         "Today: review PRs"
+        ],
+        "seconds": 40,
+        "trigger": "key_press"
+       },
+       {
+        "app": "Notion",
+        "window": "Standup log",
+        "text": [
+         "Standup log",
+         "Week entry 3",
+         "Posted to team"
+        ],
+        "seconds": 35
+       }
+      ]
+     },
+     {
+      "job": "vpn",
+      "steps": [
+       {
+        "app": "System Settings",
+        "window": "VPN",
+        "text": [
+         "VPN",
+         "Remove configuration",
+         "Add configuration"
+        ],
+        "seconds": 60
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "offset": -1,
+    "runs": [
+     {
+      "job": "standup",
+      "steps": [
+       {
+        "app": "Slack",
+        "window": "#team-eng",
+        "text": [
+         "Channel",
+         "Draft: yesterday I fixed the login bug",
+         "Today: review PRs"
+        ],
+        "seconds": 40,
+        "trigger": "key_press"
+       },
+       {
+        "app": "Notion",
+        "window": "Standup log",
+        "text": [
+         "Standup log",
+         "Week entry 4",
+         "Posted to team"
+        ],
+        "seconds": 35
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "checks": [
+  {
+   "id": "standup_found",
+   "job": "standup",
+   "phase": 1,
+   "kind": "published"
+  },
+  {
+   "id": "standup_steps",
+   "job": "standup",
+   "phase": 1,
+   "kind": "keywords",
+   "any": [
+    "slack",
+    "notion"
+   ],
+   "on_screen": [
+    "Posted to team"
+   ]
+  },
+  {
+   "id": "vpn_unpublished",
+   "job": "vpn",
+   "phase": 1,
+   "kind": "unpublished",
+   "on_screen": [
+    "Remove configuration"
+   ]
+  }
+ ]
+}

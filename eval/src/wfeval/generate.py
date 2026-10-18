@@ -19,7 +19,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from .screens import Step
-from .stories import SUITES, Run, Suite
+from .custom import SpecError, all_suites, problems
+from .stories import Run, Suite
 
 FRAMES_PER_MINUTE = 7.0
 DAY_START, DAY_END = 9 * 3600, 18 * 3600
@@ -108,7 +109,7 @@ def layout(rng: random.Random, suite: Suite, runs: list[Run], start: float, gaps
 
 def build(suite_name: str, seed: int) -> tuple[dict[int, dict], dict]:
     rng = random.Random(f"{suite_name}:{seed}")
-    suite = SUITES[suite_name](rng)
+    suite = all_suites()[suite_name](rng)
     phases: dict[int, dict] = {}
     counter: dict[str, int] = {}
     for phase, days in sorted(suite.phases.items()):
@@ -218,13 +219,17 @@ def iso(ts: datetime) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="wfeval-generate")
-    ap.add_argument("suite", choices=sorted(SUITES))
+    ap.add_argument("suite")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--out", type=Path)
     args = ap.parse_args(argv)
+    if args.suite not in all_suites():
+        # A custom suite file that doesn't parse is not in the list: say why, not just "unknown".
+        print(f"refusing to write {args.suite}:\n{problems().get(args.suite) or 'no such suite'}", file=sys.stderr)
+        return 1
     try:
         out = write(args.suite, args.seed, args.out)
-    except SuiteError as e:
+    except (SuiteError, SpecError) as e:
         print(f"refusing to write {args.suite}:\n{e}", file=sys.stderr)
         return 1
     print(out)

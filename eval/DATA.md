@@ -104,6 +104,11 @@ it is meant to test.
 | `receipts-renamed` | The same stories, other vendors, apps and times | Consistency | planned |
 | `holdout` | Other jobs: support ticket triage, weekly sales report, a one-off | Final comparison only | planned |
 
+Your own suites: a JSON file in `suites/<name>.json` (or add one from the PipeOps page,
+Step 01, "Custom test suites"). The format is at the top of `src/wfeval/custom.py`;
+`suites/standup.json` is a working example. It goes through the same generator and rules as
+the built-in suites, so a suite that breaks a rule is refused with the reason.
+
 ### `receipts`: what each check expects
 
 Receipt filing: open a scanned receipt in Preview, read name, date, amount and type,

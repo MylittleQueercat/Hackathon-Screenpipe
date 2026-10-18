@@ -47,7 +47,7 @@ export function Header({
         <span className="text-[17px] font-semibold tracking-tight text-ink-50">PipeOps</span>
         <span className="text-ink-600">/</span>
         <span className="flex items-center gap-1.5 text-[14px] text-ink-300">
-          <img src="/screenpipe-icon.png" alt="" className="h-4 w-4 rounded-[5px]" />
+          <img src="/screenpipe-icon.png" alt="" className="h-8 w-8 rounded-[9px]" />
           {experiment.experiment.subject}
         </span>
       </div>
