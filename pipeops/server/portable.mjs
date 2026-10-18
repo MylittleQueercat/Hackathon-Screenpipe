@@ -213,6 +213,17 @@ export function validatePortable(doc, { fileName } = {}) {
   const ints = ['qualityPassed', 'qualityTotal', 'modelRequests', 'runtimeSeconds'];
   need(isObj(m) && ints.every((k) => typeof m[k] === 'number' && m[k] >= 0), `metrics must have non-negative numbers: ${ints.join(', ')}`);
   need(isObj(m) && isNullOr(m.costUsd, 'number'), 'metrics.costUsd must be a number or null');
+  need(isObj(m) && (m.failedCalls === undefined || isNullOr(m.failedCalls, 'number')), 'metrics.failedCalls must be a number, null, or absent');
+  if (isObj(m) && m.phases !== undefined) {
+    const phasesOk = Array.isArray(m.phases) && m.phases.every((p) => isObj(p)
+      && typeof p.phase === 'number'
+      && ['qualityPassed', 'qualityTotal', 'modelRequests', 'runtimeSeconds'].every((k) => typeof p[k] === 'number' && p[k] >= 0)
+      && isNullOr(p.agentRuns, 'number') && typeof p.idleChurn === 'boolean' && isNullOr(p.status, 'string'));
+    need(phasesOk, 'metrics.phases, when present, must be [{phase, qualityPassed, qualityTotal, modelRequests, runtimeSeconds (numbers ≥0), agentRuns:number|null, idleChurn:boolean, status:string|null}]');
+    if (phasesOk && Array.isArray(c?.phases)) {
+      need(m.phases.length === c.phases.length, `metrics.phases has ${m.phases.length} entries but conditions.phases has ${c.phases.length}`);
+    }
+  }
   need(isObj(doc.modelUsage) && isObj(doc.modelUsage.total) && isObj(doc.modelUsage.byTask), 'modelUsage needs total and byTask objects');
   need(isObj(doc.stages), 'stages must be an object');
 
@@ -253,6 +264,9 @@ export function portableToRawRun(doc, role) {
       qualityTotal: doc.metrics.qualityTotal,
       modelRequests: doc.metrics.modelRequests,
       runtimeSeconds: doc.metrics.runtimeSeconds,
+      // Optional in the format: older files (and single-phase runs) may omit these.
+      phases: Array.isArray(doc.metrics.phases) ? doc.metrics.phases : undefined,
+      failedCalls: typeof doc.metrics.failedCalls === 'number' ? doc.metrics.failedCalls : null,
     },
     stages: doc.stages,
     recordedActivity: null,

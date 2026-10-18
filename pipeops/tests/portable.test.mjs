@@ -103,6 +103,98 @@ test('validator rejects bad shape, stage kind, unknown keys, mismatched totals a
   assert.ok(validatePortable(null).length);
 });
 
+/** A full multi-phase run dir with controllable per-phase requests/seconds, idle churn and
+ *  refused-call counts. Same conditions on both sides so buildExperimentBundle will pair them. */
+async function multiPhaseRun(runsDir, id, { variant, phases }) {
+  const d = path.join(runsDir, id);
+  await mkdir(d, { recursive: true });
+  const run = { run_id: id, variant: { name: variant, preset: { provider: 'p', model: 'm' } },
+    data: { suite: 's', seed: 1, sha256: { 'truth.json': 'aa' } }, started_at: 'a', finished_at: 'b' };
+  await writeFile(path.join(d, 'run.json'), JSON.stringify(run));
+  const rows = phases.map((p) => ({
+    variant, suite: 's', seed: 1, repeat: 1, phase: p.phase, status: 'graded',
+    passed: p.passed, scored: p.scored, seconds: p.seconds,
+    checks: { c1: { pass: p.passed > 0 } }, workflows_by_job: {},
+    ...(p.idleChurn ? { mistakes: { idle_churn: 2 } } : {}),
+    usage: { requests: p.requests, agent_runs: p.agentRuns ?? 0,
+      ...(p.failed != null ? { workspace: { failed: p.failed } } : {}) },
+  }));
+  await writeFile(path.join(d, 'results.jsonl'), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  await writeFile(path.join(d, 'truth.json'), JSON.stringify({ checks: [{ id: 'c1', kind: 'published', job: 'j' }], jobs: { j: { expect: 'published', summary: 'Job J' } } }));
+  return d;
+}
+
+test('metrics.phases: per-phase totals read straight from results rows, idle churn and refused calls flagged', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
+  const phases = [
+    { phase: 1, passed: 1, scored: 1, seconds: 300, requests: 57, agentRuns: 12, failed: 2 },
+    { phase: 2, passed: 1, scored: 1, seconds: 270, requests: 54, agentRuns: 9, failed: 0 },
+    { phase: 3, passed: 1, scored: 1, seconds: 0, requests: 0, agentRuns: 0, idleChurn: true, failed: 0 },
+  ];
+  await multiPhaseRun(tmp, 'mp', { variant: 'idle-skip', phases });
+  const { toRawRun } = await import('../server/convert.mjs');
+  const raw = toRawRun('mp', 'idle-skip', 'variant', await loadRunArtifacts(tmp, 'mp'));
+  assert.equal(raw.metrics.phases.length, 3);
+  assert.deepEqual(raw.metrics.phases.map((p) => p.modelRequests), [57, 54, 0]);
+  assert.equal(raw.metrics.phases[2].idleChurn, true);
+  assert.equal(raw.metrics.phases[0].idleChurn, false);
+  assert.equal(raw.metrics.phases[2].agentRuns, 0);
+  assert.equal(raw.metrics.failedCalls, 2); // summed over phases
+  assert.equal(raw.metrics.modelRequests, 111); // phase totals add up to the run total
+  await rm(tmp, { recursive: true, force: true });
+});
+
+test('failedCalls is null when no phase carries workspace.failed (run predates the logging)', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
+  await multiPhaseRun(tmp, 'old', { variant: 'baseline', phases: [{ phase: 1, passed: 1, scored: 1, seconds: 3, requests: 5 }] });
+  const { toRawRun } = await import('../server/convert.mjs');
+  const raw = toRawRun('old', 'baseline', 'baseline', await loadRunArtifacts(tmp, 'old'));
+  assert.equal(raw.metrics.failedCalls, null);
+  await rm(tmp, { recursive: true, force: true });
+});
+
+test('verdict is direction-aware: fewer requests reads as cheaper, more as no improvement', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
+  const base = [{ phase: 1, passed: 1, scored: 1, seconds: 100, requests: 100 }];
+  const cheaper = [{ phase: 1, passed: 1, scored: 1, seconds: 60, requests: 50 }];
+  await multiPhaseRun(tmp, 'base', { variant: 'baseline', phases: base });
+  await multiPhaseRun(tmp, 'cheap', { variant: 'idle-skip', phases: cheaper });
+  const win = buildExperimentBundle({
+    baselineId: 'base', baselineLabel: 'baseline', baselineArtifacts: await loadRunArtifacts(tmp, 'base'),
+    variantId: 'cheap', variantLabel: 'idle-skip', variantArtifacts: await loadRunArtifacts(tmp, 'cheap'),
+  });
+  assert.match(win.comparison.verdict, /cheaper/i);
+  assert.match(win.comparison.note, /-50%|−50%/); // relative request drop stated
+  const regress = buildExperimentBundle({
+    baselineId: 'cheap', baselineLabel: 'idle-skip', baselineArtifacts: await loadRunArtifacts(tmp, 'cheap'),
+    variantId: 'base', variantLabel: 'baseline', variantArtifacts: await loadRunArtifacts(tmp, 'base'),
+  });
+  assert.match(regress.comparison.verdict, /no improvement/i);
+  await rm(tmp, { recursive: true, force: true });
+});
+
+test('portable round-trips phases and validates their shape; rejects malformed ones', async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
+  await multiPhaseRun(tmp, 'rt', { variant: 'idle-skip', phases: [
+    { phase: 1, passed: 1, scored: 1, seconds: 300, requests: 57, failed: 1 },
+    { phase: 2, passed: 1, scored: 1, seconds: 270, requests: 54, failed: 0 },
+  ] });
+  const doc = await exportRun(tmp, 'rt');
+  assert.equal(doc.run.id, 'rt');
+  assert.equal(doc.metrics.phases.length, 2);
+  assert.equal(doc.metrics.failedCalls, 1);
+  assert.deepEqual(validatePortable(doc, { fileName: 'rt.json' }), []);
+  // a portable file maps back to a run carrying the phases
+  const loaded = portableToRawRun(doc, 'variant');
+  assert.equal(loaded.metrics.phases.length, 2);
+  // malformed: a phase missing a required number, and a length mismatch with conditions.phases
+  const bad = structuredClone(doc); delete bad.metrics.phases[0].modelRequests;
+  assert.ok(validatePortable(bad, { fileName: 'rt.json' }).some((e) => /metrics\.phases/.test(e)));
+  const short = structuredClone(doc); short.metrics.phases.pop();
+  assert.ok(validatePortable(short, { fileName: 'rt.json' }).some((e) => /conditions\.phases/.test(e)));
+  await rm(tmp, { recursive: true, force: true });
+});
+
 test('security scan flags credentials, tokens, host paths and emails', () => {
   for (const bad of ['sk-ant-api03-abcdefghijklmnopqrstu', 'Authorization: Bearer abcdefghijklmnop1234', 'api_key=hunter2hunter2',
     '/Users/alice/Documents/x', '/home/bob/.ssh', 'me@example.com', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig', 'ghp_abcdefghijklmnopqrstuvwx']) {

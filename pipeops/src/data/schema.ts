@@ -57,11 +57,31 @@ export interface CheckRecord {
   evidence: string[] | null;
 }
 
+/** One phase of a full cycle (phase 1: history; phase 2: a rule change; phase 3: nothing new).
+ *  Read straight from a results.jsonl row — never estimated. */
+export interface PhaseMetric {
+  phase: number;
+  qualityPassed: number;
+  qualityTotal: number;
+  modelRequests: number;
+  runtimeSeconds: number;
+  agentRuns: number | null;
+  /** idle_churn tag: this cycle created or revised a workflow with no new history. */
+  idleChurn: boolean;
+  status: string | null;
+}
+
 export interface RunMetrics {
   qualityPassed: number;
   qualityTotal: number;
   modelRequests: number;
   runtimeSeconds: number;
+  /** Per-phase breakdown. Undefined/empty when the artifacts predate it; a single element
+   *  for a one-phase run. Lets the UI tell the three-phase end-to-end story. */
+  phases?: PhaseMetric[];
+  /** Workflows calls the engine refused (usage.workspace.failed, summed over phases).
+   *  null when the run predates that logging (started before 2026-10-17 20:00Z). */
+  failedCalls?: number | null;
 }
 
 export interface RawRun {

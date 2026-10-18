@@ -316,6 +316,37 @@ function buildGroundTruth(truth) {
   return Object.entries(truth.jobs).map(([id, j]) => ({ id, title: j.summary ?? id }));
 }
 
+/** Per-phase metrics, one element per results.jsonl row, in phase order. Nothing estimated. */
+function buildPhases(results) {
+  return results
+    .map((r) => ({
+      phase: r.phase,
+      qualityPassed: r.passed ?? 0,
+      qualityTotal: r.scored ?? 0,
+      modelRequests: r.usage?.requests ?? 0,
+      runtimeSeconds: Math.round(r.seconds ?? 0),
+      agentRuns: typeof r.usage?.agent_runs === 'number' ? r.usage.agent_runs : null,
+      idleChurn: typeof r.mistakes?.idle_churn === 'number' && r.mistakes.idle_churn > 0,
+      status: r.status ?? null,
+    }))
+    .sort((a, b) => a.phase - b.phase);
+}
+
+/** Workflows calls the engine refused, summed across phases (usage.workspace.failed). null when
+ *  no phase carries the field — the run predates the logging (started before 2026-10-17 20:00Z). */
+function failedCalls(results) {
+  let present = false;
+  let total = 0;
+  for (const r of results) {
+    const n = r.usage?.workspace?.failed;
+    if (typeof n === 'number') {
+      present = true;
+      total += n;
+    }
+  }
+  return present ? total : null;
+}
+
 export function toRawRun(id, label, role, { run, results, truth, catalogs, phaseMeta }) {
   const passed = results.reduce((s, r) => s + (r.passed ?? 0), 0);
   const scored = results.reduce((s, r) => s + (r.scored ?? 0), 0);
@@ -332,6 +363,8 @@ export function toRawRun(id, label, role, { run, results, truth, catalogs, phase
       qualityTotal: scored,
       modelRequests: requests,
       runtimeSeconds: Math.round(seconds),
+      phases: buildPhases(results),
+      failedCalls: failedCalls(results),
     },
     stages: buildStages(results, phaseMeta),
     recordedActivity: null,
@@ -345,10 +378,11 @@ function verdict(a, b) {
   if (a.id === b.id) return { verdict: 'Single run loaded.', note: 'Pick a variant run to pair it against.' };
   const dq = b.metrics.qualityPassed - a.metrics.qualityPassed;
   const dr = b.metrics.modelRequests - a.metrics.modelRequests;
+  const relReq = a.metrics.modelRequests ? Math.round((dr / a.metrics.modelRequests) * 100) : null;
   if (dq < 0) return { verdict: 'Regression: quality dropped.', note: `${a.label} ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} -> ${b.label} ${b.metrics.qualityPassed}/${b.metrics.qualityTotal}.` };
   if (dq > 0) return { verdict: 'Quality improved.', note: `+${dq} checks, ${dr >= 0 ? '+' : ''}${dr} requests.` };
-  if (dr > 0) return { verdict: 'No improvement demonstrated.', note: 'Same quality, more requests.' };
-  if (dr < 0) return { verdict: 'Same quality, cheaper.', note: `${-dr} fewer requests.` };
+  if (dr > 0) return { verdict: 'No improvement demonstrated.', note: `Same quality, ${dr} more requests${relReq != null ? ` (+${relReq}%)` : ''}.` };
+  if (dr < 0) return { verdict: 'Same quality, cheaper.', note: `${-dr} fewer requests${relReq != null ? ` (${relReq}%)` : ''}, same checks passed.` };
   return { verdict: 'No change detected.', note: 'Identical totals.' };
 }
 

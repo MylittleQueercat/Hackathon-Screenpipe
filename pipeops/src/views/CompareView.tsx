@@ -2,13 +2,23 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Experiment, Run } from '../data/schema';
 import { CountUp, Eyebrow, Kbd, PlayIcon, PrimaryButton } from '../components/ui';
-import { fmtSeconds, pct } from '../lib/format';
+import { fmtSeconds, signed } from '../lib/format';
 import { usePlayKey } from '../lib/events';
 import { ANIMATED, useTheme } from '../lib/theme';
 
 type Mode = 'A' | 'B' | 'AB';
+type Dir = 'win' | 'cost' | 'flat';
 const VIZ_W = 1000;
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+/** A change from A to B, with its direction. For cost metrics (requests, runtime) less is a
+ *  win; pass lowerIsBetter=false for metrics where more is better. */
+function delta(from: number, to: number, lowerIsBetter = true) {
+  const d = to - from;
+  const p = from === 0 ? null : (d / from) * 100;
+  const dir: Dir = d === 0 ? 'flat' : (d < 0) === lowerIsBetter ? 'win' : 'cost';
+  return { d, dir, abs: signed(d), pctLabel: p === null ? null : `${signed(p, 1)}%` };
+}
 
 export function CompareView({ experiment }: { experiment: Experiment }) {
   const a = experiment.runs.find((r) => r.id === experiment.comparison.baseline)!;
@@ -41,9 +51,11 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
 
   const shown = mode === 'A' ? a : b;
   const showDelta = mode === 'AB';
-  const qualityDelta = b.metrics.qualityPassed - a.metrics.qualityPassed;
-  const reqDelta = b.metrics.modelRequests - a.metrics.modelRequests;
-  const secDelta = b.metrics.runtimeSeconds - a.metrics.runtimeSeconds;
+  const quality = delta(a.metrics.qualityPassed, b.metrics.qualityPassed, false);
+  const req = delta(a.metrics.modelRequests, b.metrics.modelRequests);
+  const sec = delta(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds);
+  // Phase breakdown only when the variant ran more than one phase (the three-phase story).
+  const phases = b.metrics.phases && b.metrics.phases.length > 1 ? b.metrics.phases : null;
 
   return (
     <div className="flex h-full flex-col px-[120px] pt-9">
@@ -79,7 +91,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           }
           delta={
             showDelta ? (
-              <DeltaChip tone="neutral">{qualityDelta === 0 ? '±0 · unchanged' : `${qualityDelta > 0 ? '+' : ''}${qualityDelta}`}</DeltaChip>
+              <DeltaChip tone={quality.dir}>{quality.d === 0 ? '±0 · unchanged' : `${signed(quality.d)} checks`}</DeltaChip>
             ) : null
           }
         />
@@ -90,12 +102,12 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           value={<CountUp value={shown.metrics.modelRequests} duration={1.4} />}
           delta={
             showDelta ? (
-              <DeltaChip tone="cost">
-                +{reqDelta} · +{pct(a.metrics.modelRequests, b.metrics.modelRequests).toFixed(1)}%
+              <DeltaChip tone={req.dir}>
+                {req.abs}{req.pctLabel ? ` · ${req.pctLabel}` : ''}
               </DeltaChip>
             ) : null
           }
-          tone={mode !== 'A' ? 'cost' : undefined}
+          tone={mode !== 'A' ? req.dir : undefined}
         />
         <Lane
           label="Runtime"
@@ -105,12 +117,12 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           valueSub={fmtSeconds(shown.metrics.runtimeSeconds)}
           delta={
             showDelta ? (
-              <DeltaChip tone="cost">
-                +{secDelta}s · +{pct(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds).toFixed(1)}%
+              <DeltaChip tone={sec.dir}>
+                {sec.abs}s{sec.pctLabel ? ` · ${sec.pctLabel}` : ''}
               </DeltaChip>
             ) : null
           }
-          tone={mode !== 'A' ? 'cost' : undefined}
+          tone={mode !== 'A' ? sec.dir : undefined}
         />
       </div>
 
@@ -126,16 +138,19 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
               transition={{ duration: 0.9, ease: EASE }}
               className="flex items-end justify-between"
             >
-              <div>
+              <div className="min-w-0 flex-1 pr-8">
                 <Eyebrow className="text-signal">Conclusion</Eyebrow>
-                <div className="mt-3 text-[84px] font-semibold leading-[0.95] tracking-tightest text-ink-50">
+                <div className="mt-3 text-[64px] font-semibold leading-[0.95] tracking-tightest text-ink-50">
                   {experiment.comparison.verdict}
                 </div>
                 <p className="mt-4 text-[18px] text-ink-300">
-                  Same quality ({a.metrics.qualityPassed}/{a.metrics.qualityTotal} → {b.metrics.qualityPassed}/{b.metrics.qualityTotal}),
-                  at <span className="text-cost">+{pct(a.metrics.modelRequests, b.metrics.modelRequests).toFixed(1)}% requests</span> and{' '}
-                  <span className="text-cost">+{pct(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds).toFixed(1)}% runtime</span>.
+                  {quality.d === 0
+                    ? `Same quality (${a.metrics.qualityPassed}/${a.metrics.qualityTotal})`
+                    : `Quality ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} → ${b.metrics.qualityPassed}/${b.metrics.qualityTotal}`}
+                  , at <DeltaWord dir={req.dir}>{req.pctLabel ?? req.abs} requests</DeltaWord> and{' '}
+                  <DeltaWord dir={sec.dir}>{sec.pctLabel ?? `${sec.abs}s`} runtime</DeltaWord>.
                 </p>
+                {phases && <PhaseStrip a={a} b={b} />}
               </div>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -218,7 +233,7 @@ function Lane({
   value: ReactNode;
   valueSub?: string;
   delta: ReactNode;
-  tone?: 'cost';
+  tone?: Dir;
 }) {
   return (
     <div className="flex h-[150px] items-center border-b border-ink-800">
@@ -230,7 +245,7 @@ function Lane({
       <div className="flex w-[360px] shrink-0 flex-col items-end">
         <div
           className={`text-[80px] font-semibold leading-none tracking-tightest transition-colors duration-700 ${
-            tone === 'cost' ? 'text-cost' : 'text-ink-50'
+            tone === 'cost' ? 'text-cost' : tone === 'win' ? 'text-signal' : 'text-ink-50'
           }`}
         >
           {value}
@@ -244,18 +259,76 @@ function Lane({
   );
 }
 
-function DeltaChip({ children, tone }: { children: ReactNode; tone: 'cost' | 'neutral' }) {
+const TONE: Record<Dir | 'neutral', string> = {
+  win: 'bg-signal/15 text-signal',
+  cost: 'bg-cost/15 text-cost',
+  flat: 'bg-ink-700/40 text-ink-300',
+  neutral: 'bg-ink-700/40 text-ink-300',
+};
+
+function DeltaChip({ children, tone }: { children: ReactNode; tone: Dir | 'neutral' }) {
   return (
     <motion.span
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className={`tnum rounded-full px-2.5 py-0.5 font-mono text-[12px] ${
-        tone === 'cost' ? 'bg-cost/15 text-cost' : 'bg-signal/15 text-signal'
-      }`}
+      className={`tnum rounded-full px-2.5 py-0.5 font-mono text-[12px] ${TONE[tone]}`}
     >
       {children}
     </motion.span>
+  );
+}
+
+function DeltaWord({ dir, children }: { dir: Dir; children: ReactNode }) {
+  return <span className={dir === 'win' ? 'text-signal' : dir === 'cost' ? 'text-cost' : 'text-ink-200'}>{children}</span>;
+}
+
+/** Per-phase request bars for the full three-phase story (phase 1: history, 2: a rule change,
+ *  3: nothing new — where idle-skip drops to zero). Shown only when the variant ran >1 phase. */
+function PhaseStrip({ a, b }: { a: Run; b: Run }) {
+  const ap = a.metrics.phases ?? [];
+  const bp = b.metrics.phases ?? [];
+  const phaseNums = [...new Set([...ap, ...bp].map((p) => p.phase))].sort((x, y) => x - y);
+  const max = Math.max(1, ...ap.map((p) => p.modelRequests), ...bp.map((p) => p.modelRequests));
+  const find = (ps: typeof ap, n: number) => ps.find((p) => p.phase === n) ?? null;
+  const bar = (p: ReturnType<typeof find>, cls: string) => (
+    <div className="flex items-center gap-2">
+      <div className="h-[8px] rounded-sm bg-ink-800" style={{ width: 120 }}>
+        <div className={`h-full rounded-sm ${cls}`} style={{ width: `${((p?.modelRequests ?? 0) / max) * 100}%` }} />
+      </div>
+      <span className="tnum w-9 font-mono text-[11px] text-ink-400">{p ? p.modelRequests : '—'}</span>
+    </div>
+  );
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4, duration: 0.5 }}
+      className="mt-6 max-w-[560px] rounded-xl border border-ink-800 bg-ink-900/40 px-5 py-4"
+    >
+      <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-widest text-ink-500">
+        <span>Requests per phase</span>
+        <span className="flex gap-4 normal-case tracking-normal">
+          <span className="text-ink-300">■ {a.label}</span>
+          <span className="text-signal">■ {b.label}</span>
+        </span>
+      </div>
+      <div className="flex flex-col gap-2.5">
+        {phaseNums.map((n) => {
+          const bPhase = find(bp, n);
+          return (
+            <div key={n} className="flex items-center gap-4">
+              <span className="w-[62px] shrink-0 font-mono text-[12px] text-ink-300">
+                Phase {n}
+                {bPhase?.idleChurn ? <span className="ml-1 text-cost" title="idle churn: changed the catalog with no new history">●</span> : null}
+              </span>
+              {bar(find(ap, n), 'bg-ink-300')}
+              {bar(bPhase, 'bg-signal')}
+            </div>
+          );
+        })}
+      </div>
+    </motion.div>
   );
 }
 
@@ -315,18 +388,29 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
 
 function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
   const pal = ANIMATED[useTheme()];
-  const max = Math.max(a.metrics.modelRequests, b.metrics.modelRequests);
+  const av = a.metrics.modelRequests;
+  const bv = b.metrics.modelRequests;
+  const hi = Math.max(av, bv, 1);
+  const lo = Math.min(av, bv);
+  const saved = bv < av; // the variant used fewer requests — a win
   const width = VIZ_W;
-  const pitch = width / max;
-  const shownCount = mode === 'A' ? a.metrics.modelRequests : b.metrics.modelRequests;
-  const extraFrom = a.metrics.modelRequests;
-  const extraX = extraFrom * pitch;
+  const pitch = width / hi;
+  const bandColor = saved ? pal.signal : pal.cost;
+  const aX = av * pitch; // where A ends, the baseline marker
+  // Which slots are lit, and their colour, for the current mode.
+  const slot = (i: number): { lit: boolean; fill: string; band: boolean } => {
+    if (mode === 'A') return { lit: i < av, fill: pal.on, band: false };
+    if (mode === 'B') return { lit: i < bv, fill: pal.on, band: false };
+    // AB: common base lit neutral, the delta band lit in its direction colour.
+    if (i < lo) return { lit: true, fill: pal.on, band: false };
+    if (i < hi) return { lit: true, fill: bandColor, band: true };
+    return { lit: false, fill: pal.off, band: false };
+  };
   return (
     <div className="relative" style={{ width, height: 72 }}>
       <svg width={width} height={72} className="overflow-visible">
-        {Array.from({ length: max }, (_, i) => {
-          const visible = i < shownCount;
-          const extra = i >= extraFrom;
+        {Array.from({ length: hi }, (_, i) => {
+          const s = slot(i);
           return (
             <motion.rect
               key={i}
@@ -334,33 +418,28 @@ function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
               width={Math.max(2, pitch - 3.5)}
               rx={1}
               initial={false}
-              animate={{
-                y: visible ? 12 : 44,
-                height: visible ? 48 : 16,
-                fill: !visible ? pal.off : extra && mode !== 'A' ? pal.cost : pal.on,
-              }}
-              transition={{ delay: extra ? (i - extraFrom) * 0.035 : 0, duration: 0.35, ease: 'easeOut' }}
+              animate={{ y: s.lit ? 12 : 44, height: s.lit ? 48 : 16, fill: s.lit ? s.fill : pal.off }}
+              transition={{ delay: s.band ? (i - lo) * 0.035 : 0, duration: 0.35, ease: 'easeOut' }}
             />
           );
         })}
-        {/* baseline boundary */}
-        <line x1={extraX - 1.5} x2={extraX - 1.5} y1={0} y2={72} stroke="rgb(var(--ink-400))" strokeDasharray="3 3" />
+        <line x1={aX - 1.5} x2={aX - 1.5} y1={0} y2={72} stroke="rgb(var(--ink-400))" strokeDasharray="3 3" />
       </svg>
-      <span className="absolute -bottom-5 font-mono text-[10px] text-ink-500" style={{ left: extraX - 60 }}>
-        A ends · {a.metrics.modelRequests}
+      <span className="absolute -bottom-5 font-mono text-[10px] text-ink-500" style={{ left: Math.max(0, aX - 60) }}>
+        A ends · {av}
       </span>
       <AnimatePresence>
-        {mode === 'AB' && (
+        {mode === 'AB' && bv !== av && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="absolute -top-6 flex items-center"
-            style={{ left: extraX, width: width - extraX }}
+            style={{ left: lo * pitch, width: (hi - lo) * pitch }}
           >
-            <div className="h-2 flex-1 border-x border-t border-cost/70" />
-            <span className="px-2 font-mono text-[11px] text-cost">+{b.metrics.modelRequests - a.metrics.modelRequests}</span>
-            <div className="h-2 flex-1 border-x border-t border-cost/70" />
+            <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
+            <span className={`px-2 font-mono text-[11px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}</span>
+            <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -370,11 +449,16 @@ function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
 
 function RuntimeViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
   const width = VIZ_W;
-  const maxSec = Math.ceil(Math.max(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds) / 300) * 300; // round to 5 min
+  const av = a.metrics.runtimeSeconds;
+  const bv = b.metrics.runtimeSeconds;
+  const saved = bv < av; // the variant was faster — a win
+  const maxSec = Math.max(300, Math.ceil(Math.max(av, bv) / 300) * 300); // round to 5 min
   const x = (s: number) => (s / maxSec) * width;
-  const aX = x(a.metrics.runtimeSeconds);
-  const bX = x(b.metrics.runtimeSeconds);
+  const aX = x(av);
+  const bX = x(bv);
   const shownX = mode === 'A' ? aX : bX;
+  const loX = Math.min(aX, bX);
+  const hiX = Math.max(aX, bX);
   const ticks = Array.from({ length: maxSec / 300 + 1 }, (_, i) => i * 300);
   return (
     <div className="relative" style={{ width, height: 72 }}>
@@ -386,34 +470,34 @@ function RuntimeViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
       ))}
       {/* track */}
       <div className="absolute top-[18px] h-[20px] w-full rounded-full bg-ink-850" />
-      {/* baseline portion */}
+      {/* the shown run's bar */}
       <motion.div
-        className="absolute top-[18px] h-[20px] rounded-l-full bg-ink-200"
+        className="absolute top-[18px] h-[20px] rounded-full bg-ink-200"
         initial={false}
-        animate={{ width: Math.min(shownX, aX), borderTopRightRadius: mode === 'A' ? 999 : 0, borderBottomRightRadius: mode === 'A' ? 999 : 0 }}
+        animate={{ width: Math.max(0, shownX) }}
         transition={{ duration: 1.2, ease: EASE }}
       />
-      {/* extra runtime */}
+      {/* the delta region between A and B, coloured by direction */}
       <motion.div
-        className="absolute top-[18px] h-[20px] rounded-r-full bg-cost shadow-[0_0_24px_-2px_rgb(var(--cost)/0.55)]"
-        style={{ left: aX }}
+        className={`absolute top-[18px] h-[20px] ${saved ? 'bg-signal shadow-[0_0_24px_-2px_rgb(var(--signal)/0.55)]' : 'bg-cost shadow-[0_0_24px_-2px_rgb(var(--cost)/0.55)]'}`}
+        style={{ left: loX, borderTopRightRadius: 999, borderBottomRightRadius: 999 }}
         initial={false}
-        animate={{ width: mode === 'A' ? 0 : bX - aX, opacity: mode === 'A' ? 0 : 1 }}
+        animate={{ width: mode === 'AB' ? hiX - loX : 0, opacity: mode === 'AB' ? (saved ? 0.5 : 1) : 0 }}
         transition={{ duration: 1.8, ease: EASE }}
       />
       <div className="absolute top-[8px] h-[40px] border-l border-dashed border-ink-400" style={{ left: aX }} />
       <AnimatePresence>
-        {mode === 'AB' && (
+        {mode === 'AB' && bv !== av && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             className="absolute -top-5 flex items-center"
-            style={{ left: aX, width: bX - aX }}
+            style={{ left: loX, width: hiX - loX }}
           >
-            <div className="h-2 flex-1 border-x border-t border-cost/70" />
-            <span className="px-2 font-mono text-[11px] text-cost">+{b.metrics.runtimeSeconds - a.metrics.runtimeSeconds}s</span>
-            <div className="h-2 flex-1 border-x border-t border-cost/70" />
+            <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
+            <span className={`px-2 font-mono text-[11px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}s</span>
+            <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
           </motion.div>
         )}
       </AnimatePresence>
