@@ -70,7 +70,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
     <div className="flex h-full">
       {/* -------- lenses -------- */}
       <aside className="flex w-[400px] shrink-0 flex-col border-r border-ink-800 px-10 py-8">
-        <Eyebrow size="lg">Evidence explorer</Eyebrow>
+        <Eyebrow size="lg" className="!text-signal">Evidence explorer</Eyebrow>
         <h2 className="mt-3 text-[44px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
           Why did each check pass?
         </h2>
@@ -127,13 +127,13 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                 transition={{ duration: 0.18 }}
                 className="flex flex-col items-center"
               >
-                <span className="font-mono text-[14.5px] uppercase tracking-[0.2em] text-ink-400">check {pad2(selected + 1)}</span>
-                <span className={`mt-1 text-[68px] font-semibold leading-none tracking-tightest ${check.passed ? 'text-signal text-glow' : 'text-cost'}`}>
+                <span className="font-mono text-[16px] uppercase tracking-[0.2em] text-ink-400">check {pad2(selected + 1)}</span>
+                <span className={`mt-1 text-[100px] font-semibold leading-none tracking-tightest ${check.passed ? 'text-signal text-glow' : 'text-cost'}`}>
                   {check.passed ? 'PASS' : 'FAIL'}
                 </span>
               </motion.div>
             </AnimatePresence>
-            <span className="tnum mt-3 font-mono text-[15.5px] text-ink-400">
+            <span className="tnum mt-3 font-mono text-[18px] text-ink-300">
               {passedCount}/{n} passed
             </span>
           </div>
@@ -144,7 +144,10 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
           )}
         </div>
 
-        <Matching run={run} />
+        {/* centred in the space below the ring */}
+        <div className="flex w-full flex-1 items-center justify-center pb-6">
+          <Matching run={run} />
+        </div>
       </section>
 
       {/* -------- dossier -------- */}
@@ -242,14 +245,14 @@ function LensRow({ label, count, active, onClick }: { label: string; count: numb
     <button
       onClick={onClick}
       className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition ${
-        active ? 'bg-ink-850 text-ink-50 ring-1 ring-signal/40' : 'text-ink-300 hover:bg-ink-900 hover:text-ink-100'
+        active ? 'bg-signal/[0.08] text-signal ring-1 ring-signal/50' : 'text-signal/70 hover:bg-ink-900 hover:text-signal'
       }`}
     >
       <span className="flex items-center gap-3 text-[17.5px]">
-        <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-signal' : 'bg-ink-600'}`} />
+        <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-signal' : 'bg-signal/40'}`} />
         {label}
       </span>
-      <span className="tnum font-mono text-[14.5px] text-ink-400">{count ?? '—'}</span>
+      <span className="tnum font-mono text-[16px] text-current">{count ?? '—'}</span>
     </button>
   );
 }
@@ -289,7 +292,7 @@ function Matching({ run }: { run: Run }) {
   const right: (WorkflowRecord | null)[] = ready ? gen : Array(rows).fill(null);
 
   return (
-    <div className="mt-10 w-full max-w-[900px]">
+    <div className="w-full max-w-[900px]">
       <div className="mb-3 flex items-center justify-between">
         <Eyebrow size="lg">Expected workflows ↔ agent output</Eyebrow>
         {!ready && <Badge size="lg" kind="placeholder" />}
