@@ -1,0 +1,240 @@
+{
+ "case": "j01",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Whether the original PDF file is actually renamed/moved on disk to the new_filename value, or only the CSV log is updated - no Finder activity was captured in this window to confirm",
+      "why": "History has many Finder captures in /Users/morgan/Documents/Paperwork/Inbox showing Morgan renaming each scan to the new_filename (e.g. typing 2026-10-05_Acme-Office-Supplies_receipt.pdf); claim of no Finder activity is false",
+      "times": [
+       "2026-10-14T10:00:34.575Z",
+       "2026-10-17T11:28:45.514Z"
+      ]
+     },
+     {
+      "quote": "produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15",
+      "why": "Printer setup is the separate one-off printer job; tying it to the receipts trigger conflates jobs",
+      "times": [
+       "2026-10-15"
+      ]
+     },
+     {
+      "quote": "File-system actions (rename/move of the scanned PDFs) are not confirmed",
+      "why": "Contradicted by Finder captures",
+      "times": []
+     }
+    ]
+   },
+   "procedure": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Read scan in Preview / Disambiguate document type / Log row in tracker.csv",
+      "why": "No rename step in Finder at all, although rename is a core step in every run (receipts-01..10 'rename' steps); no mention of the Paperwork/Inbox folder",
+      "times": []
+     },
+     {
+      "quote": "Open client-types.txt to look up whether the vendor is a contract client",
+      "why": "Lookup is described, but the step list otherwise covers only 3 of ~5 steps (no Finder rename, no duplicate comparison step)",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Duplicate charges are cross-referenced against an already-logged row rather than filed normally (scan-0417)",
+      "why": "Duplicate named but blank new_filename / not renamed is not described",
+      "times": [
+       "2026-10-17T11:29:54.697Z"
+      ]
+     },
+     {
+      "quote": "variations list has only lookup and duplicate",
+      "why": "Missing date (UNKNOWN-DATE prefix, notes 'missing date') and over-500 'review needed' are only in the description and a single logged row, not as variations describing what Morgan does",
+      "times": []
+     }
+    ]
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Append row: scan-0418.pdf,...",
+      "why": "Gives a row example and columns in description, but no folder, no rename procedure, no filename format rule, no thresholds spelled out as a procedure; an agent could not complete the task (files would stay un-renamed)",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Whether the original PDF file is actually renamed/moved on disk",
+      "why": "Question the history already answers (Finder renames)",
+      "times": []
+     },
+     {
+      "quote": "Whether the naming convention (date_vendor_type) is applied consistently enough to describe as a strict rule",
+      "why": "Padding; the convention is consistent across all 10 rows",
+      "times": []
+     },
+     {
+      "quote": "Observed on 2 captured days",
+      "why": "Overconfident-low evidence reading; confidence 4 despite missing a core step",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "\"repetitions\": 2 / Observed on 2 captured days in a 90-day scan",
+      "why": "Receipts work appears on 4 days (10-14, 10-15, 10-16, 10-17) with 10 runs",
+      "times": []
+     },
+     {
+      "quote": "outcome ... 10 rows covering scans 0412-0421 vs repetitions 2",
+      "why": "Internal mismatch between 10 scans and 2 repetitions; timing sample of 2 runs only",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "totalMinutes 0 with timing averageMinutes 2.26",
+      "why": "Inconsistent duration fields (0 vs estimated 2.26 min)",
+      "times": []
+     }
+    ]
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Verify renamed files appear in the inbox folder with the normalized filenames from tracker.csv",
+      "why": "Frames rename as a verification check from a Finder listing rather than Morgan's actual rename action, which the history does show",
+      "times": [
+       "2026-10-17T11:28:45.514Z"
+      ]
+     },
+     {
+      "quote": "What exact UI shows the 'Document Record'",
+      "why": "Minor; the Document Record is the PDF's on-screen text",
+      "times": []
+     }
+    ]
+   },
+   "procedure": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Review scanned document -> Classify and log in tracker.csv -> Rename file on disk",
+      "why": "Includes Finder rename and the Paperwork/Inbox folder, but orders rename after logging and does not name rename as an action Morgan performs; type lookup in client-types.txt not a step",
+      "times": []
+     },
+     {
+      "quote": "Is renaming done manually in Finder or via some other mechanism",
+      "why": "Rename action is in fact captured in Finder (typing the new name), so this is not an unknown",
+      "times": [
+       "2026-10-14T10:00:34.575Z"
+      ]
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list rather than the document itself",
+      "why": "Lookup case never names client-types.txt or says to check it for contract clients; thin",
+      "times": []
+     },
+     {
+      "quote": "Missing-date case (scan-0415): date unreadable -> new_filename uses 'UNKNOWN-DATE' prefix",
+      "why": "Correct, but 'unreadable' is an inference",
+      "times": []
+     }
+    ]
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list",
+      "why": "No file name/location for the client list",
+      "times": []
+     },
+     {
+      "quote": "date_vendor_type.pdf",
+      "why": "Format stated as generic pattern; the 'original file not renamed' for duplicate is good, but no concrete example filename in description",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "What determines the vendor/date/amount when the embedded 'Document Record' is ambiguous or missing",
+      "why": "Partly padding; the history shows a missing date simply logged as UNKNOWN-DATE",
+      "times": []
+     },
+     {
+      "quote": "Is renaming done manually in Finder or via some other mechanism",
+      "why": "Answered by history",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 3 captured days in a 90-day scan",
+      "why": "Receipts work occurs on 4 days (10-14 to 10-17); 3 undercounts",
+      "times": []
+     },
+     {
+      "quote": "Observed edits are clustered on 2026-10-14 and 2026-10-16/17",
+      "why": "Omits 10-15 receipts activity",
+      "times": []
+     },
+     {
+      "quote": "timing: null, totalMinutes 0",
+      "why": "No duration estimate given although runs are observable",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "a status (filed / duplicate / r",
+      "why": "Description text is cut off mid-word",
+      "times": []
+     },
+     {
+      "quote": "No such follow-up was found in",
+      "why": "Open question and a limitation are truncated mid-sentence",
+      "times": []
+     }
+    ]
+   }
+  }
+ },
+ "preference": "Y",
+ "strength": "clear",
+ "reason": "Y captures the Finder rename in Paperwork/Inbox (including that duplicates are left un-renamed), the date_vendor_type format, and all four exceptions (duplicate, UNKNOWN-DATE missing date, over-500 review needed, type from client list) as variations. X omits the rename step entirely and wrongly lists it as an unconfirmed open question despite many Finder captures, conflates the printer setup with the trigger, and puts missing-date and high-value only in the description. Both undercount days (X 2, Y 3, actual 4); Y has truncated text and X names client-types.txt more explicitly, but correctness favours Y."
+}

@@ -1,0 +1,71 @@
+{
+ "case": "j11",
+ "scores": {
+  "X": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "Preview scan-0422.pdf (02:24:00-02:24:11), Preview scan-0423.pdf (02:27:13-02:27:20), Finder Inbox checked to confirm renamed files on disk (02:28:04-02:28:11), then tracker.csv updated with both new rows (02:29:01-02:29:05)", "why": "Times do not match the history. Preview scan-0422 runs 02:23:19-02:23:31, the Finder check is at 02:27:31, and tracker edits end at 02:28:25. The run end is also given as 02:28:25, which contradicts the 02:29:05 in the same summary.", "times": ["2026-10-18T02:23:19", "2026-10-18T02:27:31", "2026-10-18T02:28:25"]},
+    {"quote": "Observed on 3 captured days in a 90-day scan", "why": "Receipt processing appears on 5 days (14, 15, 16, 17, 18 Oct) and in 13 runs.", "times": ["2026-10-14", "2026-10-18"]}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Append row: scan-0418.pdf,... Check Finder Inbox listing to confirm renamed files appear on disk", "why": "The order is wrong. Morgan reads in Preview, renames in Finder, then logs in TextEdit. Here logging comes before the Finder step, and the Finder rename is only a check, never an action. The rename is the core of the job.", "times": ["2026-10-16T11:50:16", "2026-10-16T11:50:22"]},
+    {"quote": "(no step)", "why": "The document never says to open the Inbox first or that Morgan renames the file in Finder before editing the CSV.", "times": []}
+   ]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "a missing date is logged with notes='missing date'", "why": "The UNKNOWN-DATE_ filename prefix and the blank date cell are not mentioned (scan-0415).", "times": ["2026-10-15T09:50"]},
+    {"quote": "Flag duplicate charge against an already-logged row instead of filing normally", "why": "It does not say the duplicate gets no new filename (blank new_filename) and is left as scan-0417.pdf on disk.", "times": ["2026-10-16T09:31"]}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Adopt new naming convention TYPE_DATE_NAME.pdf in place of DATE_NAME_TYPE.pdf", "why": "Old and new are stated correctly and no contradiction is left. But it never says earlier files were not renamed, and the example uses a 'receipt_' type prefix without spelling out the format. The stage name 'Apply/update naming convention' mixes the one-off rule edit with the recurring logging step.", "times": ["2026-10-18T02:14:44"]}
+   ]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "tracker.csv ... proposed new filename (following the currently active naming convention)", "why": "The CSV columns appear only in the evidence blocks. The Inbox path is not stated in the prose, and the rename step is missing, so an agent could not do the job from the procedure alone.", "times": []}
+   ]},
+   "calibration": {"score": 4, "deductions": [
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog of scans - only two capture windows ... were inspected", "why": "The history shows daily runs on 5 days, so this question is partly answered and 'two windows' is wrong.", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "HP printer driver setup (2026-10-15) is one-off configuration context", "why": "Reasonable, but the printer is not part of this job, so it is padding.", "times": []}
+   ]},
+   "numbers": {"score": 2, "deductions": [
+    {"quote": "\"repetitions\": 3 ... \"Observed on 3 captured days\"", "why": "There are 13 runs over 5 days. The stage counts (observedOccurrences 3, 5) are also off.", "times": []},
+    {"quote": "about 5m05s end to end for the pair", "why": "Only 3 timing samples, one of them two scans combined, so the average 3.2 min is thin. The summary times are partly invented.", "times": ["2026-10-18T02:23:19"]}
+   ]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "Apply/update naming convention and log row in tracker.csv", "why": "One stage mixes a rule-change note, the logging, a Finder check and the output, so it is hard to read as a procedure.", "times": []}
+   ]}
+  },
+  "Y": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "Observed on 4 captured days in a 90-day scan", "why": "Receipt processing appears on 5 days (14-18 Oct).", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "\"description\": \"... then\" and variations ending \"('From today, filed receipts are named:\"", "why": "The description and the last variation are cut off mid-sentence.", "times": []}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.", "why": "The Preview, Finder rename, TextEdit log order is not stated. The rename stage comes after logging and contains only checks, not the rename action. Opening the Inbox is not described.", "times": ["2026-10-16T11:49:55", "2026-10-16T11:50:22"]},
+    {"quote": "Type sometimes inferred from an external client list", "why": "The client-types.txt lookup step is not in the procedure, and the file is never named.", "times": ["2026-10-17T10:11:38"]}
+   ]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "It names the case but not what Morgan does: open client-types.txt in TextEdit, find the client (Northwind: contract), then set the type and note.", "times": ["2026-10-17T10:11:38"]}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "As of 2026-10-18 the normalized pattern changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf for new intake only; existing files on disk were left unchanged.", "why": "This is correct and supported, and it marks the old rule as replaced. But the top-level description and variation are truncated before the rule, and there is no explicit statement of the current format, e.g. receipt_2026-10-15_Hardware-Store.pdf, outside quotes.", "times": ["2026-10-18T02:14:44", "2026-10-18T02:27:31"]}
+   ]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "a normalized new_filename", "why": "The filename format is never stated directly. It is only in the evidence and in the rule-change quote. The columns are listed, and Paperwork/Inbox is named. The client-types.txt step is missing.", "times": []}
+   ]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "What exact UI shows the 'Document Record' — a form overlay, embedded text, or metadata panel?", "why": "Padding. It is plain Preview text. The lookup question for ambiguous or missing vendor data is also speculative, since the history shows a missing date handled by UNKNOWN-DATE.", "times": ["2026-10-16T11:49:08"]},
+    {"quote": "Is the 500 threshold a fixed personal rule or policy-driven?", "why": "Not answerable from the history, so it is padding.", "times": []},
+    {"quote": "Is intake purely event-driven per arriving scan or is there a periodic cadence?", "why": "Daily runs on 5 days are visible, so this is partly answered.", "times": []}
+   ]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "\"repetitions\": 4 ... Observed on 4 captured days", "why": "There are 5 days and 13 runs. Stage 1 'observedOccurrences': 1 is far too low, since Preview is used every run.", "times": []},
+    {"quote": "\"timing\": null", "why": "No durations given, though they could have been estimated.", "times": []}
+   ]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "\"description\": \"Morgan processes ... then\"", "why": "Truncated headline text, and the variations list is cut off mid-quote.", "times": []},
+    {"quote": "Edit naming-rule-update.txt to announce a new filename convention effective immediately.", "why": "A one-off rule note is listed as a step in the recurring classify stage.", "times": ["2026-10-18T02:14:44"]}
+   ]}
+  }
+ },
+ "preference": "Y",
+ "strength": "slight",
+ "reason": "Both have the right rule change (old DATE_NAME_TYPE replaced by TYPE_DATE_NAME, no contradiction), and both miss the Preview, Finder rename, TextEdit log order. Y covers the exceptions better. It gives the UNKNOWN-DATE prefix with the 'missing date' note, the duplicate left unrenamed with a blank new_filename and a pointer to the earlier file, the over-500 flag, and that older files were not renamed. Y also has a rename-on-disk stage, and its day count (4) is closer to the true 5 than X's 3. X has the client-types.txt lookup as a real step, timing samples and a better title and description. But X has no rename action, omits the UNKNOWN-DATE filename, and its timing summary has invented times (02:29:01 after a stated end of 02:28:25). Y's flaws are truncated description and variation text, padded open questions, and no mention of client-types.txt. Close call."
+}

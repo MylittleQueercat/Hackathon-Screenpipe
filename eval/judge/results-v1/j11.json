@@ -1,0 +1,51 @@
+{
+ "case": "j11",
+ "scores": {
+  "X": {
+   "faithful": {"score": 3, "deductions": [
+    {"quote": "Preview scan-0422.pdf (02:24:00-02:24:11), Preview scan-0423.pdf (02:27:13-02:27:20), Finder Inbox checked to confirm renamed files on disk (02:28:04-02:28:11), then tracker.csv updated with both new rows (02:29:01-02:29:05)", "why": "Timestamps do not match the history: Preview scan-0422 starts 02:23:19 and scan-0423 at 02:26:32; Finder Inbox is at 02:27:31; 02:28:04-02:28:11 are TextEdit captures; nothing at 02:29:01-02:29:05 (tracker last edited 02:28:25, next capture is noise).", "times": ["2026-10-18T02:23:19", "2026-10-18T02:26:32", "2026-10-18T02:27:31", "2026-10-18T02:28:25"]},
+    {"quote": "Observed on 3 captured days in a 90-day scan", "why": "Receipts work appears on 5 days (14-18 Oct).", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "scan-0412.pdf .. scan-0423.pdf) appears, produced by an HP scanner", "why": "The link between the scans and the HP scanner/printer setup of 15 Oct is inferred, not shown on screen.", "times": ["2026-10-15"]}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Check Finder Inbox listing to confirm renamed files appear on disk", "why": "Morgan actually renames each file in Finder (typing the new name) before or just after logging; the document reduces this to a verification check and never states the rename as a step, and leaves the order (Preview, rename, tracker) implicit.", "times": ["2026-10-14T10:00:34", "2026-10-14T13:03:46"]},
+    {"quote": "Adopt new naming convention TYPE_DATE_NAME.pdf in place of DATE_NAME_TYPE.pdf", "why": "Writing the naming-rule note is listed as a step of the recurring procedure, mixing a one-time event into the per-scan steps.", "times": ["2026-10-18T02:14:44"]}]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Flag duplicate charge against an already-logged row instead of filing normally", "why": "Does not say the duplicate keeps new_filename blank and is not renamed; missing-date (UNKNOWN-DATE prefix) and high-value handling appear only in the description / evidence, not as procedure steps or variations.", "times": ["2026-10-16T09:31:08", "2026-10-14T13:04:27"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "the proposed new_filename convention changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf", "why": "New rule and old rule correct, old marked as replaced, but does not say existing files are not retroactively renamed, and the open question about contracts is the only scope guidance.", "times": ["2026-10-18T02:14:44"]}]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "Open scan-NNNN.pdf in Preview", "why": "No explicit rename-in-Finder step, no explicit statement of the UNKNOWN-DATE placeholder or that duplicates keep an empty filename in the instructions (only in evidence rows). Column list and client-types.txt content are given, folder is only called 'Inbox'.", "times": []}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog of scans - only two capture windows", "why": "History shows five consecutive days with 13 runs, so this is largely answered and the 'two windows' claim contradicts its own '3 days'.", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "since client-types.txt had to be consulted at least once", "why": "Using a lookup for an ambiguous type is not evidence of an inconsistent naming rule; padding.", "times": ["2026-10-17T10:11:38"]}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "\"repetitions\": 3", "why": "13 runs across 5 days in the history; stage counts (3 occurrences / 2 days for Preview, 5 / 3 for logging) are mutually inconsistent.", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "about 5m05s end to end for the pair", "why": "Based on the wrong timestamps above; actual 02:23:19 to 02:28:25 is about 5m06s, so the value is fine but the sub-times cited are wrong. Per-scan timings 1m48s and 2m43s check out.", "times": ["2026-10-16T11:49:08", "2026-10-17T10:10:51"]}]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "Apply/update naming convention and log row in tracker.csv", "why": "Stage merges rule change, row logging, duplicate, finder check, and output into one long stage.", "times": []}]}
+  },
+  "Y": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "Observed on 4 captured days in a 90-day scan", "why": "Receipts work appears on 5 days (14-18 Oct).", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "Edit naming-rule-update.txt to announce a new filename convention", "why": "Presented as a step in the per-scan classification stage rather than a one-off event (minor).", "times": ["2026-10-18T02:14:11"]}]},
+   "procedure": {"score": 4, "deductions": [
+    {"quote": "Verify renamed files appear in the inbox folder with the normalized filenames from tracker.csv.", "why": "The Finder rename itself (typed in place, 10:00:34 etc.) is not captured as a step; stage 3 only checks. Order Preview, log, rename is the reverse of the usual Preview, rename, log.", "times": ["2026-10-14T10:00:34", "2026-10-14T13:03:46"]}]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "Does not name client-types.txt or say Morgan opens it in TextEdit while the sidebar shows Type: UNKNOWN; the rest (duplicate with blank filename and no rename, UNKNOWN-DATE with note, >500 review needed) is well described.", "times": ["2026-10-17T10:11:38", "2026-10-17T10:10:51"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Naming convention change (2026-10-18): new_filename pattern changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf per naming-rule-update.txt ('From today, filed receipts are named:", "why": "Variation entry is cut off mid-quote and the description is also truncated; the rule is stated correctly in stage 2/3 (and new-intake-only, no retroactive rename), but the 'normalized new_filename' wording in the procedure step does not state which pattern is current.", "times": ["2026-10-18T02:14:44"]}]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "Append a CSV row for the scan with original_file, normalized new_filename, date, amount, type, status and notes.", "why": "Columns and folder (Paperwork/Inbox) are given, but the current filename pattern and the client-types.txt lookup are not spelled out in the steps.", "times": []}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "What determines the vendor/date/amount when the embedded 'Document Record' is ambiguous or missing?", "why": "Speculative padding; the history shows the record on every scan, and 'What exact UI shows the Document Record' is similar filler.", "times": ["2026-10-16T11:49:08"]},
+    {"quote": "Is renaming done manually in Finder or via some other mechanism?", "why": "Finder captures show the name typed in a text field in place, partly answering this.", "times": ["2026-10-14T13:04:06"]}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "\"repetitions\": 4", "why": "13 runs across 5 days; stage occurrence counts (1, 4, 2) are inconsistent; no timing given although it could be derived.", "times": ["2026-10-14", "2026-10-18"]}]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "recording original_file, a normalized new_filename, date, amount, type, and a status (filed / duplicate / review needed), then", "why": "Description is truncated mid-sentence, and the final variation is also cut off.", "times": []}]}
+  }
+ },
+ "preference": "Y",
+ "strength": "slight",
+ "reason": "Both capture the planted exceptions and the TYPE_DATE_NAME change with the old rule marked replaced. Y is more faithful and procedurally fuller: a separate rename-on-disk stage, duplicate left unrenamed with blank filename, UNKNOWN-DATE placeholder, over-500 flag, Paperwork/Inbox path, no retroactive rename, and day count (4) closer to the true 5 than X's 3. X is better on the client-types.txt lookup and gives timing, but its timing summary cites several timestamps that do not exist in the history and it has internally inconsistent counts and a padded cadence question. Y loses on truncated description/variation text and some filler open questions, so the margin is slight."
+}

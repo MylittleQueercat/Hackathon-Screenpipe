@@ -1,137 +1,32 @@
+/* screenpipe — AI that knows everything you've seen, said, or heard */
+/* https://screenpipe.com */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
-  /* Colour tokens as space-separated RGB channels so Tailwind opacity modifiers work. */
-  --ink-950: 10 11 13;
-  --ink-900: 15 16 19;
-  --ink-850: 20 21 25;
-  --ink-800: 26 27 32;
-  --ink-700: 36 38 44;
-  --ink-600: 51 54 62;
-  --ink-500: 74 78 88;
-  --ink-400: 107 112 124;
-  --ink-300: 144 149 160;
-  --ink-200: 185 189 198;
-  --ink-100: 228 230 235;
-  --ink-50: 244 245 247;
-  --signal: 200 255 77;
-  --on-signal: 10 11 13;
-  --cost: 255 122 82;
-  --shadow: 0 0 0;
-  --grid: 255 255 255;
-  --grid-a: 0.025;
-  --glow-a: 1;
-}
-
-/* Light theme: warm-white surfaces, near-black text, hairline borders. The ink scale is
-   inverted (950 = page, 50 = strongest text); lime/orange accents are deepened so they
-   stay legible as text on white. */
-:root[data-theme='light'] {
   color-scheme: light;
-  --ink-950: 247 247 245;
-  --ink-900: 255 255 255;
-  --ink-850: 241 241 238;
-  --ink-800: 232 232 228;
-  --ink-700: 217 217 212;
-  --ink-600: 194 194 188;
-  --ink-500: 138 138 132;
-  --ink-400: 116 116 111;
-  --ink-300: 85 85 79;
-  --ink-200: 58 58 54;
-  --ink-100: 28 28 26;
-  --ink-50: 10 10 10;
-  --signal: 77 124 15;
-  --on-signal: 255 255 255;
-  --cost: 194 65 12;
-  --shadow: 60 60 50;
-  --grid: 0 0 0;
-  --grid-a: 0.05;
-  --glow-a: 0.45;
 }
 
 html,
 body,
 #root {
   height: 100%;
-  margin: 0;
-  overflow: hidden;
-  background: rgb(var(--ink-950));
-  color: rgb(var(--ink-100));
-  font-family: 'Inter Variable', Inter, system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  font-feature-settings: 'ss01', 'cv11';
 }
 
-.tnum {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Background: faint engineering grid + vignette */
-.lab-bg {
-  background-color: rgb(var(--ink-950));
-  background-image:
-    radial-gradient(1200px 700px at 50% 35%, rgb(var(--signal) / 0.035), transparent 70%),
-    linear-gradient(rgb(var(--grid) / var(--grid-a)) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--grid) / var(--grid-a)) 1px, transparent 1px);
-  background-size: auto, 48px 48px, 48px 48px;
-}
-
-/* Visual language: recorded = solid, placeholder = dashed, simulated = hatched */
-.hatch {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgb(var(--signal) / 0.16) 0 2px,
-    transparent 2px 7px
-  );
-}
-.hatch-muted {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgb(var(--grid) / 0.06) 0 2px,
-    transparent 2px 7px
-  );
-}
-
-.glow-signal {
-  box-shadow:
-    0 0 0 1px rgb(var(--signal) / 0.55),
-    0 0 32px -4px rgb(var(--signal) / calc(0.45 * var(--glow-a)));
-}
-
-.text-glow {
-  text-shadow: 0 0 40px rgb(var(--signal) / calc(0.35 * var(--glow-a)));
-}
-
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -40;
-  }
-}
-.dash-flow {
-  stroke-dasharray: 6 8;
-  animation: dash-flow 1.2s linear infinite;
-}
-
-@keyframes pulse-dot {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-.pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+body {
+  @apply bg-bone font-serif text-ink antialiased;
 }
 
 button {
-  -webkit-tap-highlight-color: transparent;
+  @apply transition-colors;
 }
-button:focus-visible {
-  outline: 1px solid rgb(var(--signal));
-  outline-offset: 3px;
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
 }

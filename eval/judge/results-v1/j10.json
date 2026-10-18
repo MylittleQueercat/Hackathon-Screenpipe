@@ -1,0 +1,72 @@
+{
+ "case": "j10",
+ "scores": {
+  "X": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "The history shows Morgan opening a specific file, client-types.txt, because the Preview record says 'Type: UNKNOWN'. The document never names the file or the UNKNOWN trigger, and 'external' is vague. Nothing is invented, but the detail is thin.", "times": ["2026-10-17T10:11:38"]},
+    {"quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.", "why": "Supported. The 'Document Record' open question ('What exact UI shows...') is already answered by the Preview text in the history.", "times": ["2026-10-16T11:49:08"]}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "\"name\": \"Classify and log in tracker.csv\" ... \"name\": \"Rename file on disk\"", "why": "The stages put the tracker.csv entry before the rename. In the history Morgan almost always opens the Inbox in Finder, reads in Preview, renames in Finder, then edits tracker.csv (e.g. 10:00:34 rename, then 10:00:57 track). The first step, opening the Inbox folder, is not stated. The duplicate comparison, where Morgan opens the already-filed Acme PDF in Preview, is not described.", "times": ["2026-10-14T10:00:34", "2026-10-14T10:00:57", "2026-10-16T09:30:31"]},
+    {"quote": "No rename action itself was captured, only before/after state.", "why": "Finder 'rename' steps are in the history with filenames being typed, so the rename step is under-described.", "times": ["2026-10-14T10:00:34"]}
+   ]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself (scan-0420 note: 'type from client list')", "why": "This names the case but not what Morgan does: open client-types.txt in TextEdit and look up Northwind, then log it as a contract. The duplicate, missing-date and over-500 cases are each stated as an action (status, note, UNKNOWN-DATE prefix, original file not renamed).", "times": ["2026-10-17T10:11:38"]}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Naming convention change (2026-10-18): new_filename pattern changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf per naming-rule-update.txt ('From today, filed receipts are named:", "why": "The new rule is stated correctly, the old one is marked replaced, and old files are noted as left unchanged. The variation text is cut off mid-quote and has no worked example (receipt_2026-10-15_Hardware-Store.pdf appears only in the evidence). The stage 'Classify and log' lists the old-format rows with no 'superseded' label next to the filename pattern.", "times": ["2026-10-18T02:14:44"]}
+   ]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "original_file, a normalized new_filename, date, amount, type, and a status (filed / duplicate / review needed)", "why": "Gives the tracker.csv columns, the Paperwork/Inbox folder and the exception rules, but not the old filename format explicitly (DATE_Name_type) or the client-types.txt location. The truncated description ends in 'then,'.", "times": []}
+   ]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "What exact UI shows the 'Document Record' — a form overlay, embedded text, or metadata panel?", "why": "Answered by the history: it is the text inside the Preview PDF.", "times": ["2026-10-16T11:49:08"]},
+    {"quote": "Is renaming done manually in Finder or via some other mechanism?", "why": "The history shows Finder rename steps, so this is mostly answered.", "times": ["2026-10-14T10:00:34"]},
+    {"quote": "No resolution was found for the single 'review needed' flagged item.", "why": "A real limitation, but it is repeated in several places.", "times": []}
+   ]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "Observed on 4 captured days in a 90-day scan", "why": "Receipt work is on 5 days (10-14 to 10-18), and the document includes 10-18 evidence. 'repetitions: 4' also undercounts the 13 runs of the job. The number is closer to the truth than Y's 3, and it makes no duration claims.", "times": ["2026-10-14", "2026-10-18"]}
+   ]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "Naming convention change (2026-10-18): ... ('From today, filed receipts are named:", "why": "A truncated sentence in the variations and in the description.", "times": []},
+    {"quote": "No ordered capture example covers every step.", "why": "A limitation is duplicated in two forms. The same table is repeated as evidence at several levels.", "times": []}
+   ]}
+  },
+  "Y": {
+   "faithful": {"score": 3, "deductions": [
+    {"quote": "produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15", "why": "Unsupported link. The HP printer setup is a separate one-off job. Nothing in the history says the scans come from that device. It pulls the one-off job into the receipts trigger.", "times": ["2026-10-15"]},
+    {"quote": "Preview scan-0422.pdf (02:24:00-02:24:11), Preview scan-0423.pdf (02:27:13-02:27:20), Finder Inbox checked ... (02:28:04-02:28:11), then tracker.csv updated with both new rows (02:29:01-02:29:05)", "why": "Times do not match the history. scan-0422 is read from 02:23:19, scan-0423 at 02:26:32, Finder rename at 02:27:06, and the last tracker edit is 02:28:25. There is nothing at 02:29. The tracker was edited twice, once per scan, not once for 'both'.", "times": ["2026-10-18T02:23:19", "2026-10-18T02:26:32", "2026-10-18T02:28:25"]},
+    {"quote": "edited 2026-10-18T02:14:10-02:15:24Z", "why": "The naming-rule edits run from 02:14:11 to 02:14:44. No capture at 02:15:24.", "times": ["2026-10-18T02:14:11", "2026-10-18T02:14:44"]}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Apply/update naming convention and log row in tracker.csv", "why": "Rename, tracker row and Finder check are merged into one stage with the Finder check last. The real order is Finder Inbox, Preview read, Finder rename, then tracker row. The duplicate comparison against the filed Acme PDF is not described as a step. The new-file-rename step is only 'confirmed' through Finder, never listed as a step.", "times": ["2026-10-14T10:00:34", "2026-10-16T09:30:31"]},
+    {"quote": "Open client-types.txt to look up whether the vendor is a contract client", "why": "This step is correct and in the right place, after Preview and before the row.", "times": ["2026-10-17T10:11:38"]}
+   ]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "a missing date is logged with notes='missing date'", "why": "Omits the UNKNOWN-DATE prefix in new_filename and the empty date field (scan-0415). It is in the description but not in the variations, and it says nothing about the file still being filed.", "times": ["2026-10-15T09:50:03"]},
+    {"quote": "an amount over roughly 500 is marked status='review needed'", "why": "'Roughly' is vague. The note is 'over 500', and only one case is seen (780 EUR). It is not in the variations list.", "times": ["2026-10-16T11:50:22"]},
+    {"quote": "a repeat charge is marked status='duplicate' with a note pointing to the earlier row", "why": "The empty new_filename and the file left unrenamed are not stated. The lookup of the earlier PDF in Preview is not described.", "times": ["2026-10-16T09:30:31"]}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "the naming convention (date_vendor_type, now type_date_vendor)", "why": "Written in a different form from DATE_NAME_TYPE and TYPE_DATE_NAME elsewhere in the document. The old rule is marked as replaced and the new one is right. The document does not say whether older files were left alone, though the Finder evidence shows they were. The open question about contract scans is a real one.", "times": ["2026-10-18T02:14:44"]}
+   ]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "a proposed new filename, date, amount, type, status and notes", "why": "No literal tracker.csv header. The Inbox path appears only in evidence. The description names client-types.txt but does not say where it lives. The over-500 rule is fuzzy and the UNKNOWN-DATE prefix is not given. 'proposed' filename is odd, since the file is renamed on disk.", "times": []}
+   ]},
+   "calibration": {"score": 4, "deductions": [
+    {"quote": "HP printer driver setup (2026-10-15) is one-off configuration context", "why": "A correct exclusion, but it contradicts the trigger that ties the scans to that same HP setup.", "times": ["2026-10-15"]},
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog of scans - only two capture windows (2026-10-11..17 and 2026-10-18) were inspected", "why": "The history has 5 receipts days from 10-14 to 10-18, so the 'two capture windows' framing is wrong. The open questions are otherwise real, and confidence 4 is a little high for a document that misdescribes the trigger.", "times": []}
+   ]},
+   "numbers": {"score": 2, "deductions": [
+    {"quote": "Observed on 3 captured days in a 90-day scan", "why": "Receipt work is on 5 days (10-14 to 10-18). 'repetitions: 3' against 13 runs is a big undercount.", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "about 5m05s end to end for the pair", "why": "The timing windows are given with wrong times, and the pair mixes two runs. The run for scan-0422 ends around 02:24:32 and the one for scan-0423 around 02:27:42, so the average of 3.2 minutes rests on shaky windows.", "times": ["2026-10-18T02:24:32", "2026-10-18T02:27:42"]}
+   ]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "No ordered capture example covers every step of one occurrence end-to-end; procedure is reconstructed from multiple overlapping captures", "why": "Duplicates the limitation that follows it. The stage structure is clear, but the single three-part merged stage hides the order.", "times": []}
+   ]}
+  }
+ },
+ "preference": "X",
+ "strength": "clear",
+ "reason": "X is more faithful and gives the exceptions as concrete rules: the UNKNOWN-DATE prefix, 'review needed' for over 500, the duplicate left unrenamed with a pointer note, and the literal tracker.csv columns. It also notes that older files were left unchanged after the rule change, and its day count (4) is nearer the real 5 than Y's 3. Y has a real strength in naming client-types.txt and describing the lookup, but it invents an HP-scanner trigger from the unrelated one-off printer job and misreports capture times on 10-18. Its exception detail is vaguer ('roughly 500', no UNKNOWN-DATE). Both documents state the new TYPE_DATE_NAME rule correctly and mark the old one as replaced. Both order the steps wrongly, with the tracker.csv entry before the rename."
+}

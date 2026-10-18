@@ -1,0 +1,223 @@
+{
+ "case": "j02",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Only one continuous batch (2026-10-16T13:08 to 2026-10-17T11:29, spanning two days) was observed",
+      "why": "History shows receipts work on four days (Oct 14-17, runs receipts-01..10); the batch started 2026-10-14T09:59 and Finder renames/Preview reads occurred Oct 14-16.",
+      "times": [
+       "2026-10-14T09:59:35Z"
+      ]
+     },
+     {
+      "quote": "Rename scan-0412.pdf to 2026-10-05_Acme-Office-Supplies_receipt.pdf",
+      "why": "Rename step is cited to a Finder listing at 2026-10-17T11:28 showing only the end state; the rename itself was visible on 2026-10-14T10:00:34-41 (typing in Finder text field).",
+      "times": [
+       "2026-10-14T10:00:34Z"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Open scan-0420.pdf in Preview ... Open scan-0421.pdf in Preview",
+      "why": "Review stage cites only the last two scans; Preview reads for scan-0412..0419 on Oct 14-16 exist but are not used.",
+      "times": [
+       "2026-10-14T09:59:51Z"
+      ]
+     },
+     {
+      "quote": "leave it in the Paperwork/Inbox folder",
+      "why": "No explicit step ordering of review -> Finder rename -> tracker row for a single file; the stages are given but the per-file loop is not stated.",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 5,
+    "deductions": []
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "DATE_Vendor_type.pdf",
+      "why": "Convention and columns are given and exact examples are present, but vendor hyphenation (spaces to hyphens) is only implied via examples and the status values/threshold logic are spread over stages and variations rather than stated as a checklist.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Only one continuous batch",
+      "why": "Recurrence uncertainty is real, but the history shows four days / ten runs, so it understates evidence.",
+      "times": []
+     },
+     {
+      "quote": "It is unverified whether the on-disk file rename itself is performed manually",
+      "why": "History shows the name typed into the Finder rename field (2026-10-14T10:00:34-41), so this is largely answered.",
+      "times": [
+       "2026-10-14T10:00:34Z"
+      ]
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 2 captured days in a 90-day scan",
+      "why": "Receipts activity occurred on 4 days (Oct 14, 15, 16, 17).",
+      "times": []
+     },
+     {
+      "quote": "\"averageMinutes\": 1341.09",
+      "why": "Elapsed minutes from 10-16T13:08 to 10-17T11:29 spans only part of the work and counts overnight gaps; Oct 14 start missed.",
+      "times": [
+       "2026-10-16T13:08:49Z"
+      ]
+     },
+     {
+      "quote": "\"repetitions\": 2",
+      "why": "Ten files in four days/ten runs; repetitions of 2 is not the file count.",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 5,
+    "deductions": []
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "or a project file attachment arrives in Mail from a known sender",
+      "why": "Merges the separate email job (save attachment and reply) into the receipts workflow; stage 'Acknowledge emailed project files' is not part of receipts (email runs email-01..03).",
+      "times": [
+       "2026-10-16T10:41:35Z",
+       "2026-10-17T12:24:14Z"
+      ]
+     },
+     {
+      "quote": "Flag scan-0417 as duplicate of scan-0412",
+      "why": "Plausible (same as Acme 2026-10-05 / scan-0412) but stated as inference not on screen directly.",
+      "times": [
+       "2026-10-17T11:29:54Z"
+      ]
+     },
+     {
+      "quote": "User renames the file logically",
+      "why": "No rename evidence cited and the Finder rename is never described.",
+      "times": []
+     }
+    ]
+   },
+   "procedure": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Read Document Record overlay for Name/Date/Amount/Type",
+      "why": "Only one review step and two tracker steps; no Finder rename step, no filename convention, no type lookup step, no missing-date handling step.",
+      "times": [
+       "2026-10-14T10:00:34Z"
+      ]
+     },
+     {
+      "quote": "Acknowledge emailed project files",
+      "why": "Unrelated email step included in the receipts procedure.",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Document type inferred from a client list rather than the scan itself",
+      "why": "Named only; no mention of client-types.txt or what Morgan does (look up Northwind: contract, rename as contract, note 'type from client list').",
+      "times": [
+       "2026-10-17T10:11:38Z"
+      ]
+     },
+     {
+      "quote": "Scan has a missing/unclear date (scan-0415, logged as UNKNOWN-DATE",
+      "why": "Described as outcome but not how the file is renamed or what status is set; duplicate does not say new_filename left blank.",
+      "times": []
+     }
+    ]
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "renamed filename, date, amount, type and status",
+      "why": "Never states the DATE_Vendor_type.pdf format, the Inbox folder, or the rename action; an agent could not reproduce the filing from this document alone. Columns are listed.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Is this a recurring weekly cadence beyond the observed Oct 14-17 window, or a one-off batch catch-up?",
+      "why": "Real uncertainty, but description asserts 'weekly batch' without evidence.",
+      "times": []
+     },
+     {
+      "quote": "Is the 'Document Record' overlay in Preview auto-generated",
+      "why": "Reasonable question but marginal.",
+      "times": []
+     },
+     {
+      "quote": "\"confidence\": 4",
+      "why": "Confidence 4 is high for a thin, merged procedure.",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 2 captured days in a 90-day scan",
+      "why": "Receipts work spans four days (Oct 14-17).",
+      "times": []
+     },
+     {
+      "quote": "\"averageMinutes\": 4409.71",
+      "why": "Elapsed time across days, not work time; 'weekly batch' not supported.",
+      "times": [
+       "2026-10-14T10:00:12Z"
+      ]
+     }
+    ]
+   },
+   "clarity": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Scanned receipt/document intake and tracker filing",
+      "why": "Two jobs mixed in title, trigger and outcome, making the document confusing.",
+      "times": []
+     }
+    ]
+   }
+  }
+ },
+ "preference": "X",
+ "strength": "strong",
+ "reason": "X covers the receipts job end to end (Preview review, Finder rename to DATE_Vendor_type.pdf, tracker.csv row with exact columns) and describes all four exceptions as actions (UNKNOWN-DATE + 'missing date', duplicate with blank new_filename and pointer, 'review needed'/'over 500', client-types.txt lookup with note 'type from client list'). Y omits the rename step, filename format and client-types lookup, and wrongly folds the separate email-reply job into receipts. Both understate frequency (2 days vs 4 actual); X wrongly says only a 2-day batch was seen."
+}

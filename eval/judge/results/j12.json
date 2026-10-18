@@ -1,0 +1,223 @@
+{
+ "case": "j12",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Observed on 3 captured days in a 90-day scan",
+      "why": "Receipt work appears on 4 days (10-14, 10-15, 10-16, 10-17), so 3 is undercounted.",
+      "times": [
+       "2026-10-15"
+      ]
+     },
+     {
+      "quote": "Type sometimes inferred from an external client list rather than the document itself",
+      "why": "Accurate but never names client-types.txt, the file Morgan opens; the lookup is vague.",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "No rename action itself was captured, only the before/after state.",
+      "why": "History shows Morgan renaming in Finder (10-14 10:00:34 onward, text field edits); it is captured, though the doc covers the rename step and order well otherwise.",
+      "times": [
+       "2026-10-14T10:00:34"
+      ]
+     },
+     {
+      "quote": "Classify and log in tracker.csv",
+      "why": "Rename is placed after logging; the history shows Finder rename interleaved, minor ordering uncertainty.",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list",
+      "why": "Lookup case is described without the file name or the Northwind->contract result being stated as an action.",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     }
+    ]
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.",
+      "why": "Concrete columns, filename format and folder given, but no explicit Finder rename procedure or client-types.txt location.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Is renaming done manually in Finder or via some other mechanism",
+      "why": "Finder renames are visible in the history, so this is partly answered.",
+      "times": []
+     },
+     {
+      "quote": "What exact UI shows the 'Document Record'",
+      "why": "Padding; the Preview text shows it plainly.",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "\"repetitions\": 3",
+      "why": "Four days of receipt activity; 3 undercounts.",
+      "times": []
+     },
+     {
+      "quote": "totalMinutes 0 / timing null",
+      "why": "No durations given though runs are measurable.",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Review scanned document",
+      "why": "Evidence lists duplicated across stage and top level; otherwise clear.",
+      "times": []
+     }
+    ]
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "no Finder activity was captured in this window to confirm",
+      "why": "False: Finder renames of scan files are present on 10-14 10:00 and later.",
+      "times": [
+       "2026-10-14T10:00:34"
+      ]
+     },
+     {
+      "quote": "produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15",
+      "why": "Pulls the one-off printer job into the receipts trigger; the doc itself says printer setup is not part of the procedure, a contradiction.",
+      "times": []
+     },
+     {
+      "quote": "Observed on 2 captured days",
+      "why": "Four days of receipt activity.",
+      "times": []
+     }
+    ]
+   },
+   "procedure": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Whether the original PDF file is actually renamed/moved on disk",
+      "why": "Omits the rename step entirely, which is central to the job (rename DATE_NAME_TYPE.pdf and log).",
+      "times": [
+       "2026-10-14T10:00:34"
+      ]
+     },
+     {
+      "quote": "Flag duplicate charge against an already-logged row",
+      "why": "No step for missing-date naming or filename construction rule.",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Duplicate charges are cross-referenced against an already-logged row",
+      "why": "Variations list only lookup and duplicate; missing date and over-500 appear only in the description, not as handled cases with UNKNOWN-DATE naming.",
+      "times": []
+     },
+     {
+      "quote": "a missing date is logged with notes='missing date'",
+      "why": "Does not say the filename gets UNKNOWN-DATE prefix.",
+      "times": [
+       "2026-10-17T11:29:54"
+      ]
+     }
+    ]
+   },
+   "rule_change": null,
+   "usable": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "proposed new filename",
+      "why": "Filename format never stated as a rule, no folder, no rename; a reader cannot do the whole task.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Whether the original PDF file is actually renamed/moved on disk",
+      "why": "Answered by history (Finder renames).",
+      "times": []
+     },
+     {
+      "quote": "was a one-off backlog of 10 scans",
+      "why": "Question is answered by activity across 4 days.",
+      "times": []
+     },
+     {
+      "quote": "\"confidence\": 4",
+      "why": "High confidence despite missing the rename step.",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 2 captured days",
+      "why": "Should be 4.",
+      "times": []
+     },
+     {
+      "quote": "averageMinutes 2.25585",
+      "why": "Per-scan timings are measured from real captures and are a plus, but sample of 2 is small and not flagged.",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "HP printer driver setup (2026-10-15) is one-off configuration context",
+      "why": "Mixing printer context into trigger confuses the document.",
+      "times": []
+     }
+    ]
+   }
+  }
+ },
+ "preference": "X",
+ "strength": "clear",
+ "reason": "X covers the full job including the Finder rename step, all four exceptions (duplicate, missing date as UNKNOWN-DATE, over-500 review, client-list type) with Paperwork/Inbox and the tracker.csv columns. Y omits and wrongly denies the rename (Finder activity exists), blends in the printer one-off, undercounts days (2), and describes only duplicate and lookup as variations; its one strength is naming client-types.txt and real per-run timings."
+}

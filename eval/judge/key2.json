@@ -1,0 +1,18 @@
+{
+ "j01": {
+  "phase": 1,
+  "job": "receipts",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p1-receipts",
+  "order": "a"
+ },
+ "j02": {
+  "phase": 1,
+  "job": "receipts",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p1-receipts",
+  "order": "b"
+ }
+}

@@ -1,0 +1,98 @@
+{
+ "j01": {
+  "phase": 1,
+  "job": "receipts",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p1-receipts",
+  "order": "b"
+ },
+ "j02": {
+  "phase": 2,
+  "job": "email",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p2-email",
+  "order": "b"
+ },
+ "j03": {
+  "phase": 1,
+  "job": "email",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p1-email",
+  "order": "b"
+ },
+ "j04": {
+  "phase": 3,
+  "job": "email",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p3-email",
+  "order": "b"
+ },
+ "j05": {
+  "phase": 2,
+  "job": "email",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p2-email",
+  "order": "a"
+ },
+ "j06": {
+  "phase": 3,
+  "job": "receipts",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p3-receipts",
+  "order": "a"
+ },
+ "j07": {
+  "phase": 2,
+  "job": "receipts",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p2-receipts",
+  "order": "b"
+ },
+ "j08": {
+  "phase": 1,
+  "job": "email",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p1-email",
+  "order": "a"
+ },
+ "j09": {
+  "phase": 3,
+  "job": "email",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p3-email",
+  "order": "a"
+ },
+ "j10": {
+  "phase": 2,
+  "job": "receipts",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p2-receipts",
+  "order": "a"
+ },
+ "j11": {
+  "phase": 3,
+  "job": "receipts",
+  "X": "stack",
+  "Y": "base",
+  "pair": "p3-receipts",
+  "order": "b"
+ },
+ "j12": {
+  "phase": 1,
+  "job": "receipts",
+  "X": "base",
+  "Y": "stack",
+  "pair": "p1-receipts",
+  "order": "a"
+ }
+}

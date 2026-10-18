@@ -1,0 +1,51 @@
+{
+ "case": "j06",
+ "scores": {
+  "X": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "Observed on 4 captured days in a 90-day scan", "why": "Receipt activity appears on 5 days (14-18 Oct); count is low by one.", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "Edit naming-rule-update.txt to announce a new filename convention effective immediately.", "why": "Authoring the rule note is shown as a step of the recurring procedure, which is a one-off event. Not wrong but blurs the job.", "times": ["2026-10-18T02:14:44.474934+00:00"]}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.", "why": "Only one Preview step is cited, and the Finder rename is described only through before/after state; the order Preview -> tracker row -> rename is implied, not stated as a sequence. Finder rename events are in the history (e.g. 10:00:34 on 14 Oct) but the doc says 'No rename action itself was captured'.", "times": ["2026-10-14T10:00:34.575000Z"]}]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "Does not name client-types.txt or show the lookup (Northwind: contract, 17 Oct 10:11); the Preview record said Type: UNKNOWN and the doc never says so.", "times": ["2026-10-17T10:11:38.493+00:00"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "new_filename pattern changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf per naming-rule-update.txt ('From today, filed receipts are named:", "why": "The variation text is truncated mid-sentence and the example (receipt_2026-10-15_Hardware-Store.pdf) is not in the narrative; stage 2 still lists old-format rows as the 'normalized' example without marking them superseded. However the old rule is clearly marked as replaced and 'no retroactive renaming' is stated, with no real contradiction.", "times": ["2026-10-18T02:14:44.474934+00:00"]}]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "Open scan-04xx.pdf in Preview", "why": "Gives the inbox folder, tracker columns, statuses and thresholds, but no full-path or explicit statement of the new-format example, and the client-list file is unnamed.", "times": []}]},
+   "calibration": {"score": 4, "deductions": [
+    {"quote": "No ordered capture example covers every step. These references do not establish one end-to-end occurrence.", "why": "Boilerplate limitation duplicated with the earlier one; 'No rename action itself was captured' is also inaccurate since Finder rename captures exist.", "times": ["2026-10-14T10:00:34.575000Z"]}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "\"repetitions\": 4", "why": "Receipts appear on 5 days and about 12 scans were processed; 4 is low and no timing is given at all (all minutes 0, timing null).", "times": []}]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "'review needed', note 'over 500'; no further action on this item found in captured evidence.", "why": "Variations are clear but a truncated last bullet and a repeated limitation hurt readability.", "times": []}]}
+  },
+  "Y": {
+   "faithful": {"score": 2, "deductions": [
+    {"quote": "A new scanned PDF (scan-0412.pdf .. scan-0423.pdf) appears, produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15", "why": "The 15 Oct HP Easy Start session installed an HP LaserJet M110w printer driver, a separate one-off printer job; nothing shows it is the scanner that produces the scans. Conflates the printer job into the receipts trigger and description.", "times": ["2026-10-15T10:14:17.387000Z"]},
+    {"quote": "only two capture windows (2026-10-11..17 and 2026-10-18) were inspected", "why": "History starts 14 Oct and has receipt work on 14-18 Oct.", "times": ["2026-10-14"]},
+    {"quote": "Whether the naming convention ... is applied consistently enough ... since client-types.txt had to be consulted at least once", "why": "Non sequitur; the client-types lookup concerns document type, not filename consistency.", "times": ["2026-10-17T10:11:38.493+00:00"]},
+    {"quote": "Observed on 3 captured days", "why": "Receipts occur on 5 days.", "times": []}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Open scan-NNNN.pdf in Preview", "why": "Order Preview -> client-types lookup -> tracker row is good, but the missing-date and high-value handling are not steps, and the doc says the file is 'moved/renamed on disk' without noting the 'proposed' vs actual filename inconsistency (it calls new_filename 'proposed' yet claims confirmed rename).", "times": ["2026-10-17T10:10:51.036+00:00"]}]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "a missing date is logged with notes='missing date'", "why": "Missing date and over-500 review appear only in the top description; they are not in variations or procedure. The UNKNOWN-DATE filename prefix, and that the row is still 'filed', are never stated. Duplicate does not say the original is left unrenamed (empty new_filename).", "times": ["2026-10-17T11:29:54.697+00:00"]},
+    {"quote": "an amount over roughly 500", "why": "Threshold hedged though history shows note 'over 500' on 780.00 EUR.", "times": ["2026-10-16T11:50:56.895+00:00"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Whether the new TYPE_DATE_NAME convention also applies to 'contract' type scans", "why": "Reasonable open question, but the doc never says the old rule applies to files already on disk, and the 'date_vendor_type, now type_date_vendor' wording mixes terms with DATE_NAME_TYPE. Old rule is otherwise marked replaced and new example cited.", "times": ["2026-10-18T02:14:44.474+00:00"]}]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "Append row: scan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500", "why": "Names client-types.txt and gives inbox path in evidence, but the tracker column list, the missing-date format and duplicate handling are not stated as instructions; a reader must infer them from evidence rows.", "times": []}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "\"confidence\": 4", "why": "Confidence 4 is high given the printer/scanner conflation and the undercounted days.", "times": []},
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog", "why": "History already shows work on 5 consecutive days, so partially answered.", "times": []}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "\"repetitions\": 3", "why": "Undercounts days (5) and scans (about 12).", "times": []},
+    {"quote": "about 5m05s end to end for the pair", "why": "Per-scan timing sample is useful and roughly consistent (1m48s, 2m43s) but covers only 3 windows and the pair run is not comparable.", "times": ["2026-10-18T02:23:19.722+00:00"]}]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "HP printer driver setup (2026-10-15) is one-off configuration context, not part of the recurring triage procedure itself", "why": "The doc itself says the printer is separate yet its trigger and description fold it in, an internal contradiction.", "times": ["2026-10-15T10:14:17.387000Z"]}]}
+  }
+ },
+ "preference": "X",
+ "strength": "clear",
+ "reason": "X describes each exception as what Morgan does (duplicate row with empty new_filename and 'same as' note, over-500 review flag, UNKNOWN-DATE prefix but still filed, client-list type lookup) and states the rename-rule change with no retroactive renaming, staying faithful to the history (Paperwork/Inbox, Preview/TextEdit/Finder). Y gains from naming client-types.txt and giving timings, but wrongly ties the one-off HP printer driver install to the scan trigger (called an 'HP scanner'), only mentions missing-date and high-value in passing, undercounts days (3 vs 5), and has a non sequitur open question. Both undercount days and neither is perfect; X's correctness advantage decided it."
+}

@@ -1,0 +1,194 @@
+{
+ "case": "j10",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Edit naming-rule-update.txt to announce a new filename convention effective immediately.",
+      "why": "Presented as a step of the recurring procedure; it is a one-off rule note, not part of the per-scan loop. Also the description/variations text is cut off mid-sentence.",
+      "times": [
+       "2026-10-18T02:14:44"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.",
+      "why": "Order is right (Preview, tracker row, rename on disk) but the rename is placed after logging and no concrete step says what to rename or when; the client-list lookup is not a stage.",
+      "times": [
+       "2026-10-16T11:49:08"
+      ]
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list rather than the document itself",
+      "why": "Lookup is described but client-types.txt is not named and the action (open the file, find the client, take its type) is vague. Duplicate, missing date and over-500 are well described with the row contents.",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Confirm new-format files exist on disk alongside unchanged old-format files, with no retroactive renaming.",
+      "why": "Old and new pattern are stated correctly and the old one is marked replaced for new intake only. Slight weakness: the truncated variations entry and 'No retroactive renaming' is inferred from Finder state, not stated by the rule file.",
+      "times": [
+       "2026-10-18T02:27:31"
+      ]
+     }
+    ]
+   },
+   "usable": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Verify renamed files appear in the inbox folder with the normalized filenames from tracker.csv.",
+      "why": "Gives the inbox folder, the tracker columns, the filename format with examples and all status rules, but does not say how to build the filename for contracts or name client-types.txt.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Does the 'review needed' flag (e.g. scan-0418, 780 EUR) trigger any follow-up action beyond the tracker.csv note?",
+      "why": "Mostly real uncertainties, but the limitations list repeats 'No ordered capture example covers every step' twice and 'Is intake purely event-driven' is padding.",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 4 captured days in a 90-day scan",
+      "why": "Receipt work is on 5 days (2026-10-14 to 10-18). No timing at all (all minutes 0) although captures allow estimating ~2-3 min per scan.",
+      "times": [
+       "2026-10-14",
+       "2026-10-18"
+      ]
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Naming convention change (2026-10-18): new_filename pattern changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf per naming-rule-update.txt ('From today, filed receipts are named:",
+      "why": "Description and variations strings are truncated mid-sentence; otherwise well organised.",
+      "times": []
+     }
+    ]
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15",
+      "why": "The printer driver setup is a separate one-off job (LaserJet driver search); no scanner is shown to produce the scans. Document wrongly makes it the trigger. 'self-authored' note and 'Who decided' are also speculation.",
+      "times": [
+       "2026-10-15T10:13:01"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Open scan-NNNN.pdf in Preview",
+      "why": "Steps are Preview, optional type lookup, tracker row, Finder check; the Finder check is listed after the row for the same files and there is no explicit rename step or filename-building rule. The 'Only observed once' client-types lookup is treated as ambiguity handling.",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Duplicate charges are cross-referenced against an already-logged row rather than filed normally (scan-0417)",
+      "why": "Missing date (UNKNOWN-DATE prefix, empty date, note) appears only as a phrase in the description; no variation or step covers scan-0415. Over-500 is in the description and one example row but not as a rule in variations. Duplicate is described without saying the new_filename is left blank.",
+      "times": [
+       "2026-10-15"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Whether the naming convention (date_vendor_type, now type_date_vendor) is applied consistently enough",
+      "why": "New rule and old rule are correct and the old is marked replaced. Minor: calls it 'proposed new_filename' and one open question uses a third spelling; asks whether it applies to contracts (a real question).",
+      "times": [
+       "2026-10-18T02:14:44"
+      ]
+     }
+    ]
+   },
+   "usable": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Append row: scan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,2026-10-10,780.00,receipt,review needed,over 500",
+      "why": "Gives a row example and client-types.txt, but no inbox folder path, no tracker column header, and missing-date handling is not usable from the document.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog of scans - only two capture windows",
+      "why": "Confidence 4 is high given the errors; the 'HP printer' limitation and the 'only two capture windows' claim are wrong or padding (history spans five days).",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Observed on 3 captured days in a 90-day scan",
+      "why": "Receipt work is on 5 days. Timing runs (1m48s, 2m43s, ~5m for the pair) are plausible and a real strength, and '12 rows covering scans 0412-0423' is right.",
+      "times": [
+       "2026-10-14",
+       "2026-10-18"
+      ]
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Whether the new TYPE_DATE_NAME convention also applies to 'contract' type scans",
+      "why": "Readable, but the same naming-change fact is repeated in description, outcome, variations, procedure and open questions.",
+      "times": []
+     }
+    ]
+   }
+  }
+ },
+ "preference": "X",
+ "strength": "clear",
+ "reason": "X covers all four exceptions (duplicate, missing date, over-500 review, client-list type lookup) plus the rule change and keeps old files unchanged; it is wrong on day count (4 vs 5) and has no timing. Y omits the missing-date case from its variations and steps, wrongly ties the recurring job to an HP scanner/printer setup that belongs to a separate one-off job, and counts 3 days; its timing data and naming of client-types.txt are real strengths but do not outweigh the exception and faithfulness gaps."
+}

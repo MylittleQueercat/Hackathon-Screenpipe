@@ -1,0 +1,52 @@
+{
+ "case": "j06",
+ "scores": {
+  "X": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "A new scanned document file appears in the local Paperwork/Inbox folder (scanner/printer output).", "why": "Folder is right (Documents/Paperwork/Inbox) but 'scanner/printer output' is a guess; the history never shows how scans arrive.", "times": ["2026-10-14T09:59:35Z"]},
+    {"quote": "Observed on 4 captured days in a 90-day scan", "why": "Receipt work appears on 5 days (14-18 Oct), 12 scans.", "times": ["2026-10-14", "2026-10-18"]}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Is renaming done manually in Finder or via some other mechanism? No rename action itself was captured, only before/after state.", "why": "History has a Finder rename step in 11 of 12 runs, between Preview read and tracker.csv entry (run 05 reverses it). The document gives no explicit per-scan order and treats rename as unobserved.", "times": ["2026-10-14T10:00:34Z"]},
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "The lookup step (open client-types.txt in TextEdit, then log) is not in the procedure.", "times": ["2026-10-17T10:11:38Z"]}]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself (scan-0420 note: 'type from client list').", "why": "Named only. It does not say which file (client-types.txt) or what Morgan does. Duplicate, missing-date (UNKNOWN-DATE prefix, still filed) and over-500 (review needed) are each described well, including that duplicates are not renamed.", "times": ["2026-10-17T10:11:38Z"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Append a CSV row for the scan with original_file, normalized new_filename, date, amount, type, status and notes.", "why": "The generic step is backed by an old-format example row and does not say the format is now TYPE_DATE_NAME. The rule change appears only in variations and a later stage, and the description never mentions it. Old/new are stated correctly and no real contradiction.", "times": ["2026-10-17T11:29:54Z"]}]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "Open scan-04xx.pdf in Preview and read the Document Record fields.", "why": "Gives folder, tracker.csv columns, exception handling and new naming. Missing the client-types.txt lookup and the per-scan order.", "times": ["2026-10-16T11:49:08Z"]}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "What exact UI shows the 'Document Record' — a form overlay, embedded text, or metadata panel?", "why": "Padding; Preview text shows a 'Document Record' block with Name/Date/Amount/Type.", "times": ["2026-10-14T09:59:51Z"]},
+    {"quote": "No ordered capture example covers every step end-to-end.", "why": "Limitation is repeated twice in near-identical wording.", "times": []}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "Observed on 4 captured days", "why": "5 days and 12 runs; repetitions=4 undercounts. All durations 0/null although timestamps allow roughly 1.5-3 min per scan.", "times": ["2026-10-14", "2026-10-18"]}]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "then appends or edits a row in tracker.csv (opened in TextEdit) recording ... and a status (filed / duplicate / review needed), then", "why": "Description is cut off mid-sentence; variations last entry also cut off.", "times": []}]}
+  },
+  "Y": {
+   "faithful": {"score": 3, "deductions": [
+    {"quote": "A new scanned PDF (scan-0412.pdf .. scan-0423.pdf) appears, produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15", "why": "Invented link. The HP LaserJet M110w setup is the planted one-off printer job, and nothing shows the scans come from it. This pulls the unrelated job into the trigger.", "times": ["2026-10-15T10:14:17Z"]},
+    {"quote": "documented in a self-authored naming-rule-update.txt note", "why": "The history shows only the file open in TextEdit with 'Edited'; authorship is an inference.", "times": ["2026-10-18T02:14:44Z"]},
+    {"quote": "only two capture windows (2026-10-11..17 and 2026-10-18) were inspected", "why": "History covers 14-18 Oct.", "times": []}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "the renamed file is moved/renamed on disk in the Inbox folder to match the logged new_filename", "why": "Rename is folded into the tracker stage and described as Finder-correlation only. It is not a separate step in the Preview, Finder rename, tracker order, and no per-scan order is given.", "times": ["2026-10-18T02:23:56Z"]},
+    {"quote": "Append row: scan-0418.pdf,2026-10-10_Studio-Equipment_receipt.pdf,...,review needed,over 500", "why": "The only stage procedure covers over-500, duplicate and the rule change. Missing-date handling is not a step.", "times": ["2026-10-16T11:50:56Z"]}]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "a missing date is logged with notes='missing date' ... an amount over roughly 500 is marked status='review needed'", "why": "Missing-date and high-value appear only in the description. They are absent from variations and the procedure, there is no UNKNOWN-DATE filename and nothing on the blank filename for a duplicate. The client-types.txt lookup is a good dedicated stage.", "times": ["2026-10-15T09:50:03Z", "2026-10-16T11:50:22Z"]}]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Adopt new naming convention TYPE_DATE_NAME.pdf in place of DATE_NAME_TYPE.pdf", "why": "Correct and old is marked replaced. But 'Whether the naming convention (date_vendor_type, now type_date_vendor) is applied consistently enough to describe as a strict rule, since client-types.txt had to be consulted' is a muddled, non-sequitur question. The 'contracts under the new rule?' question is real.", "times": ["2026-10-18T02:14:44Z"]}]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "Append a row to tracker.csv with original filename, proposed new filename ...", "why": "Columns are listed in prose but the 'proposed' wording and missing UNKNOWN-DATE/duplicate-blank details leave gaps. The Paperwork/Inbox path is not given, and a printer-setup trigger could mislead.", "times": []}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog of scans - only two capture windows ... were inspected", "why": "Five days of scans on a steady pattern is already visible.", "times": []},
+    {"quote": "HP printer driver setup (2026-10-15) is one-off configuration context", "why": "Irrelevant to this job's limitations. Confidence 4 is high given the errors.", "times": ["2026-10-15T10:14:17Z"]}]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "Observed on 3 captured days in a 90-day scan", "why": "5 days and 12 runs.", "times": []},
+    {"quote": "about 5m05s end to end for the pair", "why": "The third timing sample is two scans merged, so the 3.2 min average is inflated. Per-scan time is about 1.2-2.7 min (0422: 02:23:19 to 02:24:32). The summary also puts the tracker update at 02:29, but the end timestamp is 02:28:25. It does give real timings, and '12 rows covering scans 0412-0423' is correct.", "times": ["2026-10-18T02:23:19Z", "2026-10-18T02:28:25Z"]}]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "by 2026-10-18T02:28:25Z it held 12 rows covering scans 0412-0423, with the last two ... instead of the earlier DATE_NAME_TYPE.pdf conve", "why": "Outcome is truncated mid-word. The description is long but reads clearly.", "times": []}]}
+  }
+ },
+ "preference": "X",
+ "strength": "slight",
+ "reason": "X describes all four planted exceptions (duplicate not renamed, UNKNOWN-DATE still filed, over-500 review needed, type from client list) in variations and procedure. It keeps a separate rename stage and states the TYPE_DATE_NAME change correctly, with old files left unchanged. Y has a nice client-types.txt lookup stage and real timings, but it ties the scans to the HP printer setup (the unrelated one-off job), says 3 days and 'two capture windows', and keeps missing-date and over-500 only in the description. Both give the rule change correctly and both get the day count wrong (5 days, 12 scans), so the margin is small."
+}

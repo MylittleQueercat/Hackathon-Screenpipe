@@ -1,0 +1,71 @@
+{
+ "case": "j07",
+ "scores": {
+  "X": {
+   "faithful": {"score": 3, "deductions": [
+    {"quote": "produced by an HP scanner", "why": "The HP device in the history is a LaserJet M110w printer set up on 10-15 (one-off printer job, unrelated noise). Nothing ties it to the scans. The trigger also cites 'HP Easy Start / Printers & Scanners on 2026-10-15', which pulls the unrelated printer job into the receipt workflow.", "times": ["2026-10-15T10:14:17Z"]},
+    {"quote": "only two capture windows (2026-10-11..17 and 2026-10-18) were inspected", "why": "The history runs 10-14 to 10-18, so the 10-11 start is invented.", "times": []},
+    {"quote": "a proposed new filename", "why": "The new name is not just proposed. Finder renames happen first and tracker.csv records the result."}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Check Finder Inbox listing to confirm renamed files appear on disk", "why": "Morgan actually renames the file in Finder (planted step 'rename', e.g. 11:49:55-11:50:20 on 10-16) before editing tracker.csv. X reduces this to an after-the-fact check and never states a rename step, so the file-rename action is missing and the order is wrong.", "times": ["2026-10-16T11:49:55Z", "2026-10-18T02:23:56Z"]},
+    {"quote": "Adopt new naming convention TYPE_DATE_NAME.pdf in place of DATE_NAME_TYPE.pdf", "why": "Listed as a step inside the recurring procedure, though it is a one-time rule edit.", "times": ["2026-10-18T02:14:44Z"]}
+   ]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "a missing date is logged with notes='missing date'", "why": "Does not mention the UNKNOWN-DATE_ placeholder in the filename (it appears only in raw evidence), so what Morgan does about the missing date is incomplete.", "times": ["2026-10-16"]},
+    {"quote": "Duplicate charges are cross-referenced against an already-logged row rather than filed normally (scan-0417)", "why": "Does not say the duplicate gets no new filename and stays as scan-0417.pdf. The client-types.txt lookup is covered well."}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "the proposed new_filename convention changed from DATE_NAME_TYPE.pdf to TYPE_DATE_NAME.pdf", "why": "The new rule is correct and the old one is marked replaced. But the document never says older files stay unrenamed, and the procedure keeps the old rule as a step ('Apply/update naming convention') rather than a clean current-rule statement. It also leaves open whether the rule applies to contracts, which is reasonable."}
+   ]},
+   "usable": {"score": 3, "deductions": [
+    {"quote": "tracker.csv in TextEdit recording the original filename, a proposed new filename, date, amount, type, status and notes", "why": "Columns are listed but the current filename format with an example, the UNKNOWN-DATE placeholder, the Paperwork/Inbox path and the rename step are not given in prose. A reader would have to dig through raw evidence."}
+   ]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "Whether this recurs on a regular cadence (e.g. weekly catch-up) or was a one-off backlog", "why": "Ten receipt sessions across five days are already visible, so this is largely answered by the history."},
+    {"quote": "Who decided/requested the 2026-10-18 naming change", "why": "Mild padding. 'Self-authored note' is also asserted without support."}
+   ]},
+   "numbers": {"score": 2, "deductions": [
+    {"quote": "Observed on 3 captured days in a 90-day scan", "why": "Receipt runs occur on 10-14, 15, 16, 17 and 18 (5 days; 12 full runs plus a rule-edit run).", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "\"repetitions\": 3", "why": "Roughly 12 scan runs are visible; 3 is a large undercount.", "times": []},
+    {"quote": "about 5m05s end to end for the pair", "why": "The timing sample mixes a two-scan pair with single runs, so the 3.2 minute average is not a per-scan figure."}
+   ]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "the renamed PDF is actually moved/renamed on disk in the Inbox folder, not just logged in the CSV", "why": "The description calls the name 'proposed' and also says it is renamed. Stage naming ('Apply/update naming convention and log row') merges unrelated actions, and the stages are muddled."}
+   ]}
+  },
+  "Y": {
+   "faithful": {"score": 4, "deductions": [
+    {"quote": "reads an embedded 'Document Record'", "why": "Accurate to the screen text, though the stage question about what UI shows it is padding."},
+    {"quote": "Observed on 4 captured days", "why": "Count is wrong (see numbers). Otherwise the details (UNKNOWN-DATE, duplicate not renamed, old files left unchanged, columns, statuses) match the history."}
+   ]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Classify and log in tracker.csv ... Rename file on disk", "why": "Stages are ordered Preview, tracker.csv, then rename. In the history Morgan renames in Finder first (e.g. 11:49:55-11:50:20 on 10-16) and then updates tracker.csv. Order is wrong, though the rename step itself is present.", "times": ["2026-10-16T11:49:55Z", "2026-10-18T02:23:56Z"]},
+    {"quote": "Edit naming-rule-update.txt to announce a new filename convention", "why": "Presented as a procedure step although it is a one-off edit."}
+   ]},
+   "exceptions": {"score": 4, "deductions": [
+    {"quote": "Type sometimes inferred from an external client list rather than the document itself", "why": "The lookup is only named. It omits client-types.txt, the Type: UNKNOWN trigger and the Northwind: contract result at 10:11:38 on 10-17. Duplicate, missing date and over-500 are well described."}
+   ]},
+   "rule_change": {"score": 4, "deductions": [
+    {"quote": "Is the 2026-10-18 naming convention change permanent or will it revert", "why": "Rule stated correctly, old marked replaced, and 'new intake only; existing files on disk were left unchanged' matches Finder. Minor flaw: the filename-pattern wording still appears in the procedure as a step rather than as a single current rule."}
+   ]},
+   "usable": {"score": 4, "deductions": [
+    {"quote": "append or edit a row in tracker.csv", "why": "Gives columns, statuses, folder, rename and exception handling, but the client-types.txt file and the filename pattern with an example are not given in prose."}
+   ]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "What determines the vendor/date/amount when the embedded 'Document Record' is ambiguous or missing?", "why": "Speculative padding. The Document Record is always legible in the history."},
+    {"quote": "Is intake purely event-driven per arriving scan or is there a periodic cadence?", "why": "Largely answerable from the repeated daily sessions."}
+   ]},
+   "numbers": {"score": 3, "deductions": [
+    {"quote": "Observed on 4 captured days", "why": "Receipt work is on 5 days (10-14 to 10-18).", "times": ["2026-10-14", "2026-10-18"]},
+    {"quote": "\"repetitions\": 4", "why": "About 12 runs are visible. Timing is null, which is honest, but frequency is undercounted."}
+   ]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "No ordered capture example covers every step. These references do not establish one end-to-end occurrence.", "why": "Repeated limitation boilerplate, and the 'Review scanned document' stage cites only a single occurrence."}
+   ]}
+  }
+ },
+ "preference": "Y",
+ "strength": "clear",
+ "reason": "Both documents get the core job right: Preview, then tracker.csv columns, then the exceptions, plus the DATE_NAME_TYPE to TYPE_DATE_NAME change. Both undercount days and repetitions and put the Finder rename after the tracker edit. Y is more faithful and more usable. It has an explicit rename-on-disk stage, notes that duplicates are not renamed, uses the UNKNOWN-DATE placeholder, says the rule applies to new intake only with older files unchanged, and gives all four exception cases as what Morgan does. Its counts (4 days) are closer than X's (3). X wrongly folds the one-off HP LaserJet printer setup into the trigger ('produced by an HP scanner'), invents an 10-11 start date, calls the new name 'proposed', and mis-times pairs against single runs. X's one clear advantage is the client-types.txt lookup stage, which Y only names."
+}

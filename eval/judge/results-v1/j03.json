@@ -1,0 +1,48 @@
+{
+ "case": "j03",
+ "scores": {
+  "X": {
+   "faithful": {"score": 3, "deductions": [
+    {"quote": "optionally opens the saved PDF in Preview afterward", "why": "Preview is opened in all three runs and always BEFORE Save As (10-14 10:15:48, 10-16 10:40:21, 10-17 12:22:50, Save dialogs at 10:16:07, 10:40:54, 12:23:17). It is the attachment viewing step, not an optional post-save check. The 10-17 variation 'opened the saved PDF in Preview' is likewise wrong.", "times": ["2026-10-14T10:15:48Z", "2026-10-16T10:40:21Z", "2026-10-17T12:22:50Z"]},
+    {"quote": "no Finder window", "why": "Finder captures of /Users/morgan/Documents/Projects/Atlas and .../Beacon exist after each save and show the saved file in the folder; the document says the full path was never observed.", "times": ["2026-10-14T10:16:19Z", "2026-10-16T10:41:07Z", "2026-10-17T12:23:28Z"]}]},
+   "procedure": {"score": 3, "deductions": [
+    {"quote": "Receive request and open attachment", "why": "Misses the Preview viewing of the attachment before saving and the Finder check of the destination folder after saving, both present in every run; Preview is placed after Save As as optional.", "times": ["2026-10-16T10:40:21Z", "2026-10-16T10:41:07Z"]},
+    {"quote": "\"captureSequence\": []", "why": "Core sequence Mail message -> Save As -> reply is correct and in order, and the reply is shown to follow the save. Missing the Sent-folder check is minor."}]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "Are there other project folders beyond Atlas and Beacon", "why": "Variations listed are just the three instances; no real exceptions exist in the history, but the one variation that is described (Preview use) is mischaracterised as occurring only on 10-17, when it occurs every time. Beacon v1 already in the folder (v2 saved alongside) is not mentioned.", "times": ["2026-10-16T10:41:07Z"]}]},
+   "rule_change": null,
+   "usable": {"score": 3, "deductions": [
+    {"quote": "What is the full filesystem path of the Atlas/Beacon project folders?", "why": "The path (/Users/morgan/Documents/Projects/Atlas|Beacon) is in the history but not given, so an agent lacks the concrete folder. File naming (keep original attachment name) is implied only through variations. Trigger, senders, reply wording and Save As step are concrete.", "times": ["2026-10-14T10:16:19Z"]}]},
+   "calibration": {"score": 3, "deductions": [
+    {"quote": "Does opening the file in Preview serve as a deliberate verification step", "why": "Question rests on the wrong premise (Preview occurs before saving, so it is reading the attachment, not verifying). Full-path question is answered by Finder captures. Formal policy and other-folders questions are genuine; 'Only 3 instances' limitation is accurate.", "times": ["2026-10-17T12:22:50Z"]}]},
+   "numbers": {"score": 4, "deductions": [
+    {"quote": "\"averageMinutes\": 1.6655916666666668", "why": "Only 2 of 3 runs timed (10-17 omitted); runs actually span roughly 2.4, 2.8 and 3.0 min from first inbox capture to Sent; fine as estimate. repetitions 3 and 3 days are correct.", "times": ["2026-10-14T10:14:55Z", "2026-10-17T12:24:26Z"]}]},
+   "clarity": {"score": 4, "deductions": [
+    {"quote": "No ordered capture example covers every step.", "why": "Boilerplate limitation contradicts the document's own evidence listing Mail, Save As, reply for the same run; minor."}]}
+  },
+  "Y": {
+   "faithful": {"score": 2, "deductions": [
+    {"quote": "the actual Save-As dialog / folder-picker interaction was not independently captured in OCR text, only inferred from the reply content", "why": "Save As dialogs were captured in all three runs (Save As: ... Where: Atlas/Beacon).", "times": ["2026-10-14T10:16:07Z", "2026-10-16T10:40:54Z", "2026-10-17T12:23:17Z"]},
+    {"quote": "No Finder evidence was captured to confirm the file landed in the stated folder on disk", "why": "Finder captures list the saved file in the Projects/Atlas and Beacon folders.", "times": ["2026-10-14T10:16:19Z", "2026-10-16T10:41:07Z"]},
+    {"quote": "Open the email with the PDF attachment ... \"quote\": \"To: Priya Shah\\nSubject: Re: Beacon budget v2\\nThanks\"", "why": "Evidence for the 'read request' step is a half-typed reply, not the incoming email; evidence does not support the step.", "times": ["2026-10-16T10:41:20Z"]},
+    {"quote": "Observed twice this week", "why": "There are three runs (10-14, 10-16, 10-17); the 10-14 Atlas brief run is missed entirely."}]},
+   "procedure": {"score": 2, "deductions": [
+    {"quote": "Save attachment to the matching project folder (inferred from confirmation reply text; Save dialog itself not captured in OCR)", "why": "Step is stated as inferred though the dialog was visible; the Preview viewing and Finder check are absent; the save step is anchored on a reply capture.", "times": ["2026-10-17T12:23:59Z"]}]},
+   "exceptions": {"score": 3, "deductions": [
+    {"quote": "Confirmation wording differs per instance", "why": "Only variation is wording; no real exceptions exist but the missed first run and Preview/Finder behavior are not captured."}]},
+   "rule_change": null,
+   "usable": {"score": 2, "deductions": [
+    {"quote": "Does Morgan do anything else with the file after saving", "why": "No Save As step detail, no folder names beyond reply text, no senders in trigger, no path; an agent could not reproduce the save. It does give the reply pattern.", "times": ["2026-10-16T10:41:35Z"]}]},
+   "calibration": {"score": 2, "deductions": [
+    {"quote": "What determines which project folder is chosen - explicit instruction from sender vs inferred context?", "why": "Largely answered by history: subjects/attachments name Atlas/Beacon and the Save dialog shows the folder. Limitations about missing Save dialog and Finder are false.", "times": ["2026-10-14T10:16:07Z"]},
+    {"quote": "Only 2 occurrences observed", "why": "Actually 3."}]},
+   "numbers": {"score": 2, "deductions": [
+    {"quote": "\"averageMinutes\": 0.245575", "why": "Timing covers only reply composition (about 15 s); the whole task takes about 2-3 minutes per run. repetitions 2 and 'Observed on 2 captured days' are wrong (3).", "times": ["2026-10-16T10:41:20Z", "2026-10-17T12:23:59Z"]}]},
+   "clarity": {"score": 3, "deductions": [
+    {"quote": "\"handoffs\": []", "why": "Sparse; first stage is mislabelled with reply evidence; boilerplate limitation. Otherwise readable."}]}
+  }
+ },
+ "preference": "X",
+ "strength": "strong",
+ "reason": "X captures all three runs (10-14, 10-16, 10-17), the Mail > Save As into Atlas/Beacon > reply sequence with real Save As dialog evidence, senders and reply wording. Its errors are placing Preview after the save as optional (it always comes before) and claiming no folder path was seen. Y finds only two runs, claims the Save As dialog and Finder were never captured (both were), anchors steps on half-typed reply captures, and its timing only measures reply typing."
+}

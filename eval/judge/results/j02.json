@@ -1,0 +1,253 @@
+{
+ "case": "j02",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "optionally opens the saved PDF in Preview afterward",
+      "why": "Preview is opened on the attachment BEFORE Save As in all three runs (10:15:48, 10:40:21, 12:22:50 precede Save As at 10:16:07, 10:40:54, 12:23:17); not afterward and not optional.",
+      "times": [
+       "2026-10-17T12:22:50",
+       "2026-10-17T12:23:17"
+      ]
+     },
+     {
+      "quote": "Morgan also opened the saved PDF in Preview (12:22:50) before replying",
+      "why": "Preview at 12:22:50 is the attachment preview before saving, not the saved file; Save As was 12:23:17.",
+      "times": [
+       "2026-10-17T12:22:50"
+      ]
+     },
+     {
+      "quote": "no Finder window",
+      "why": "Finder windows at /Users/morgan/Documents/Projects/Atlas and Beacon exist in the history; the folders and full paths were observable.",
+      "times": [
+       "2026-10-14T10:16:19",
+       "2026-10-16T10:41:07"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "opens the attachment in Mail, uses File > Save As",
+      "why": "Omits the preview of the attachment before saving and the Finder check of the destination folder after saving, which occur in all three runs.",
+      "times": [
+       "2026-10-14T10:15:48",
+       "2026-10-14T10:16:19"
+      ]
+     },
+     {
+      "quote": "optionally opens the saved PDF in Preview afterward",
+      "why": "Wrong position in sequence (Preview comes before Save As).",
+      "times": [
+       "2026-10-17T12:22:50"
+      ]
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Atlas timeline (10-17): saved as Atlas-timeline.pdf",
+      "why": "Captures the 10-17 variation (same place as the brief, short reply) and the three wordings, but misreads the Preview step and misses that the Finder listing shows prior files (brief, notes) next to it.",
+      "times": [
+       "2026-10-17T12:23:28"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Is this a formal document-filing policy",
+      "why": "Document is consistent with all three runs across the full history and the day-5 receipts rule change does not touch email; only the Preview-afterward error remains.",
+      "times": []
+     }
+    ]
+   },
+   "usable": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "What is the full filesystem path of the Atlas/Beacon project folders?",
+      "why": "Path was visible in Finder (/Users/morgan/Documents/Projects/Atlas|Beacon) but the document leaves it unknown, so an agent lacks the concrete folder.",
+      "times": [
+       "2026-10-14T10:16:19"
+      ]
+     }
+    ]
+   },
+   "calibration": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "What is the full filesystem path of the Atlas/Beacon project folders?",
+      "why": "Answerable from history (Finder window titles).",
+      "times": [
+       "2026-10-14T10:16:19"
+      ]
+     },
+     {
+      "quote": "Does opening the file in Preview serve as a deliberate verification step",
+      "why": "Built on the wrong premise; Preview is a pre-save look at the attachment.",
+      "times": [
+       "2026-10-17T12:22:50"
+      ]
+     }
+    ]
+   },
+   "numbers": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "sampleCount\": 2",
+      "why": "Only 2 of the 3 runs timed, but the figures that exist are right: about 1.95 min (10:15:13 to 10:17:10) and 1.38 min (10:40:12 to 10:41:35). 3 repetitions and 3 days are correct.",
+      "times": [
+       "2026-10-14T10:15:13"
+      ]
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Is this a formal document-filing policy at Northbeam or an informal habit",
+      "why": "Speculative open question adds padding; otherwise well structured.",
+      "times": []
+     }
+    ]
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "the actual Save-As dialog / folder-picker interaction was not independently captured in OCR text, only inferred from the reply content",
+      "why": "False: Save As dialogs were captured at 10:16:07, 10:40:54 and 12:23:17 with Where: Atlas/Beacon.",
+      "times": [
+       "2026-10-14T10:16:07",
+       "2026-10-16T10:40:54",
+       "2026-10-17T12:23:17"
+      ]
+     },
+     {
+      "quote": "No Finder evidence was captured",
+      "why": "Finder windows exist at 10:16:19, 10:41:07, 12:23:28.",
+      "times": [
+       "2026-10-16T10:41:07"
+      ]
+     },
+     {
+      "quote": "Open the email with the PDF attachment",
+      "why": "Quoted evidence is a reply draft at 10:41:20, not opening the email (that is 10:39:36).",
+      "times": [
+       "2026-10-16T10:41:20"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Save attachment to the matching project folder (inferred from confirmation reply text; Save dialog itself not captured in OCR)",
+      "why": "The save step is only inferred; real Save As and Finder confirmation are missed; no preview step.",
+      "times": [
+       "2026-10-17T12:23:17"
+      ]
+     },
+     {
+      "quote": "Read incoming request",
+      "why": "Mapped to the wrong capture; the 10-14 run is entirely absent.",
+      "times": [
+       "2026-10-14T10:15:13"
+      ]
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Confirmation wording differs per instance",
+      "why": "Only wording variation noted; the 10-14 run, the 'same place as the brief' variation and different senders/folders are not described as handling.",
+      "times": [
+       "2026-10-17T12:22:08"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Observed twice this week for two different projects and senders",
+      "why": "Ignores the 10-14 run; not consistent with the full history, which shows three runs and Alex as sender twice.",
+      "times": [
+       "2026-10-14T10:15:13"
+      ]
+     }
+    ]
+   },
+   "usable": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "Save attachment to the matching project folder",
+      "why": "No folder names, no Save As location, no path or procedure detail; an agent could not do the task from this.",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "What determines which project folder is chosen - explicit instruction from sender vs inferred context?",
+      "why": "History shows request wording ('same place as the brief') and the Save As Where field; the limitation about no dialog capture is wrong.",
+      "times": [
+       "2026-10-17T12:22:08"
+      ]
+     }
+    ]
+   },
+   "numbers": {
+    "score": 2,
+    "deductions": [
+     {
+      "quote": "averageMinutes\": 0.245575",
+      "why": "Times only the reply typing (about 15 s), not the task, which took about 1.4 to 2 minutes. 'repetitions: 2' and 'Observed on 2 captured days' undercount; history shows 3 runs on 3 days.",
+      "times": [
+       "2026-10-16T10:41:20",
+       "2026-10-14T10:15:13"
+      ]
+     }
+    ]
+   },
+   "clarity": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Open the email with the PDF attachment",
+      "why": "Step text and quote do not match; stage names do not match the evidence cited.",
+      "times": [
+       "2026-10-16T10:41:20"
+      ]
+     }
+    ]
+   }
+  }
+ },
+ "preference": "X",
+ "strength": "strong",
+ "reason": "X captures all three runs (3 days), the Save As dialog with Atlas/Beacon targets, the senders, request wording and reply wordings, and correct timings. Its main errors are placing the Preview step after the save and saying the folder path was not observed (Finder shows /Users/morgan/Documents/Projects/...). Y finds only two runs, wrongly claims the Save As dialog and Finder were not captured, times only the reply typing (about 15 s), and gives no folder or procedure detail. rule_change applies only as consistency with the full history (email has no rule change), scored for both."
+}

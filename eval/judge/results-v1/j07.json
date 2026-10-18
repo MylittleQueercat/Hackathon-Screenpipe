@@ -1,0 +1,260 @@
+{
+ "case": "j07",
+ "scores": {
+  "X": {
+   "faithful": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "produced by an HP scanner set up via HP Easy Start / Printers & Scanners on 2026-10-15",
+      "why": "pulls the separate one-off printer-setup job into the receipts trigger; the history shows the receipts trigger as scans appearing in Paperwork/Inbox, not printer setup",
+      "times": [
+       "2026-10-15"
+      ]
+     },
+     {
+      "quote": "Observed on 3 captured days in a 90-day scan",
+      "why": "receipts runs occur on 5 days (14-18 Oct)",
+      "times": []
+     },
+     {
+      "quote": "Preview scan-0422.pdf (02:24:00-02:24:11), Preview scan-0423.pdf (02:27:13-02:27:20), Finder Inbox checked ... (02:28:04-02:28:11)",
+      "why": "timestamps in run summary do not match the history (Preview reads at 02:23:19 and 02:26:32, Finder at 02:27:31, track rows at 02:24:32 and 02:27:42)",
+      "times": [
+       "2026-10-18T02:23:19",
+       "2026-10-18T02:26:32"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Check Finder Inbox listing to confirm renamed files appear on disk",
+      "why": "history shows Morgan performs the rename in Finder (planted rename step before the tracker row in most runs); the doc has no rename step, only a verification, and no Finder open-inbox start",
+      "times": [
+       "2026-10-14T10:00:34",
+       "2026-10-18T02:23:56"
+      ]
+     },
+     {
+      "quote": "Append row: scan-0418.pdf,...",
+      "why": "step ordering (read, lookup, log) never places the rename before logging; missing-date handling (UNKNOWN-DATE filename) not in any step",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Duplicate charges are cross-referenced against an already-logged row",
+      "why": "good, but no instruction on leaving new_filename blank / not renaming the duplicate",
+      "times": [
+       "2026-10-16T09:31"
+      ]
+     },
+     {
+      "quote": "a missing date is logged with notes='missing date'",
+      "why": "only in the description; no UNKNOWN-DATE filename prefix, not in variations or procedure",
+      "times": [
+       "2026-10-15T09:50"
+      ]
+     },
+     {
+      "quote": "Flag ... review needed",
+      "why": "over-500 rule appears only in description; procedure just quotes the 780.00 row with no decision stated",
+      "times": [
+       "2026-10-16T11:50"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Whether the new TYPE_DATE_NAME convention also applies to 'contract' type scans",
+      "why": "reasonable open question; but doc never says old files on disk are left unchanged and describes naming as 'date_vendor_type, now type_date_vendor' loosely; no contradiction though",
+      "times": []
+     }
+    ]
+   },
+   "usable": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Open scan-NNNN.pdf in Preview",
+      "why": "gives no folder path (Paperwork/Inbox) as a step, no rename action, no UNKNOWN-DATE format, no stated 500 threshold in procedure; tracker columns are in the description only",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Whether the naming convention (date_vendor_type, now type_date_vendor) is applied consistently enough to describe as a strict rule, since client-types.txt had to be consulted at least once",
+      "why": "client-types lookup concerns type, not naming; non sequitur",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     },
+     {
+      "quote": "Who decided/requested the 2026-10-18 naming change",
+      "why": "padding; note is Morgan's own edit",
+      "times": []
+     },
+     {
+      "quote": "HP printer driver setup (2026-10-15) is one-off configuration context",
+      "why": "limitation about a different job",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "\"repetitions\": 3 / Observed on 3 captured days",
+      "why": "history has 13 runs over 5 days",
+      "times": []
+     },
+     {
+      "quote": "about 5m05s end to end for the pair",
+      "why": "timing based on mismatched timestamps; each of the two runs is about 1.5-2 min in history",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "No single ordered capture example covers every step end-to-end ... No ordered capture example covers every step. These references do not establish one end-to-end occurrence.",
+      "why": "limitation repeated; stage 3 mixes the rule update, the duplicate flag and the output in one stage",
+      "times": []
+     }
+    ]
+   }
+  },
+  "Y": {
+   "faithful": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Observed on 4 captured days in a 90-day scan",
+      "why": "receipts runs occur on 5 days",
+      "times": []
+     },
+     {
+      "quote": "Use UNKNOWN-DATE placeholder and note missing date ... but still file the row",
+      "why": "reasonable; fine. However 'Type sometimes inferred from an external client list' omits client-types.txt",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     },
+     {
+      "quote": "Verify renamed files appear in the inbox folder with the normalized filenames from tracker.csv",
+      "why": "presents rename as a verification after logging; the history shows Morgan renames in Finder before logging in most runs",
+      "times": [
+       "2026-10-14T10:00:34"
+      ]
+     }
+    ]
+   },
+   "procedure": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "Rename file on disk",
+      "why": "stage placed after logging; in history rename precedes the tracker row (runs 01-04, 07-10, 12-13); no step for opening Finder Inbox first and no explicit Morgan rename action",
+      "times": [
+       "2026-10-14T10:00:34"
+      ]
+     },
+     {
+      "quote": "Determine status ... by comparing against prior rows",
+      "why": "no step for consulting client-types.txt for unknown type",
+      "times": []
+     }
+    ]
+   },
+   "exceptions": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list rather than the document itself",
+      "why": "named but not described as what Morgan does: no client-types.txt, no look-up of the customer in it, when it applies (Type: UNKNOWN in Preview)",
+      "times": [
+       "2026-10-17T10:11:38"
+      ]
+     }
+    ]
+   },
+   "rule_change": {
+    "score": 5,
+    "deductions": []
+   },
+   "usable": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "Type sometimes inferred from an external client list",
+      "why": "an agent would not know where the client list is or how to use it",
+      "times": []
+     },
+     {
+      "quote": "a normalized new_filename",
+      "why": "filename format for the old rule is given only as pattern DATE_NAME_TYPE in the rename stage; an example of the old format is not given",
+      "times": []
+     }
+    ]
+   },
+   "calibration": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "What determines the vendor/date/amount when the embedded 'Document Record' is ambiguous or missing?",
+      "why": "history never shows an ambiguous or missing record; speculative padding",
+      "times": []
+     },
+     {
+      "quote": "What exact UI shows the 'Document Record'",
+      "why": "history text answers it: it is in Preview page text (Document Record: Name/Date/Amount/Type)",
+      "times": []
+     }
+    ]
+   },
+   "numbers": {
+    "score": 3,
+    "deductions": [
+     {
+      "quote": "\"repetitions\": 4 / Observed on 4 captured days",
+      "why": "history has 13 runs over 5 days; closer than X but still undercounted",
+      "times": []
+     },
+     {
+      "quote": "\"timing\": null",
+      "why": "no durations given although run timings are available in history",
+      "times": []
+     }
+    ]
+   },
+   "clarity": {
+    "score": 4,
+    "deductions": [
+     {
+      "quote": "No ordered capture example covers every step end-to-end. ... No ordered capture example covers every step.",
+      "why": "repeated limitation",
+      "times": []
+     }
+    ]
+   }
+  }
+ },
+ "preference": "Y",
+ "strength": "clear",
+ "reason": "Y describes every exception as what Morgan does (duplicate not renamed and cites earlier file, over-500 review needed, UNKNOWN-DATE with note missing date, client list), includes a rename-on-disk stage, states the new rule with old files left unchanged, and has a cleaner trigger and closer day count. X has a client-types stage but leaves missing-date and high-value only in the description, has no rename step, imports the one-off printer setup into the trigger, undercounts days (3 vs 5), uses mismatched run timestamps and has padded open questions. Both undercount repetitions and put rename after/outside the correct order."
+}
