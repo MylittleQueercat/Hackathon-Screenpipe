@@ -67,16 +67,16 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
       {/* ---------- header ---------- */}
       <div className="flex items-end justify-between">
         <div>
-          <Eyebrow>Experiment comparison · {experiment.experiment.question}</Eyebrow>
-          <div className="mt-3 flex items-baseline gap-5 text-[52px] font-semibold leading-none tracking-tightest">
-            <span className={mode === 'B' ? 'text-ink-500 transition-colors' : 'text-ink-50 transition-colors'}>{a.label}</span>
-            <span className="text-[32px] font-normal text-ink-600">vs</span>
-            <span className={mode === 'A' ? 'text-ink-500 transition-colors' : 'text-ink-50 transition-colors'}>{b.label}</span>
+          <Eyebrow size="lg">Experiment comparison · {experiment.experiment.question}</Eyebrow>
+          <div className="mt-3 flex items-baseline gap-5 text-[56px] font-semibold leading-none tracking-tightest">
+            <span className={mode === 'B' ? 'text-ink-400 transition-colors' : 'text-ink-50 transition-colors'}>{a.label}</span>
+            <span className="text-[36px] font-normal text-ink-500">vs</span>
+            <span className={mode === 'A' ? 'text-ink-400 transition-colors' : 'text-ink-50 transition-colors'}>{b.label}</span>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <ModeSwitch mode={mode} a={a} b={b} onMode={(m) => { clear(); setRunning(false); setMode(m); }} />
-          <PrimaryButton onClick={reveal}>
+          <PrimaryButton size="lg" onClick={reveal}>
             <PlayIcon /> {running ? 'Running reveal…' : revealed ? 'Replay reveal' : 'Run reveal'}
           </PrimaryButton>
         </div>
@@ -91,7 +91,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           value={
             <span className="tnum">
               {shown.metrics.qualityPassed}
-              <span className="text-ink-500">/{shown.metrics.qualityTotal}</span>
+              <span className="text-ink-400">/{shown.metrics.qualityTotal}</span>
             </span>
           }
           delta={
@@ -120,7 +120,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
             label="Token usage"
             sub="input · cache · output"
             viz={<TokensViz a={a} b={b} mode={mode} />}
-            value={tokShown === null ? <span className="text-ink-600">—</span> : <CountUp value={tokShown} duration={1.6} format={(n) => fmtCount(Math.round(n)) ?? '—'} />}
+            value={tokShown === null ? <span className="text-ink-500">—</span> : <CountUp value={tokShown} duration={1.6} format={(n) => fmtCount(Math.round(n)) ?? '—'} />}
             valueSub={tokShown === null ? 'not recorded' : 'total tokens'}
             delta={
               showDelta && tok && tok.pctLabel ? (
@@ -163,11 +163,11 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
               className="flex items-end justify-between"
             >
               <div className="min-w-0 flex-1 pr-8">
-                <Eyebrow className="text-signal">Conclusion</Eyebrow>
-                <div className="mt-3 text-[64px] font-semibold leading-[0.95] tracking-tightest text-ink-50">
+                <Eyebrow size="lg" className="text-signal">Conclusion</Eyebrow>
+                <div className="mt-3 text-[68px] font-semibold leading-[0.95] tracking-tightest text-ink-50">
                   {experiment.comparison.verdict}
                 </div>
-                <p className="mt-4 text-[18px] text-ink-300">
+                <p className="mt-4 text-[21px] text-ink-300">
                   {quality.d === 0
                     ? `Same quality (${a.metrics.qualityPassed}/${a.metrics.qualityTotal})`
                     : `Quality ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} → ${b.metrics.qualityPassed}/${b.metrics.qualityTotal}`}
@@ -189,10 +189,9 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
                 transition={{ delay: 0.8, duration: 0.6 }}
                 className="mb-2 flex flex-col items-end gap-2"
               >
-                <span className="rounded-full border border-ink-700 px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-ink-400">
+                <span className="rounded-full border border-ink-700 px-3 py-1 font-mono text-[13px] uppercase tracking-widest text-ink-400">
                   n = {experiment.comparison.pairing === 'single' ? 1 : '>1'} pair
                 </span>
-                <span className="font-mono text-[13px] text-ink-500">{experiment.comparison.note}</span>
               </motion.div>
             </motion.div>
           ) : (
@@ -203,10 +202,10 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
               exit={{ opacity: 0, filter: 'blur(6px)' }}
               className="flex h-[150px] items-center justify-between rounded-2xl border border-dashed border-ink-700 px-10"
             >
-              <span className="text-[22px] text-ink-400">
+              <span className="text-[25px] text-ink-400">
                 Verdict sealed. <span className="text-ink-200">Run the reveal to compare both recorded runs.</span>
               </span>
-              <span className="flex items-center gap-2 font-mono text-[12px] text-ink-500">
+              <span className="flex items-center gap-2 font-mono text-[14.5px] text-ink-400">
                 <Kbd>space</Kbd> run reveal
               </span>
             </motion.div>
@@ -231,7 +230,7 @@ function ModeSwitch({ mode, a, b, onMode }: { mode: Mode; a: Run; b: Run; onMode
         <button
           key={o.m}
           onClick={() => onMode(o.m)}
-          className={`relative z-10 rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
+          className={`relative z-10 rounded-full px-4 py-1.5 text-[15.5px] font-medium transition-colors ${
             mode === o.m ? 'text-ink-950' : 'text-ink-300 hover:text-ink-100'
           }`}
         >
@@ -269,20 +268,20 @@ function Lane({
   return (
     <div className="flex h-[128px] items-center border-b border-ink-800">
       <div className="w-[230px] shrink-0">
-        <div className="text-[22px] font-medium text-ink-50">{label}</div>
-        <div className="mt-1 font-mono text-[11px] text-ink-500">{sub}</div>
+        <div className="text-[25px] font-medium text-ink-50">{label}</div>
+        <div className="mt-1 font-mono text-[13px] text-ink-400">{sub}</div>
       </div>
       <div className="flex-1">{viz}</div>
       <div className="flex w-[360px] shrink-0 flex-col items-end">
         <div
-          className={`text-[80px] font-semibold leading-none tracking-tightest transition-colors duration-700 ${
+          className={`text-[84px] font-semibold leading-none tracking-tightest transition-colors duration-700 ${
             tone === 'cost' ? 'text-cost' : tone === 'win' ? 'text-signal' : 'text-ink-50'
           }`}
         >
           {value}
         </div>
         <div className="mt-2 flex h-6 items-center gap-3">
-          {valueSub && <span className="font-mono text-[12px] text-ink-500">{valueSub}</span>}
+          {valueSub && <span className="font-mono text-[14.5px] text-ink-400">{valueSub}</span>}
           <AnimatePresence>{delta}</AnimatePresence>
         </div>
       </div>
@@ -306,11 +305,11 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
   const rows: { tag: string; run: Run }[] = mode === 'AB' ? [{ tag: 'A', run: a }, { tag: 'B', run: b }] : [{ tag: mode, run: mode === 'A' ? a : b }];
   const cell = (n: number | null, base?: number | null) => (
     <div className="flex flex-col">
-      <span className={`tnum font-mono text-[20px] ${n === null ? 'text-ink-600' : 'text-ink-100'}`} title={n === null ? 'not recorded' : n.toLocaleString('en-US')}>
+      <span className={`tnum font-mono text-[23px] ${n === null ? 'text-ink-500' : 'text-ink-100'}`} title={n === null ? 'not recorded' : n.toLocaleString('en-US')}>
         {fmtCount(n) ?? '—'}
       </span>
       {base != null && n !== null && base > 0 && (
-        <span className={`tnum font-mono text-[11px] ${n > base ? 'text-cost' : n < base ? 'text-signal' : 'text-ink-500'}`}>
+        <span className={`tnum font-mono text-[13px] ${n > base ? 'text-cost' : n < base ? 'text-signal' : 'text-ink-400'}`}>
           {n >= base ? '+' : '−'}
           {Math.abs(pct(base, n)).toFixed(0)}%
         </span>
@@ -321,7 +320,7 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
     !e ? 'no usage recorded' : e.source === 'pipe_logs' ? 'partial: pipe logs undercount' : e.source === null ? 'source not recorded' : null;
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-end gap-4 pl-7 font-mono text-[10.5px] uppercase tracking-widest text-ink-500">
+      <div className="flex items-end gap-4 pl-7 font-mono text-[12.5px] uppercase tracking-widest text-ink-400">
         {TOKEN_COLS.map((c) => (
           <span key={c.label} className="w-[150px]">{c.label}</span>
         ))}
@@ -334,19 +333,19 @@ function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
         const baseHit = base ? cacheHitRate(base) : null;
         return (
           <div key={tag} className="flex items-center gap-4">
-            <span className="w-3 font-mono text-[11px] text-ink-500">{tag}</span>
+            <span className="w-3 font-mono text-[13px] text-ink-400">{tag}</span>
             {TOKEN_COLS.map((c) => (
               <div key={c.label} className="w-[150px]">{cell(e ? c.get(e) : null, base ? c.get(base) : null)}</div>
             ))}
             <div className="w-[110px]">
-              <span className={`tnum font-mono text-[20px] ${hit === null ? 'text-ink-600' : 'text-ink-100'}`}>
+              <span className={`tnum font-mono text-[23px] ${hit === null ? 'text-ink-500' : 'text-ink-100'}`}>
                 {hit === null ? '—' : `${(hit * 100).toFixed(1)}%`}
               </span>
               {baseHit !== null && hit !== null && (
-                <div className="tnum font-mono text-[11px] text-ink-500">{((hit - baseHit) * 100).toFixed(1)} pts</div>
+                <div className="tnum font-mono text-[13px] text-ink-400">{((hit - baseHit) * 100).toFixed(1)} pts</div>
               )}
             </div>
-            {note(e) && <span className="font-mono text-[11px] text-cost">{note(e)}</span>}
+            {note(e) && <span className="font-mono text-[13px] text-cost">{note(e)}</span>}
           </div>
         );
       })}
@@ -367,7 +366,7 @@ function DeltaChip({ children, tone }: { children: ReactNode; tone: Dir | 'neutr
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      className={`tnum rounded-full px-2.5 py-0.5 font-mono text-[12px] ${TONE[tone]}`}
+      className={`tnum rounded-full px-2.5 py-0.5 font-mono text-[14.5px] ${TONE[tone]}`}
     >
       {children}
     </motion.span>
@@ -387,8 +386,8 @@ function RejectedCalls({ a, b }: { a: Run; b: Run }) {
   const d = av !== null && bv !== null ? delta(av, bv) : null;
   const side = (label: string, v: number | null) => (
     <span>
-      <span className="text-ink-500">{label} </span>
-      {v === null ? <span className="text-ink-500">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
+      <span className="text-ink-400">{label} </span>
+      {v === null ? <span className="text-ink-400">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
     </span>
   );
   return (
@@ -396,12 +395,12 @@ function RejectedCalls({ a, b }: { a: Run; b: Run }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]"
+      className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[15.5px]"
       title="Workflows calls the engine refused (usage.workspace.failed); each one costs the agent a retry"
     >
-      <span className="uppercase tracking-widest text-[11px] text-ink-500">Rejected calls</span>
+      <span className="uppercase tracking-widest text-[13px] text-ink-400">Rejected calls</span>
       {side(a.label, av)}
-      <span className="text-ink-600">→</span>
+      <span className="text-ink-500">→</span>
       {side(b.label, bv)}
       {d && <DeltaChip tone={d.dir}>{d.d === 0 ? '±0' : `${d.abs}${d.pctLabel ? ` · ${d.pctLabel}` : ''}`}</DeltaChip>}
     </motion.div>
@@ -421,7 +420,7 @@ function PhaseStrip({ a, b }: { a: Run; b: Run }) {
       <div className="h-[8px] rounded-sm bg-ink-800" style={{ width: 120 }}>
         <div className={`h-full rounded-sm ${cls}`} style={{ width: `${((p?.modelRequests ?? 0) / max) * 100}%` }} />
       </div>
-      <span className="tnum w-9 font-mono text-[11px] text-ink-400">{p ? p.modelRequests : '—'}</span>
+      <span className="tnum w-9 font-mono text-[13px] text-ink-400">{p ? p.modelRequests : '—'}</span>
     </div>
   );
   return (
@@ -431,7 +430,7 @@ function PhaseStrip({ a, b }: { a: Run; b: Run }) {
       transition={{ delay: 0.4, duration: 0.5 }}
       className="mt-6 max-w-[560px] rounded-xl border border-ink-800 bg-ink-900/40 px-5 py-4"
     >
-      <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-widest text-ink-500">
+      <div className="mb-3 flex items-center justify-between font-mono text-[13px] uppercase tracking-widest text-ink-400">
         <span>Requests per phase</span>
         <span className="flex gap-4 normal-case tracking-normal">
           <span className="text-ink-300">■ {a.label}</span>
@@ -443,14 +442,14 @@ function PhaseStrip({ a, b }: { a: Run; b: Run }) {
           const bPhase = find(bp, n);
           return (
             <div key={n} className="flex items-center gap-4">
-              <span className="w-[62px] shrink-0 font-mono text-[12px] text-ink-300">
+              <span className="w-[62px] shrink-0 font-mono text-[14.5px] text-ink-300">
                 Phase {n}
                 {bPhase?.idleChurn ? <span className="ml-1 text-cost" title="idle churn: changed the catalog with no new history">●</span> : null}
               </span>
               {bar(find(ap, n), 'bg-ink-300')}
               {bar(bPhase, 'bg-signal')}
               {bPhase?.cycle === 'idle' && (
-                <span className="font-mono text-[11px] text-signal" title="The engine started no cycle: nothing was recorded after the last checked period">
+                <span className="font-mono text-[13px] text-signal" title="The engine started no cycle: nothing was recorded after the last checked period">
                   no cycle · nothing new
                 </span>
               )}
@@ -484,17 +483,17 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
         {mode === 'AB' ? (
           <>
             <div className="flex items-center gap-3">
-              <span className="w-4 font-mono text-[11px] text-ink-500">A</span>
+              <span className="w-4 font-mono text-[13px] text-ink-400">A</span>
               {row(a, true)}
             </div>
             <div className="flex items-center gap-3">
-              <span className="w-4 font-mono text-[11px] text-ink-500">B</span>
+              <span className="w-4 font-mono text-[13px] text-ink-400">B</span>
               {row(b, true)}
             </div>
           </>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="w-4 font-mono text-[11px] text-ink-500">{mode}</span>
+            <span className="w-4 font-mono text-[13px] text-ink-400">{mode}</span>
             {row(mode === 'A' ? a : b)}
           </div>
         )}
@@ -506,7 +505,7 @@ function QualityViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
             animate={{ opacity: 1, scale: 1, rotate: -4 }}
             exit={{ opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 16 }}
-            className="rounded-md border-2 border-signal px-3 py-1 font-mono text-[14px] font-semibold uppercase tracking-[0.2em] text-signal"
+            className="rounded-md border-2 border-signal px-3 py-1 font-mono text-[16.5px] font-semibold uppercase tracking-[0.2em] text-signal"
           >
             unchanged
           </motion.span>
@@ -555,7 +554,7 @@ function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
         })}
         <line x1={aX - 1.5} x2={aX - 1.5} y1={0} y2={72} stroke="rgb(var(--ink-400))" strokeDasharray="3 3" />
       </svg>
-      <span className="absolute -bottom-5 font-mono text-[10px] text-ink-500" style={{ left: Math.max(0, aX - 60) }}>
+      <span className="absolute -bottom-5 font-mono text-[12px] text-ink-400" style={{ left: Math.max(0, aX - 60) }}>
         A ends · {av}
       </span>
       <AnimatePresence>
@@ -568,7 +567,7 @@ function RequestsViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
             style={{ left: lo * pitch, width: (hi - lo) * pitch }}
           >
             <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
-            <span className={`px-2 font-mono text-[11px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}</span>
+            <span className={`px-2 font-mono text-[13px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}</span>
             <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
           </motion.div>
         )}
@@ -595,7 +594,7 @@ function RuntimeViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
       {/* grid */}
       {ticks.map((t) => (
         <div key={t} className="absolute top-0 h-[52px] border-l border-ink-800" style={{ left: x(t) }}>
-          <span className="absolute -left-2 top-[56px] font-mono text-[10px] text-ink-600">{t / 60}m</span>
+          <span className="absolute -left-2 top-[56px] font-mono text-[12px] text-ink-500">{t / 60}m</span>
         </div>
       ))}
       {/* track */}
@@ -626,7 +625,7 @@ function RuntimeViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
             style={{ left: loX, width: hiX - loX }}
           >
             <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
-            <span className={`px-2 font-mono text-[11px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}s</span>
+            <span className={`px-2 font-mono text-[13px] ${saved ? 'text-signal' : 'text-cost'}`}>{signed(bv - av)}s</span>
             <div className={`h-2 flex-1 border-x border-t ${saved ? 'border-signal/70' : 'border-cost/70'}`} />
           </motion.div>
         )}

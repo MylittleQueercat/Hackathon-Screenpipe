@@ -334,10 +334,10 @@ export function ReplayView({
                 }`}
               >
                 <span className="flex items-center gap-3">
-                  <span className="font-mono text-[13px] text-ink-500">{pad2(i + 1)}</span>
+                  <span className="font-mono text-[13px] text-ink-400">{pad2(i + 1)}</span>
                   <span className={`text-[19px] ${i === selIdx ? 'text-ink-50' : 'text-ink-300'}`}>{s.name}</span>
                 </span>
-                <span className="font-mono text-[13px] text-ink-500">
+                <span className="font-mono text-[13px] text-ink-400">
                   {i < selIdx ? 'reuse' : i === selIdx ? 'fork ◆' : 're-run'}
                 </span>
               </button>
@@ -364,7 +364,7 @@ export function ReplayView({
           <Eyebrow size="lg">2 · Replay plan</Eyebrow>
           <ol className="mt-3 flex flex-col gap-3">
             <PlanStep n={1} active={sim >= 1} title={`Restore snapshot before ${sel.name}`}>
-              {snapshotId ? <span className="font-mono text-ink-200">{snapshotId}</span> : <Missing size="sm" path={`stages.${sel.id}.snapshotId`} />}
+              {snapshotId && <span className="font-mono text-ink-200">{snapshotId}</span>}
             </PlanStep>
             <PlanStep n={2} active={sim >= 1} title={upstream.length ? `Reuse ${upstream.map((s) => s.name).join(', ')}` : 'Nothing upstream to reuse'}>
               <span className="text-ink-400">{upstream.length ? 'Outputs come from the snapshot — these stages are not re-run.' : 'Replay starts at the first stage.'}</span>
@@ -402,7 +402,7 @@ export function ReplayView({
           <PrimaryButton size="lg" className="mt-auto self-start" onClick={preview}>
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
           </PrimaryButton>
-          <p className="mt-1.5 font-mono text-[13px] text-ink-500">simulation only · no model calls</p>
+          <p className="mt-1.5 font-mono text-[13px] text-ink-400">simulation only · no model calls</p>
           {/* Real execution: hidden until asked for. The button only reveals the panel; nothing
               runs until the explicit Confirm inside it, and only when a saved snapshot has a
               step for this stage. Never fabricated. */}
@@ -415,9 +415,7 @@ export function ReplayView({
             <p className="mt-4 text-[15.5px] leading-relaxed text-ink-400">
               {snapshots.length === 0 ? (
                 <>
-                  Real execution unavailable on this machine: no saved snapshot (<code className="font-mono">eval/snapshots/</code> is
-                  local and not part of the repo). Demo runs can only show the preview above. Create one with{' '}
-                  <code className="font-mono">wfeval snapshot</code>.
+                  Real execution needs a saved snapshot (<code className="font-mono">wfeval snapshot</code>); none on this machine.
                 </>
               ) : (
                 <>No saved snapshot has a step for {sel.name}.</>
@@ -431,7 +429,7 @@ export function ReplayView({
               >
                 Run Stage Replay
               </button>
-              <span className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-500">spends AI allowance</span>
+              <span className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-400">spends AI allowance</span>
             </div>
           ) : (
             <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
@@ -494,7 +492,7 @@ export function ReplayView({
               )}
               {stageLog && (
                 <details className="mt-3" open={stageRunning}>
-                  <summary className="cursor-pointer font-mono text-[13px] text-ink-500">{stageError ? 'technical details' : 'live output'}</summary>
+                  <summary className="cursor-pointer font-mono text-[13px] text-ink-400">{stageError ? 'technical details' : 'live output'}</summary>
                   <div
                     ref={stageLogRef}
                     className="mt-2 h-32 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-2 font-mono text-[13px] text-ink-300"
@@ -545,7 +543,7 @@ function GraphNode({
   const cls = {
     recorded: 'border-ink-400 bg-ink-900 text-ink-50',
     reused: 'border-ink-500 bg-ink-900 text-ink-100',
-    faded: 'border-ink-700 bg-ink-950 text-ink-500',
+    faded: 'border-ink-700 bg-ink-950 text-ink-400',
     sim: 'hatch-muted border-dashed border-ink-600 bg-ink-950 text-ink-400',
     'sim-lit': 'hatch border-signal bg-ink-900 text-ink-50 glow-signal',
   }[tone];
@@ -589,7 +587,7 @@ function PlanStep({ n, title, active, children }: { n: number; title: string; ac
 function OutcomeRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="border-b border-ink-800 pb-3">
-      <div className="font-mono text-[13px] uppercase tracking-widest text-ink-500">{label}</div>
+      <div className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</div>
       <div className="mt-1.5">{children}</div>
     </div>
   );
@@ -614,7 +612,7 @@ function StageRunTable({ runs }: { runs: StageRunSummary[] }) {
   const short = (t: string) => t.replace(/^workflow-/, '');
   return (
     <div className="font-mono text-[13.5px]">
-      <div className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 pb-1 text-[12px] uppercase tracking-widest text-ink-500">
+      <div className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 pb-1 text-[12px] uppercase tracking-widest text-ink-400">
         <span>variant</span>
         <span title="checks passed in the graded view (drafts, or the catalog after Review)">checks</span>
         <span>requests</span>
@@ -629,8 +627,8 @@ function StageRunTable({ runs }: { runs: StageRunSummary[] }) {
           <div key={r0.id} className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 border-t border-ink-800 py-1 text-ink-200">
             <span className="truncate" title={g.map((r) => r.id).join('\n')}>
               {r0.variant ?? '?'}
-              {r0.tasks.length > 1 && <span className="text-ink-500"> · {r0.tasks.map(short).join('→')}</span>}
-              <span className="text-ink-500"> ×{g.length}</span>
+              {r0.tasks.length > 1 && <span className="text-ink-400"> · {r0.tasks.map(short).join('→')}</span>}
+              <span className="text-ink-400"> ×{g.length}</span>
             </span>
             <span className="tnum">{checks}</span>
             <span className="tnum">{range(g.map((r) => r.requests))}</span>

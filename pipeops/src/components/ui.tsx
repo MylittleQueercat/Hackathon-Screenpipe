@@ -48,7 +48,7 @@ export function Missing({ path, size = 'md' }: { path: string; size?: 'sm' | 'md
   return (
     <span
       className={`inline-flex items-center gap-2 rounded-md border border-dashed border-ink-500/80 ${
-        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-xs'
+        size === 'sm' ? 'px-1.5 py-0.5 text-[13px]' : 'px-2 py-1 text-[14px]'
       } font-mono text-ink-400`}
       title={`Will be read from ${path}`}
     >
@@ -63,10 +63,10 @@ export function MissingBlock({ title, path, children }: { title: string; path: s
   return (
     <div className="hatch-muted rounded-xl border border-dashed border-ink-600 p-4">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[13px] text-ink-200">{title}</span>
+        <span className="text-[15.5px] text-ink-200">{title}</span>
         <Badge kind="placeholder" />
       </div>
-      <div className="mt-2 font-mono text-[11px] text-ink-400">source → {path}</div>
+      <div className="mt-2 font-mono text-[13px] text-ink-400">source → {path}</div>
       {children}
     </div>
   );
@@ -83,7 +83,7 @@ export function Eyebrow({ children, className = '', size = 'md' }: { children: R
 
 export function Kbd({ children }: { children: ReactNode }) {
   return (
-    <kbd className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-ink-600 bg-ink-850 px-1 font-mono text-[10px] text-ink-300">
+    <kbd className="inline-flex h-6 min-w-6 items-center justify-center rounded border border-ink-600 bg-ink-850 px-1.5 font-mono text-[12px] text-ink-300">
       {children}
     </kbd>
   );
@@ -230,7 +230,7 @@ export function Select<T extends string>({
           open ? 'border-signal/50' : 'border-ink-700 hover:border-ink-500'
         }`}
       >
-        <span className={`truncate ${current ? 'text-ink-100' : 'text-ink-500'}`}>{current?.label ?? placeholder}</span>
+        <span className={`truncate ${current ? 'text-ink-100' : 'text-ink-400'}`}>{current?.label ?? placeholder}</span>
         <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`shrink-0 text-ink-400 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
           <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

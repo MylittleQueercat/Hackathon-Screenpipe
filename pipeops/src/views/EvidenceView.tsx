@@ -16,7 +16,7 @@ export function EvidenceView({ experiment, run }: { experiment: Experiment; run:
 function NoCheckDetail({ run }: { run: Run }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-10">
-      <Eyebrow size="lg">Evidence explorer · run/{run.id}</Eyebrow>
+      <Eyebrow size="lg">Evidence explorer</Eyebrow>
       <div className="mt-4 text-[68px] font-semibold leading-none tracking-tightest text-ink-50">
         {run.metrics.qualityPassed}/{run.metrics.qualityTotal}
         <span className="ml-3 text-[32px] font-normal text-ink-400">checks passed</span>
@@ -70,7 +70,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
     <div className="flex h-full">
       {/* -------- lenses -------- */}
       <aside className="flex w-[400px] shrink-0 flex-col border-r border-ink-800 px-10 py-8">
-        <Eyebrow size="lg">Evidence explorer · run/{run.id}</Eyebrow>
+        <Eyebrow size="lg">Evidence explorer</Eyebrow>
         <h2 className="mt-3 text-[44px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
           Why did each check pass?
         </h2>
@@ -93,7 +93,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
         {!lensesMapped && (
           <div className="mt-4">
             <Missing size="sm" path="checks[].lens" />
-            <p className="mt-2 text-[14.5px] leading-relaxed text-ink-500">
+            <p className="mt-2 text-[14.5px] leading-relaxed text-ink-400">
               The artifact does not say which lens each check belongs to, so lens filters show no checks yet.
             </p>
           </div>
@@ -138,7 +138,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
             </span>
           </div>
           {lens !== null && (
-            <div className="absolute inset-x-0 -bottom-9 text-center font-mono text-[13px] text-ink-500">
+            <div className="absolute inset-x-0 -bottom-9 text-center font-mono text-[13px] text-ink-400">
               {lensesMapped ? `${lensCount(lens)} checks in this lens` : '0 checks mapped to this lens · lens not in artifact'}
             </div>
           )}
@@ -171,7 +171,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                 <div className="text-[32px] font-semibold tracking-tight text-ink-50">{check.name}</div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  <div className="text-[32px] font-semibold tracking-tight text-ink-500">Unnamed check</div>
+                  <div className="text-[32px] font-semibold tracking-tight text-ink-400">Unnamed check</div>
                   <Missing size="sm" path={`checks[${selected}].name`} />
                 </div>
               )}
@@ -195,7 +195,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                   className={`mt-2 flex items-start gap-2 text-[15.5px] leading-relaxed ${check.inStages ? 'text-ink-300' : 'text-cost'}`}
                   title="Reported by the grader (in_stages), not scored"
                 >
-                  <span className="mt-[3px] font-mono text-[12px] uppercase tracking-widest text-ink-500">in steps</span>
+                  <span className="mt-[3px] font-mono text-[12px] uppercase tracking-widest text-ink-400">in steps</span>
                   {check.inStages
                     ? 'Its words are in the workflow’s steps: the workflow says what to do.'
                     : 'Passes on wording only: the words appear in a variation, question or limitation, not in the steps.'}
@@ -203,17 +203,13 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
               )}
             </div>
 
-            {/* why */}
-            <div className="mt-6">
-              <Eyebrow size="lg">Why</Eyebrow>
-              <div className="mt-2">
-                {check.reason ? (
-                  <p className="text-[17.5px] leading-relaxed text-ink-100">{check.reason}</p>
-                ) : (
-                  <Missing path={`checks[${selected}].reason`} />
-                )}
+            {/* why: only when the grader recorded a reason */}
+            {check.reason && (
+              <div className="mt-6">
+                <Eyebrow size="lg">Why</Eyebrow>
+                <p className="mt-2 text-[17.5px] leading-relaxed text-ink-100">{check.reason}</p>
               </div>
-            </div>
+            )}
 
             {/* expected vs actual */}
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -236,10 +232,6 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                 )}
               </div>
             </div>
-
-            <p className="mt-auto pt-4 font-mono text-[13px] leading-relaxed text-ink-600">
-              Nothing in this dossier is generated. Empty fields fill in when the run's evaluation JSON is connected.
-            </p>
           </motion.div>
         </AnimatePresence>
       </aside>
@@ -259,7 +251,7 @@ function LensRow({ label, count, active, onClick }: { label: string; count: numb
         <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-signal' : 'bg-ink-600'}`} />
         {label}
       </span>
-      <span className="tnum font-mono text-[14.5px] text-ink-500">{count ?? '—'}</span>
+      <span className="tnum font-mono text-[14.5px] text-ink-400">{count ?? '—'}</span>
     </button>
   );
 }
@@ -278,9 +270,9 @@ function NavBtn({ children, onClick }: { children: React.ReactNode; onClick: () 
 function Side({ label, value, path }: { label: string; value: string | null; path: string }) {
   return (
     <div className={`min-h-[96px] rounded-xl border p-3 ${value ? 'border-ink-700 bg-ink-900' : 'hatch-muted border-dashed border-ink-700'}`}>
-      <div className="font-mono text-[13px] uppercase tracking-widest text-ink-500">{label}</div>
+      <div className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</div>
       <div className="mt-2 max-h-[190px] overflow-y-auto pr-1 text-[16.5px] leading-snug text-ink-100">
-        {value ?? <span className="break-all font-mono text-[13px] text-ink-500">— {path}</span>}
+        {value ?? <span className="break-all font-mono text-[13px] text-ink-400">— {path}</span>}
       </div>
     </div>
   );
@@ -327,7 +319,7 @@ function Matching({ run }: { run: Run }) {
         <Column items={right} label="generated" rowH={rowH} />
       </div>
       {!ready && (
-        <div className="mt-3 text-center font-mono text-[13px] text-ink-500">
+        <div className="mt-3 text-center font-mono text-[13px] text-ink-400">
           matching appears when groundTruth and generatedWorkflows are in the run JSON · slot count is illustrative
         </div>
       )}
@@ -343,7 +335,7 @@ function Column({ items, label, rowH }: { items: (WorkflowRecord | null)[]; labe
           {w ? (
             <div title={w.title} className="w-full min-w-0 truncate rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-[15.5px] text-ink-100">{w.title}</div>
           ) : (
-            <div className="flex w-full items-center justify-between rounded-lg border border-dashed border-ink-700 px-3 py-2 font-mono text-[13px] text-ink-600">
+            <div className="flex w-full items-center justify-between rounded-lg border border-dashed border-ink-700 px-3 py-2 font-mono text-[13px] text-ink-500">
               <span>{label}</span>
               <span>—</span>
             </div>

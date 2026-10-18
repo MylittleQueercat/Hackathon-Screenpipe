@@ -183,9 +183,9 @@ export function LoadView({
             ))}
           </div>
           <div className="mt-5 flex-1 space-y-3 overflow-y-auto pr-2">
-            {runs === null && !backendError && <p className="font-mono text-[16px] text-ink-500">loading runs…</p>}
-            {runs?.length === 0 && source === 'local' && <p className="text-[17px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
-            {runs?.length === 0 && source === 'demo' && <p className="text-[17px] text-ink-500">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
+            {runs === null && !backendError && <p className="font-mono text-[16px] text-ink-400">loading runs…</p>}
+            {runs?.length === 0 && source === 'local' && <p className="text-[17px] text-ink-400">No completed runs in eval/runs/ yet. Run one on the right.</p>}
+            {runs?.length === 0 && source === 'demo' && <p className="text-[17px] text-ink-400">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
             {runs?.map((r) => (
               <RunCard key={r.id} r={r} active={r.id === currentRunId} loading={loadingId === r.id} onClick={() => loadRecorded(r.id)} />
             ))}
@@ -347,7 +347,7 @@ function CustomSuites({
         aria-expanded={open}
       >
         <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">Custom test suites</span>
-        <span className="flex items-center gap-3 text-[15px] text-ink-500">
+        <span className="flex items-center gap-3 text-[15px] text-ink-400">
           {custom.length} yours
           <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
         </span>
@@ -366,9 +366,9 @@ function CustomSuites({
                 <li key={s.name} className="flex items-center justify-between gap-3 rounded-lg bg-ink-950/60 px-3 py-1.5 text-[15px] text-ink-200">
                   <span className="min-w-0 truncate font-mono">
                     {s.name}
-                    <span className="text-ink-500">{s.broken ? ' · unreadable' : ` · ${s.jobs} jobs · ${s.checks} checks`}</span>
+                    <span className="text-ink-400">{s.broken ? ' · unreadable' : ` · ${s.jobs} jobs · ${s.checks} checks`}</span>
                   </span>
-                  <span className="flex shrink-0 gap-3 text-ink-500">
+                  <span className="flex shrink-0 gap-3 text-ink-400">
                     <button className="hover:text-signal" onClick={() => edit(s.name)}>edit</button>
                     <button className="hover:text-cost disabled:opacity-40" disabled={disabled} onClick={() => remove(s.name)}>remove</button>
                   </span>
@@ -378,7 +378,7 @@ function CustomSuites({
           )}
 
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">suite name</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">suite name</span>
             <input
               className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 font-mono text-[16px] text-ink-100"
               value={name}
@@ -387,7 +387,7 @@ function CustomSuites({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">suite definition (JSON)</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">suite definition (JSON)</span>
             <textarea
               className="h-48 w-full resize-y rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[14px] leading-snug text-ink-100"
               value={text}
@@ -418,7 +418,7 @@ function CustomSuites({
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-1 flex-col gap-1.5">
-      <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">{label}</span>
+      <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</span>
       {children}
     </label>
   );
@@ -442,10 +442,10 @@ function RunCard({ r, active, loading, onClick }: { r: RunSummary; active: boole
             complete
           </span>
         </div>
-        <div className="mt-2 font-mono text-[15px] text-ink-500">
+        <div className="mt-2 font-mono text-[15px] text-ink-400">
           suite {r.suite ?? '—'} · seed {r.seed ?? '—'} · phase{r.phases.length > 1 ? 's' : ''} {r.phases.join(', ')}
         </div>
-        <div className="mt-1 font-mono text-[13.5px] text-ink-600">finished {when}</div>
+        <div className="mt-1 font-mono text-[13.5px] text-ink-500">finished {when}</div>
       </div>
       <span className={`text-[16px] font-medium ${loading ? 'text-signal' : 'text-ink-300 group-hover:text-signal'}`}>
         {loading ? 'Loading…' : 'Load →'}
