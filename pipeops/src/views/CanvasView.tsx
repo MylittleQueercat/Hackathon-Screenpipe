@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Experiment, Run, StageId, WorkflowRecord } from '../data/schema';
-import { ArrowRight, Badge, CountUp, Eyebrow, GhostButton, Missing, MissingBlock, PlayIcon, PrimaryButton } from '../components/ui';
+import { ArrowRight, CountUp, Eyebrow, GhostButton, Missing, MissingBlock, PlayIcon, PrimaryButton } from '../components/ui';
 import { fmtSeconds, pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
 
@@ -80,14 +80,8 @@ export function CanvasView({
       {/* ---------------- canvas ---------------- */}
       <div className="relative flex flex-1 flex-col px-10 pt-6">
         <div className="flex items-center justify-between">
-          <div>
-            <Eyebrow size="lg">Experiment canvas · run/{run.id}</Eyebrow>
-            <div className="mt-1.5 text-[25px] font-medium tracking-tight text-ink-100">
-              How recorded activity becomes evaluated workflows
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Badge size="lg" kind="recorded" label="Recorded run" />
+          <div className="text-[25px] font-medium tracking-tight text-ink-100">
+            How recorded activity becomes evaluated workflows
           </div>
         </div>
 
@@ -340,7 +334,7 @@ function StageStatus({ phase, p }: { phase: number; p: number }) {
         <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-signal" /> playing
       </span>
     );
-  if (phase > p) return <span className="font-mono text-[13px] uppercase tracking-widest text-ink-300">✓ recorded</span>;
+  if (phase > p) return <span className="font-mono text-[15px] text-signal">✓</span>;
   return <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">queued</span>;
 }
 
@@ -405,9 +399,8 @@ function Inspector({
     return (
       <div className="flex h-full flex-col">
         <Eyebrow size="lg">Inspector · run</Eyebrow>
-        <div className="mt-3 flex items-center gap-3">
-          <span className="text-[44px] font-semibold tracking-tight text-ink-50">{run.label}</span>
-          <Badge size="lg" kind="recorded" />
+        <div className="mt-3 truncate whitespace-nowrap text-[34px] font-semibold tracking-tight text-ink-50" title={run.label}>
+          {run.label}
         </div>
         <div className="mt-8 divide-y divide-ink-800 border-y border-ink-800">
           <BigStat label="model requests" value={<CountUp value={run.metrics.modelRequests} />} />
@@ -424,7 +417,9 @@ function Inspector({
               <div key={s.id} className="flex items-center justify-between text-[16.5px]">
                 <span className="text-ink-200">{s.name}</span>
                 {run.stages[s.id]?.modelRequests != null ? (
-                  <span className="tnum font-mono text-ink-100">{run.stages[s.id].modelRequests} req</span>
+                  <span className="tnum font-mono text-signal">
+                    {run.stages[s.id].modelRequests} <span className="text-ink-400">req</span>
+                  </span>
                 ) : (
                   <Missing size="sm" path={`stages.${s.id}.modelRequests`} />
                 )}
@@ -448,10 +443,7 @@ function Inspector({
           Stage {pad2(i + 1)} / {pad2(experiment.stages.length)}
         </Eyebrow>
         <div className="mt-2 text-[60px] font-semibold leading-none tracking-tightest text-ink-50">{s.name}</div>
-        <div className="mt-4 flex items-start gap-3">
-          <p className="text-[19px] leading-relaxed text-ink-300">{s.summary}</p>
-          {s.summaryStatus === 'draft' && <Badge size="lg" kind="placeholder" label="draft copy" />}
-        </div>
+        <p className="mt-4 text-[19px] leading-relaxed text-ink-300">{s.summary}</p>
         <div className="mt-8 space-y-4">
           <Field label="Model requests" value={rec?.modelRequests} path={`${base}.modelRequests`} />
           <Field label="Runtime" value={rec?.runtimeSeconds != null ? `${rec.runtimeSeconds}s` : null} path={`${base}.runtimeSeconds`} />
@@ -589,7 +581,7 @@ function BigStat({ label, value, sub }: { label: string; value: ReactNode; sub?:
     <div className="flex items-end justify-between py-5">
       <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</span>
       <span className="text-right">
-        <span className="tnum block text-[56px] font-semibold leading-none tracking-tightest text-ink-50">{value}</span>
+        <span className="tnum block text-[56px] font-semibold leading-none tracking-tightest text-signal">{value}</span>
         {sub && <span className="mt-1 block font-mono text-[14.5px] text-ink-400">{sub}</span>}
       </span>
     </div>

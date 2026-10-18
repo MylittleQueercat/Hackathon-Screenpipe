@@ -75,7 +75,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
           Why did each check pass?
         </h2>
         <p className="mt-4 text-[17.5px] leading-relaxed text-ink-400">
-          Pick a lens, then a check. Each verdict is traced back to the artifact field it came from.
+          Pick a lens, then a check.
         </p>
 
         <div className="mt-10 flex flex-col gap-1.5">
@@ -186,9 +186,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                   </span>
                   {check.passed ? 'Passed' : 'Failed'}
                 </span>
-                <Badge size="lg" kind="recorded" />
               </div>
-              <p className="mt-3 text-[16.5px] leading-relaxed text-ink-300">Verdict recorded in the evaluation artifact.</p>
               {/* in_stages: reported by the grader for passing keyword checks, never scored */}
               {check.passed && check.inStages != null && (
                 <p
@@ -294,7 +292,7 @@ function Matching({ run }: { run: Run }) {
     <div className="mt-10 w-full max-w-[900px]">
       <div className="mb-3 flex items-center justify-between">
         <Eyebrow size="lg">Expected workflows ↔ agent output</Eyebrow>
-        {ready ? <Badge size="lg" kind="recorded" /> : <Badge size="lg" kind="placeholder" />}
+        {!ready && <Badge size="lg" kind="placeholder" />}
       </div>
       <div className="relative grid grid-cols-[1fr_200px_1fr]" style={{ height }}>
         <Column items={left} label="ground truth" rowH={rowH} />

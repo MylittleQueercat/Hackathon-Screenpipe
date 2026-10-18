@@ -162,7 +162,7 @@ export function ReplayView({
             Replay a stage. Resume from a snapshot.
           </h2>
           <p className="mt-2 text-[19px] text-ink-300">
-            Test individual workflow stages without restarting the entire evaluation pipeline.
+            Rerun one agent without rerunning the whole pipeline.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -246,9 +246,6 @@ export function ReplayView({
 
         {/* origin */}
         <Dot x={ORIGIN_X} y={MAIN_Y} label="recorded activity" />
-        <div className="absolute font-mono text-[13px] uppercase tracking-widest text-ink-400" style={{ left: ORIGIN_X - 4, top: MAIN_Y - 58 }}>
-          recorded · run/{run.id}
-        </div>
 
         {/* main-line stage nodes */}
         {stages.map((s, i) => {
@@ -263,7 +260,7 @@ export function ReplayView({
               tone={replaced ? 'faded' : reused ? 'reused' : 'recorded'}
               title={s.name}
               index={i}
-              tag={reused ? 'reused from snapshot' : i === selIdx ? 'replay starts here' : 'recorded'}
+              tag={reused ? 'reused from snapshot' : i === selIdx ? 'replay starts here' : ''}
             />
           );
         })}
@@ -281,9 +278,6 @@ export function ReplayView({
         </motion.div>
 
         {/* branch nodes */}
-        <div className="absolute whitespace-nowrap font-mono text-[13px] uppercase tracking-widest text-signal/80" style={{ left: ORIGIN_X - 4, top: BRANCH_Y + 46 }}>
-          replay/{run.id}@{sel.id} · config {config.label}
-        </div>
         <AnimatePresence>
           {downstream.map((s, k) => {
             const i = selIdx + k;
@@ -561,7 +555,7 @@ function GraphNode({
         <span className="text-[20px] font-semibold tracking-tight">{title}</span>
         <span className="font-mono text-[12px] opacity-60">{pad2(index + 1)}</span>
       </span>
-      <span className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.1em] opacity-70">{tag}</span>
+      {tag && <span className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.1em] opacity-70">{tag}</span>}
     </motion.button>
   );
 }
