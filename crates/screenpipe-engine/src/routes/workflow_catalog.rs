@@ -151,6 +151,25 @@ pub struct CommitRequest {
     pub draft_id: Option<String>,
 }
 
+/// Whether a proposal may commit onto this catalog. A reviewed draft that only
+/// creates workflows cannot overwrite another change, so parallel publications
+/// need not wait on one another; updating an existing workflow still needs the
+/// catalog the agent read.
+pub(super) fn catalog_current(
+    catalog: &Value,
+    expected: u64,
+    workflows: &[Value],
+    draft: bool,
+) -> bool {
+    let revision = catalog["revision"].as_u64().unwrap_or(0);
+    revision == expected
+        || (draft
+            && expected < revision
+            && workflows
+                .iter()
+                .all(|w| w["id"].as_str().is_none_or(str::is_empty)))
+}
+
 /// Preserve identity and user-owned corrections. Absence from a partial scan
 /// never removes an existing workflow. No semantic matching in infrastructure.
 pub fn reconcile(mut previous: Value, updates: Vec<Value>, through: &str) -> Result<Value, String> {
@@ -351,7 +370,12 @@ pub(crate) async fn commit(
             ));
         }
     }
-    if previous["revision"].as_u64().unwrap_or(0) != body.expected_revision {
+    if !catalog_current(
+        &previous,
+        body.expected_revision,
+        &body.workflows,
+        body.draft_id.is_some(),
+    ) {
         return Err(error(
             StatusCode::CONFLICT,
             "Catalog changed. Read it again before proposing updates.",
@@ -483,7 +507,12 @@ pub(crate) async fn commit(
             ));
         }
     }
-    if previous["revision"].as_u64().unwrap_or(0) != body.expected_revision {
+    if !catalog_current(
+        &previous,
+        body.expected_revision,
+        &body.workflows,
+        body.draft_id.is_some(),
+    ) {
         return Err(error(
             StatusCode::CONFLICT,
             "Catalog changed. Read it again before proposing updates.",
@@ -841,5 +870,16 @@ mod tests {
         let result = reconcile(old, vec![], "now").unwrap();
         assert_eq!(result["analysis"]["workflows"].as_array().unwrap().len(), 1);
         assert_eq!(result["changes"], json!({"created":0,"updated":0}));
+    }
+    #[test]
+    fn a_new_reviewed_workflow_commits_onto_a_newer_catalog_but_an_update_does_not() {
+        let catalog = json!({"revision":5});
+        let new = [json!({"title":"Reconcile invoices"})];
+        let update = [json!({"id":"wf-a","title":"Reconcile invoices"})];
+        assert!(catalog_current(&catalog, 5, &update, true));
+        assert!(catalog_current(&catalog, 4, &new, true));
+        assert!(!catalog_current(&catalog, 4, &update, true));
+        assert!(!catalog_current(&catalog, 4, &new, false));
+        assert!(!catalog_current(&catalog, 6, &new, true));
     }
 }

@@ -99,6 +99,8 @@ pub fn start(ws: &mut Value, catalog: &Value) {
         ws["cycle"]["status"] = json!("running");
         ws["cycle"].as_object_mut().unwrap().remove("pausedAt");
         ws["revision"] = json!(revision(ws) + 1);
+        // Nothing read before Stop may publish after Resume.
+        ws["resumedRevision"] = ws["revision"].clone();
         return;
     }
     if !ws["cycle"].is_null() && ws["cycle"]["status"] == "running" {
@@ -270,7 +272,17 @@ pub fn check_publish(ws: &Value, rev: u64, id: Option<&str>) -> Result<(), Strin
             return Ok(());
         }
     }
-    if revision(ws) != rev {
+    // A draft publication needs only that draft unchanged since the revision Review
+    // read, so independent drafts can be published in parallel. Finish needs it all.
+    let current = match id.and_then(|id| ws["drafts"][id]["version"].as_u64()) {
+        Some(version) => {
+            version <= rev
+                && rev <= revision(ws)
+                && rev >= ws["resumedRevision"].as_u64().unwrap_or(0)
+        }
+        None => revision(ws) == rev,
+    };
+    if !current {
         return Err("Workspace changed. Read context before publishing.".into());
     }
     if ws["cycle"]["status"] != "running" {
@@ -848,6 +860,44 @@ mod tests {
         assert!(check_publish(&ws, rev, Some(&b)).is_ok());
         assert!(assigned(&ws, TASKS[1]));
         assert!(!can_finish(&ws));
+    }
+    #[test]
+    fn independent_drafts_publish_in_parallel_but_an_edited_draft_does_not() {
+        let mut ws = empty();
+        start(&mut ws, &json!({}));
+        let mut ids = Vec::new();
+        for _ in 0..2 {
+            let c = change("propose", &ws, None, Some(TASKS[2]));
+            ids.push(
+                apply(&mut ws, TASKS[0], &c).unwrap()["draft_id"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+        let (a, b) = (&ids[0], &ids[1]);
+        let read = revision(&ws);
+        // Publishing or marking one draft does not make the other stale.
+        let version = ws["drafts"][a]["version"].as_u64().unwrap();
+        assert!(set_publication_retry(&mut ws, version, a, true));
+        published(&mut ws, Some(a), None, &json!({"changes":{"created":1}}));
+        assert!(check_publish(&ws, read, Some(b)).is_ok());
+        assert!(check_publish(&ws, revision(&ws) + 1, Some(b)).is_err());
+        // Finish still needs the whole workspace as read.
+        assert!(check_publish(&ws, read, None).is_err());
+        // An edit after the read makes that draft stale.
+        let c = change("handoff", &ws, Some(b.clone()), Some(TASKS[2]));
+        let mut edit = c;
+        edit.payload = Some(json!({"title":"Reconcile invoices, edited"}));
+        apply(&mut ws, TASKS[2], &edit).unwrap();
+        assert!(check_publish(&ws, read, Some(b)).is_err());
+        assert!(check_publish(&ws, revision(&ws), Some(b)).is_ok());
+        // Nothing read before Stop publishes after Resume.
+        let before_stop = revision(&ws);
+        pause(&mut ws);
+        start(&mut ws, &json!({}));
+        assert!(check_publish(&ws, before_stop, Some(b)).is_err());
+        assert!(check_publish(&ws, revision(&ws), Some(b)).is_ok());
     }
     #[test]
     fn completion_requires_all_work_and_keeps_fixed_requested_end() {

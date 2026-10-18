@@ -137,7 +137,12 @@ pub(crate) async fn update(
             let mut current = workspace::state(&previous);
             workspace::check_publish(&current, rev, Some(id))
                 .map_err(|e| error(StatusCode::CONFLICT, &e))?;
-            if previous["revision"].as_u64().unwrap_or(0) != catalog_revision {
+            if !super::workflow_catalog::catalog_current(
+                &previous,
+                catalog_revision,
+                &workflows,
+                true,
+            ) {
                 return Err(error(
                     StatusCode::CONFLICT,
                     "Catalog changed. Read context again.",
