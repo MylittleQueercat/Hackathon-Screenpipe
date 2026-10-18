@@ -10,13 +10,14 @@ const SLIDES = ['Claim', 'Three engines', 'Replay', 'Compare', 'Takeaways']
 const val = (id: CandidateId, k: 'requests' | 'seconds' | 'rejected') => mid(review[id].m[k])
 const pctChange = (a: number, b: number) => Math.round(((b - a) / a) * 100)
 
-function Slide({ id, title, lead, children }: { id: string; title: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
+/** One full-height view. Dense slides pass `compact` so their content fits and stays centred. */
+function Slide({ id, title, lead, compact, children }: { id: string; title: React.ReactNode; lead?: React.ReactNode; compact?: boolean; children?: React.ReactNode }) {
   return (
-    <section id={id} data-slide className="flex min-h-screen items-center py-24">
+    <section id={id} data-slide className="flex min-h-[100dvh] snap-start items-center pb-6 pt-16">
       <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-        <h2 className="display max-w-4xl text-4xl font-semibold leading-[1.05] md:text-6xl">{title}</h2>
-        {lead && <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted md:text-xl">{lead}</p>}
-        {children && <div className="mt-10">{children}</div>}
+        <h2 className={`display max-w-4xl font-semibold leading-[1.05] ${compact ? 'text-3xl md:text-4xl' : 'text-4xl md:text-6xl'}`}>{title}</h2>
+        {lead && <p className={`max-w-2xl leading-relaxed text-muted ${compact ? 'mt-3 text-base md:text-lg' : 'mt-5 text-lg md:text-xl'}`}>{lead}</p>}
+        {children && <div className={compact ? 'mt-6' : 'mt-10'}>{children}</div>}
       </div>
     </section>
   )
@@ -218,23 +219,23 @@ export default function App() {
       </Slide>
 
       <div id="slide-1" />
-      <Slide id="engines" title="Three engines, one Review step." lead="Same agent, same prompt, same drafts. Only the engine’s answers change.">
+      <Slide compact id="engines" title="Three engines, one Review step." lead="Same agent, same prompt, same drafts. Only the engine’s answers change.">
         <Engines />
       </Slide>
 
       <div id="slide-2" />
-      <Slide id="replay" title="Watch the runs, request by request." lead="Each tick is a model request, each dot a workspace call. Red is the engine saying no. All three on the same time axis.">
+      <Slide compact id="replay" title="Watch the runs, request by request." lead="Each tick is a model request, each dot a workspace call. Red is the engine saying no. All three on the same time axis.">
         <Replay />
         <p className="mt-3 text-xs text-faint">Baseline: requests and calls come from the saved snapshot’s request log, which does not record each call’s reply, so its dots are grey.</p>
       </Slide>
 
       <div id="slide-3" />
-      <Slide id="compare" title="Pick two engines, see the difference.">
+      <Slide compact id="compare" title="Pick two engines, see the difference.">
         <Comparator flows={false} />
       </Slide>
 
       <div id="slide-4" />
-      <Slide id="takeaways" title="Fewer retries, same quality.">
+      <Slide compact id="takeaways" title="Fewer retries, same quality.">
         <div className="grid gap-10 md:grid-cols-3">
           <div>
             <h3 className="display text-2xl font-semibold text-ours">What we can say</h3>

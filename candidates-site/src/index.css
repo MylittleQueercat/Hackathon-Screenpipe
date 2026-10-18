@@ -21,7 +21,7 @@
   --ours: 124 155 255; --on-ours: 11 14 26; --mid: 240 185 80; --base: 140 148 170; --bad: 255 107 94;
 }
 
-html { background: rgb(var(--bg)); color: rgb(var(--fg)); scroll-behavior: smooth; scroll-padding-top: 72px; }
+html { background: rgb(var(--bg)); color: rgb(var(--fg)); scroll-behavior: smooth; scroll-padding-top: 0; scroll-snap-type: y proximity; }
 body { font-family: 'Inter Variable', Inter, system-ui, sans-serif; font-feature-settings: 'cv11' 1; -webkit-font-smoothing: antialiased; }
 .num { font-variant-numeric: tabular-nums; }
 .display { font-family: 'Fraunces Variable', Georgia, serif; font-variation-settings: 'SOFT' 50, 'WONK' 0; letter-spacing: -0.02em; }

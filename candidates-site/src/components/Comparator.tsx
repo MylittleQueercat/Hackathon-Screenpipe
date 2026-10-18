@@ -11,7 +11,6 @@ const METRICS: { key: MetricKey; label: string; unit?: string; format: (v: numbe
   { key: 'requests', label: 'Model requests', format: (v) => `${v}` },
   { key: 'output', label: 'Output tokens', format: fmtK },
   { key: 'cacheRead', label: 'Cache read tokens', format: fmtK },
-  { key: 'input', label: 'Input tokens', format: fmtK },
 ]
 
 function Picker({ label, value, onChange, other }: { label: string; value: CandidateId; onChange: (id: CandidateId) => void; other: CandidateId }) {
@@ -75,7 +74,7 @@ export function Comparator({ flows = true }: { flows?: boolean }) {
         <Picker label="Second engine" value={b} onChange={pickB} other={a} />
       </div>
 
-      <p className="display mt-8 max-w-3xl text-2xl font-semibold leading-snug md:text-3xl" aria-live="polite">
+      <p className="display mt-5 max-w-3xl text-xl font-semibold leading-snug md:text-2xl" aria-live="polite">
         <span className="font-mono text-[0.8em]" style={{ color: tone(b) }}>{candidates[b].name}</span> vs{' '}
         <span className="font-mono text-[0.8em]" style={{ color: tone(a) }}>{candidates[a].name}</span>: {summary(a, b)}.
       </p>
@@ -84,7 +83,7 @@ export function Comparator({ flows = true }: { flows?: boolean }) {
         Lower is better on every row.
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-surface">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-surface">
         <table className="num w-full min-w-[620px] border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs font-normal text-faint">
@@ -106,25 +105,25 @@ export function Comparator({ flows = true }: { flows?: boolean }) {
               const better = both && vb < va
               return (
                 <tr key={m.key} className="border-t border-line align-middle">
-                  <th scope="row" className="px-5 py-4 text-left font-medium">
+                  <th scope="row" className="px-5 py-2.5 text-left font-medium">
                     {m.label}
                     {m.unit && <div className="text-xs font-normal text-faint">{m.unit}</div>}
                   </th>
                   {([[a, ra, va], [b, rb, vb]] as const).map(([id, r, v], i) => (
-                    <td key={i} className="px-5 py-4">
+                    <td key={i} className="px-5 py-2.5">
                       {v === undefined ? (
                         <div className="text-sm text-faint">not measured yet</div>
                       ) : (
                         <>
-                          <div className="display text-2xl font-semibold">{fmtRange(m.format, r)}</div>
-                          <div className="mt-2 h-1.5 rounded-full bg-raised">
+                          <div className="display text-xl font-semibold">{fmtRange(m.format, r)}</div>
+                          <div className="mt-1.5 h-1.5 rounded-full bg-raised">
                             <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${(v / max) * 100}%`, background: tone(id) }} />
                           </div>
                         </>
                       )}
                     </td>
                   ))}
-                  <td className="px-5 py-4">
+                  <td className="px-5 py-2.5">
                     {!both ? (
                       <span className="text-faint">n/a</span>
                     ) : va === vb ? (

@@ -114,7 +114,7 @@ export function Replay() {
         </div>
       </div>
 
-      <div className="px-5 py-5">
+      <div className="px-5 py-3">
         {ORDER.map((id) => {
           const c = candidates[id]
           const evs = timelines[id]
@@ -125,7 +125,7 @@ export function Replay() {
           const done = t >= end
           const offsets = clusterOffsets(evs)
           return (
-            <div key={id} className="grid items-center gap-x-4 gap-y-2 py-3 md:grid-cols-[190px_1fr_150px]">
+            <div key={id} className="grid items-center gap-x-4 gap-y-2 py-1.5 md:grid-cols-[190px_1fr_150px]">
               <div className="font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>{c.name}</div>
               <div className="relative h-14 rounded-lg bg-raised">
                 <div className="absolute inset-y-0 left-0 rounded-lg" style={{ width: x(Math.min(t, end)), background: tone(id, 0.14) }} />
@@ -171,7 +171,7 @@ export function Replay() {
         </div>
       </div>
 
-      <div className="min-h-[76px] border-t border-line bg-raised/50 px-5 py-4 text-sm">
+      <div className="min-h-[60px] border-t border-line bg-raised/50 px-5 py-4 text-sm">
         <AnimatePresence mode="wait">
           {selected ? (
             <motion.div key={`${selected.id}-${selected.e.t}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
