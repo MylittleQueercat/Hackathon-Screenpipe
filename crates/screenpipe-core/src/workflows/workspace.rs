@@ -445,7 +445,7 @@ fn unrecorded(item: &Value, catalog: &super::EvidenceCatalog) -> Option<String> 
 /// Why a stage's procedure items fail, at most five, each with its position.
 fn procedure_problems(stage: &Value, catalog: &super::EvidenceCatalog) -> String {
     let evidence = super::clean_evidence(
-        stage.get("evidence").unwrap_or(&Value::Null),
+        &super::stage_evidence_with_citations(stage),
         catalog.points.len(),
         catalog,
     );

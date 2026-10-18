@@ -370,6 +370,28 @@ pub fn canonical_app_list(
         .collect()
 }
 
+/// A stage's evidence plus the captures its procedure items cite. A cited capture
+/// still has to be recorded (`clean_evidence` resolves it) and hold the item's quote
+/// (`check_procedure_item`); listing it twice is bookkeeping, not provenance.
+pub fn stage_evidence_with_citations(stage: &Value) -> Value {
+    let mut sources = stage
+        .get("evidence")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    for item in stage
+        .get("procedure")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+    {
+        if let (Some(timestamp), Some(app)) = (item.get("timestamp"), item.get("app")) {
+            sources.push(json!({"timestamp": timestamp, "app": app}));
+        }
+    }
+    Value::Array(sources)
+}
+
 pub fn clean_evidence(value: &Value, limit: usize, catalog: &EvidenceCatalog) -> Vec<Value> {
     let mut seen = HashSet::new();
     value
@@ -839,7 +861,7 @@ pub fn normalize_analysis(
             // before limiting supplemental display references, and retain every
             // source cited by a verified procedure.
             let all_evidence = clean_evidence(
-                stage.get("evidence").unwrap_or(&Value::Null),
+                &stage_evidence_with_citations(stage),
                 catalog.points.len(),
                 catalog,
             );
@@ -2266,5 +2288,39 @@ mod quote_tests {
             why.contains("closest passage is \"Name scan-0415.pdf\""),
             "{why}"
         );
+    }
+
+    #[test]
+    fn a_procedure_citation_is_stage_evidence_only_when_recorded_and_quoted() {
+        let at = DateTime::parse_from_rfc3339("2026-10-16T11:29:54.697Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let catalog = EvidenceCatalog {
+            points: vec![EvidencePoint {
+                timestamp: at,
+                app: "TextEdit".into(),
+                detail: "tracker.csv\nscan-0415.pdf,UNKNOWN-DATE".into(),
+                source: "screen".into(),
+                speaker: None,
+            }],
+            ..Default::default()
+        };
+        let item = |quote: &str, when: &str| {
+            json!({"kind":"action","text":"Log the receipt.",
+            "timestamp":when,"app":"TextEdit","quote":quote})
+        };
+        let stage = json!({"evidence": [], "procedure": [
+            item("scan-0415.pdf,UNKNOWN-DATE", "2026-10-16T11:29:54.697Z"),
+            item("scan-0415.pdf,UNKNOWN-DATE", "2026-10-16T11:31:00.000Z"),
+            item("a row nobody typed", "2026-10-16T11:29:54.697Z")]});
+        let evidence = clean_evidence(&stage_evidence_with_citations(&stage), 10, &catalog);
+        assert_eq!(evidence.len(), 1, "the unrecorded citation adds nothing");
+        let checked: Vec<bool> = stage["procedure"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|i| check_procedure_item(i, &evidence).is_ok())
+            .collect();
+        assert_eq!(checked, vec![true, false, false]);
     }
 }

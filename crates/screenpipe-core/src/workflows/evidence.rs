@@ -33,6 +33,15 @@ fn references(
                     .and_then(Value::as_array)
                     .into_iter()
                     .flatten()
+                    // A procedure item's citation is stage evidence too
+                    // (`stage_evidence_with_citations`).
+                    .chain(
+                        stage
+                            .get("procedure")
+                            .and_then(Value::as_array)
+                            .into_iter()
+                            .flatten(),
+                    )
                     .chain(
                         stage
                             .get("timingRuns")
@@ -550,6 +559,25 @@ mod tests {
             1
         );
     }
+    #[test]
+    fn resolves_procedure_citations_as_stage_sources() {
+        let at = "2026-08-01T10:00:00.250Z";
+        let value = json!({"workflows":[{"stages":[{"evidence":[],
+            "procedure":[{"kind":"action","text":"Save it.","timestamp":at,"app":"Editor","quote":"Saved"}]}]}]});
+        let refs = references(
+            &value,
+            DateTime::parse_from_rfc3339("2026-08-01T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            DateTime::parse_from_rfc3339("2026-08-02T00:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        )
+        .unwrap();
+        assert_eq!(refs.len(), 1);
+        assert_eq!(refs[0].1, "Editor");
+    }
+
     #[test]
     fn resolves_timing_boundaries_even_when_not_stage_citations() {
         let start = DateTime::parse_from_rfc3339("2026-08-01T00:00:00Z")
