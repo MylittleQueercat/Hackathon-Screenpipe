@@ -165,7 +165,7 @@ pub(crate) async fn update(
                 super::workflow_catalog::persist(&source, &previous, &next).await?;
             }
         }
-        let result = super::workflow_catalog::commit(
+        let mut result = super::workflow_catalog::commit(
             State(state.clone()),
             Extension(source.clone()),
             perms,
@@ -202,8 +202,18 @@ pub(crate) async fn update(
                     )
                 {
                     let mut next = previous.clone();
-                    next["agentWorkspace"] = ws;
+                    next["agentWorkspace"] = ws.clone();
                     super::workflow_catalog::persist(&source, &previous, &next).await?;
+                }
+                // Marking and clearing the attempt each moved the revision; say where it
+                // is now so the next change is not refused as a conflict.
+                let now = workspace::revision(&ws);
+                if let Err((_, Json(body))) = &mut result {
+                    if let Some(message) = body["error"].as_str() {
+                        body["error"] = json!(format!(
+                            "{message} Workspace revision is now {now}: use it as expected_revision for your next change."
+                        ));
+                    }
                 }
             }
         }
