@@ -47,11 +47,9 @@ const replicateOf = (id: string) => id.match(/-(r\d+)$/)?.[1];
  */
 export function LoadView({
   onLoad,
-  standalone,
   currentRunId,
 }: {
   onLoad: (bundle: RawExperimentBundle, runId: string, origin: DataOrigin) => void;
-  standalone?: boolean;
   currentRunId?: string;
 }) {
   const [source, setSource] = useState<'demo' | 'local'>('demo');
@@ -150,8 +148,7 @@ export function LoadView({
   return (
     <div className="flex h-full flex-col overflow-y-auto px-[120px] py-[72px]">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <Eyebrow size="lg">{standalone ? 'Welcome to the lab' : 'Step 01'} · Load experiment</Eyebrow>
-        <h1 className="mt-5 text-[76px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
+        <h1 className="text-[76px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
           Select or run an experiment.
         </h1>
         <p className="mt-5 max-w-[1040px] text-[21px] leading-relaxed text-ink-300">
