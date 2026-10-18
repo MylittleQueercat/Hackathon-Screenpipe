@@ -102,6 +102,25 @@ async fn handoff_check(
     ))
 }
 
+/// Why a new cycle has nothing to read: the recorder holds no screen or audio
+/// capture after the last cycle's `checkedThrough`. None when there may be
+/// something new, when no cycle has completed yet, or when the recorder cannot
+/// say (a failed check never blocks a cycle).
+async fn nothing_new(state: &AppState, catalog: &Value) -> Option<String> {
+    let through = catalog["checkedThrough"]
+        .as_str()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())?
+        .with_timezone(&Utc);
+    let (frame, audio, _) = state.db.get_latest_timestamps().await.ok()?;
+    match frame.into_iter().chain(audio).max() {
+        Some(latest) if latest > through => None,
+        _ => Some(format!(
+            "Nothing was recorded after {}, the end of the last checked period.",
+            through.to_rfc3339()
+        )),
+    }
+}
+
 fn error(status: StatusCode, message: &str) -> ApiError {
     (status, Json(json!({"error":message})))
 }
@@ -124,8 +143,21 @@ pub(crate) async fn context(
     }
     let catalog = read_catalog(&source).await?;
     let ws = workspace::state(&catalog);
+    let mut ready = workspace::ready(&ws, &query.task);
+    // Discover starts cycles. With nothing recorded since the last completed one, a
+    // scheduled run would spend a model session to find nothing: not ready yet.
+    // A paused cycle stays resumable.
+    let idle = if ready && query.task == workspace::TASKS[0] && ws["cycle"]["status"] == "complete"
+    {
+        nothing_new(&state, &catalog).await
+    } else {
+        None
+    };
+    if idle.is_some() {
+        ready = false;
+    }
     Ok(Json(
-        json!({"task":query.task,"ready":workspace::ready(&ws,&query.task),"canFinish":workspace::can_finish(&ws),"workspace":ws,
+        json!({"task":query.task,"ready":ready,"idle":idle,"canFinish":workspace::can_finish(&ws),"workspace":ws,
         "catalogRevision":catalog["revision"].as_u64().unwrap_or(0),
         "receiptRevision":ws["receipts"][&query.task]["revision"].as_u64().unwrap_or(0)}),
     ))
@@ -334,6 +366,14 @@ pub(crate) async fn update(
                 StatusCode::CONFLICT,
                 "This update was stopped. Resume from Workflows or wait for the next daily update.",
             ));
+        }
+        if ws["cycle"]["status"] == "complete" {
+            if let Some(idle) = nothing_new(&state, &previous).await {
+                return Ok(Json(
+                    json!({"revision":workspace::revision(&ws),"cycle":ws["cycle"],
+                    "idle":format!("{idle} No cycle was started; stop here.")}),
+                ));
+            }
         }
         workspace::start(&mut ws, &previous);
         json!({"revision":workspace::revision(&ws),"cycle":ws["cycle"]})
