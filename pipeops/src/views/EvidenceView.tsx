@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import type { Experiment, Run, WorkflowRecord } from '../data/schema';
 import { CheckRing } from '../components/CheckRing';
-import { Badge, Eyebrow, GhostButton, Missing, PlayIcon } from '../components/ui';
+import { Badge, Eyebrow, Missing, PlayIcon, PrimaryButton } from '../components/ui';
 import { pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
 
@@ -78,7 +78,7 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
           Pick a lens, then a check.
         </p>
 
-        <div className="mt-10 flex flex-col gap-1.5">
+        <div className="mt-12 flex flex-col gap-3">
           <LensRow label="All checks" count={n} active={lens === null} onClick={() => setLens(null)} />
           {experiment.evidenceLenses.map((l) => (
             <LensRow
@@ -99,9 +99,9 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
           </div>
         )}
 
-        <GhostButton size="lg" className="mt-auto self-start" onClick={scan} active={scanning}>
+        <PrimaryButton size="xl" className="mt-auto self-start" onClick={scan}>
           <PlayIcon /> {scanning ? 'Scanning checks…' : 'Scan all checks'}
-        </GhostButton>
+        </PrimaryButton>
       </aside>
 
       {/* -------- instrument -------- */}
@@ -244,15 +244,15 @@ function LensRow({ label, count, active, onClick }: { label: string; count: numb
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition ${
+      className={`flex items-center justify-between rounded-xl px-4 py-4 text-left transition ${
         active ? 'bg-signal/[0.08] text-signal ring-1 ring-signal/50' : 'text-signal/70 hover:bg-ink-900 hover:text-signal'
       }`}
     >
-      <span className="flex items-center gap-3 text-[17.5px]">
+      <span className="flex items-center gap-3 text-[19px]">
         <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-signal' : 'bg-signal/40'}`} />
         {label}
       </span>
-      <span className="tnum font-mono text-[16px] text-current">{count ?? '—'}</span>
+      <span className="tnum font-mono text-[18px] text-current">{count ?? '—'}</span>
     </button>
   );
 }
@@ -285,19 +285,19 @@ function Matching({ run }: { run: Run }) {
   const gen = run.generatedWorkflows;
   const ready = gt !== null && gen !== null;
   const rows = ready ? Math.max(gt.length, gen.length) : 4;
-  const rowH = 44;
+  const rowH = 64;
   const height = rows * rowH + 8;
 
   const left: (WorkflowRecord | null)[] = ready ? gt : Array(rows).fill(null);
   const right: (WorkflowRecord | null)[] = ready ? gen : Array(rows).fill(null);
 
   return (
-    <div className="w-full max-w-[900px]">
-      <div className="mb-3 flex items-center justify-between">
-        <Eyebrow size="lg">Expected workflows ↔ agent output</Eyebrow>
+    <div className="w-full max-w-[960px]">
+      <div className="mb-4 flex items-center justify-between">
+        <Eyebrow size="xl">Expected workflows ↔ agent output</Eyebrow>
         {!ready && <Badge size="lg" kind="placeholder" />}
       </div>
-      <div className="relative grid grid-cols-[1fr_200px_1fr]" style={{ height }}>
+      <div className="relative grid grid-cols-[1fr_140px_1fr]" style={{ height }}>
         <Column items={left} label="ground truth" rowH={rowH} />
         <svg className="h-full w-full" viewBox={`0 0 200 ${height}`} preserveAspectRatio="none">
           {left.map((l, i) => {
@@ -311,7 +311,7 @@ function Matching({ run }: { run: Run }) {
                 d={`M 0 ${y0} C 100 ${y0}, 100 ${y1}, 200 ${y1}`}
                 fill="none"
                 stroke={ready ? 'rgb(var(--signal))' : 'rgb(var(--ink-500))'}
-                strokeWidth="1.5"
+                strokeWidth="2.5"
                 className={ready ? '' : 'dash-flow'}
               />
             );
@@ -334,7 +334,7 @@ function Column({ items, label, rowH }: { items: (WorkflowRecord | null)[]; labe
       {items.map((w, i) => (
         <div key={i} className="flex min-w-0 items-center" style={{ height: rowH }}>
           {w ? (
-            <div title={w.title} className="w-full min-w-0 truncate rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-[15.5px] text-ink-100">{w.title}</div>
+            <div title={w.title} className="w-full min-w-0 truncate rounded-xl border border-ink-600 bg-ink-900 px-4 py-3 text-[18px] text-ink-100">{w.title}</div>
           ) : (
             <div className="flex w-full items-center justify-between rounded-lg border border-dashed border-ink-700 px-3 py-2 font-mono text-[13px] text-ink-500">
               <span>{label}</span>
