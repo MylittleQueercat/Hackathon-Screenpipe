@@ -64,6 +64,24 @@ export interface RunMetrics {
   runtimeSeconds: number;
 }
 
+/**
+ * Model usage of a whole run, summed over its phases. Every field is `null` when the
+ * artifact does not record it — never 0, which would claim "measured, and none".
+ * Token semantics follow the harness (eval/src/wfeval/usage.py): `input` is the uncached
+ * input only; cache reads and writes are reported separately and are NOT part of `input`.
+ */
+export interface Efficiency {
+  requests: number | null;
+  runtimeSeconds: number | null;
+  input: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+  output: number | null;
+  reasoning: number | null;
+  /** Where the token counts were read from. `pipe_logs` is known to undercount long runs. */
+  source: 'request_log' | 'pipe_logs' | 'mixed' | null;
+}
+
 export interface RawRun {
   id: string;
   label: string;
@@ -71,6 +89,8 @@ export interface RawRun {
   status: 'recorded';
   recordedAt: string | null;
   metrics: RunMetrics;
+  /** Absent on the mock placeholder and on artifacts that carry no usage at all. */
+  efficiency?: Efficiency | null;
   stages: Record<StageId, StageRecord>;
   recordedActivity: { description: string; sources?: string[] } | null;
   generatedWorkflows: WorkflowRecord[] | null;

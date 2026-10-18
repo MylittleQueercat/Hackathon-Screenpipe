@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Experiment, Run } from '../data/schema';
+import type { Efficiency, Experiment, Run } from '../data/schema';
 import { CountUp, Eyebrow, Kbd, PlayIcon, PrimaryButton } from '../components/ui';
+import { cacheHitRate, fmtCount, totalTokens } from '../lib/efficiency';
 import { fmtSeconds, pct } from '../lib/format';
 import { usePlayKey } from '../lib/events';
 import { ANIMATED, useTheme } from '../lib/theme';
@@ -44,6 +45,9 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
   const qualityDelta = b.metrics.qualityPassed - a.metrics.qualityPassed;
   const reqDelta = b.metrics.modelRequests - a.metrics.modelRequests;
   const secDelta = b.metrics.runtimeSeconds - a.metrics.runtimeSeconds;
+  const tokA = totalTokens(a.efficiency);
+  const tokB = totalTokens(b.efficiency);
+  const tokShown = totalTokens(shown.efficiency);
 
   return (
     <div className="flex h-full flex-col px-[120px] pt-9">
@@ -98,6 +102,23 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
           tone={mode !== 'A' ? 'cost' : undefined}
         />
         <Lane
+          label="Token usage"
+          sub="input · cache · output"
+          viz={<TokensViz a={a} b={b} mode={mode} />}
+          value={tokShown === null ? <span className="text-ink-600">—</span> : <CountUp value={tokShown} duration={1.6} format={(n) => fmtCount(Math.round(n)) ?? '—'} />}
+          valueSub={tokShown === null ? 'not recorded' : 'total tokens'}
+          delta={
+            showDelta && tokA !== null && tokB !== null && tokA > 0 ? (
+              <DeltaChip tone={tokB > tokA ? 'cost' : 'neutral'}>
+                {tokB >= tokA ? '+' : '−'}
+                {fmtCount(Math.abs(tokB - tokA))} · {tokB >= tokA ? '+' : '−'}
+                {Math.abs(pct(tokA, tokB)).toFixed(1)}%
+              </DeltaChip>
+            ) : null
+          }
+          tone={mode !== 'A' && tokShown !== null && tokA !== null && tokB !== null && tokB > tokA ? 'cost' : undefined}
+        />
+        <Lane
           label="Runtime"
           sub="wall-clock seconds"
           viz={<RuntimeViz a={a} b={b} mode={mode} />}
@@ -134,7 +155,13 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
                 <p className="mt-4 text-[18px] text-ink-300">
                   Same quality ({a.metrics.qualityPassed}/{a.metrics.qualityTotal} → {b.metrics.qualityPassed}/{b.metrics.qualityTotal}),
                   at <span className="text-cost">+{pct(a.metrics.modelRequests, b.metrics.modelRequests).toFixed(1)}% requests</span> and{' '}
-                  <span className="text-cost">+{pct(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds).toFixed(1)}% runtime</span>.
+                  <span className="text-cost">+{pct(a.metrics.runtimeSeconds, b.metrics.runtimeSeconds).toFixed(1)}% runtime</span>
+                  {tokA !== null && tokB !== null && tokA > 0 && (
+                    <>
+                      {' '}and <span className="text-cost">{tokB >= tokA ? '+' : '−'}{Math.abs(pct(tokA, tokB)).toFixed(1)}% tokens</span>
+                    </>
+                  )}
+                  .
                 </p>
               </div>
               <motion.div
@@ -221,7 +248,7 @@ function Lane({
   tone?: 'cost';
 }) {
   return (
-    <div className="flex h-[150px] items-center border-b border-ink-800">
+    <div className="flex h-[128px] items-center border-b border-ink-800">
       <div className="w-[230px] shrink-0">
         <div className="text-[22px] font-medium text-ink-50">{label}</div>
         <div className="mt-1 font-mono text-[11px] text-ink-500">{sub}</div>
@@ -240,6 +267,70 @@ function Lane({
           <AnimatePresence>{delta}</AnimatePresence>
         </div>
       </div>
+    </div>
+  );
+}
+
+const TOKEN_COLS: { label: string; get: (e: Efficiency) => number | null }[] = [
+  { label: 'Input (uncached)', get: (e) => e.input },
+  { label: 'Cache read', get: (e) => e.cacheRead },
+  { label: 'Cache write', get: (e) => e.cacheWrite },
+  { label: 'Output', get: (e) => e.output },
+];
+
+/**
+ * One row per run. A null cell is "not recorded" (an em dash), a recorded zero is "0" —
+ * the two are never mixed. Cache reads and writes are separate columns, not folded into
+ * Input, so nothing is counted twice; the total above is the sum of the four columns.
+ */
+function TokensViz({ a, b, mode }: { a: Run; b: Run; mode: Mode }) {
+  const rows: { tag: string; run: Run }[] = mode === 'AB' ? [{ tag: 'A', run: a }, { tag: 'B', run: b }] : [{ tag: mode, run: mode === 'A' ? a : b }];
+  const cell = (n: number | null, base?: number | null) => (
+    <div className="flex flex-col">
+      <span className={`tnum font-mono text-[20px] ${n === null ? 'text-ink-600' : 'text-ink-100'}`} title={n === null ? 'not recorded' : n.toLocaleString('en-US')}>
+        {fmtCount(n) ?? '—'}
+      </span>
+      {base != null && n !== null && base > 0 && (
+        <span className={`tnum font-mono text-[11px] ${n > base ? 'text-cost' : 'text-ink-500'}`}>
+          {n >= base ? '+' : '−'}
+          {Math.abs(pct(base, n)).toFixed(0)}%
+        </span>
+      )}
+    </div>
+  );
+  const note = (e: Efficiency | null | undefined) =>
+    !e ? 'no usage recorded' : e.source === 'pipe_logs' ? 'partial: pipe logs undercount' : e.source === null ? 'source not recorded' : null;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-end gap-4 pl-7 font-mono text-[10.5px] uppercase tracking-widest text-ink-500">
+        {TOKEN_COLS.map((c) => (
+          <span key={c.label} className="w-[150px]">{c.label}</span>
+        ))}
+        <span className="w-[110px]">Cache hit</span>
+      </div>
+      {rows.map(({ tag, run }) => {
+        const e = run.efficiency;
+        const base = mode === 'AB' && tag === 'B' ? a.efficiency : null;
+        const hit = cacheHitRate(e);
+        const baseHit = base ? cacheHitRate(base) : null;
+        return (
+          <div key={tag} className="flex items-center gap-4">
+            <span className="w-3 font-mono text-[11px] text-ink-500">{tag}</span>
+            {TOKEN_COLS.map((c) => (
+              <div key={c.label} className="w-[150px]">{cell(e ? c.get(e) : null, base ? c.get(base) : null)}</div>
+            ))}
+            <div className="w-[110px]">
+              <span className={`tnum font-mono text-[20px] ${hit === null ? 'text-ink-600' : 'text-ink-100'}`}>
+                {hit === null ? '—' : `${(hit * 100).toFixed(1)}%`}
+              </span>
+              {baseHit !== null && hit !== null && (
+                <div className="tnum font-mono text-[11px] text-ink-500">{((hit - baseHit) * 100).toFixed(1)} pts</div>
+              )}
+            </div>
+            {note(e) && <span className="font-mono text-[11px] text-cost">{note(e)}</span>}
+          </div>
+        );
+      })}
     </div>
   );
 }

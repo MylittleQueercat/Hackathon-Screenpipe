@@ -316,6 +316,22 @@ function buildGroundTruth(truth) {
   return Object.entries(truth.jobs).map(([id, j]) => ({ id, title: j.summary ?? id }));
 }
 
+const USAGE_KEYS = ['requests', 'input', 'cacheRead', 'cacheWrite', 'output', 'reasoning'];
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+/** Usage summed over phases, strictly: a field is null unless every phase recorded it, so a
+ *  run (or a phase) with no usage data is "missing", not zero. */
+export function efficiencyOf(results) {
+  if (!results.length || !results.every((r) => r.usage && typeof r.usage === 'object')) return null;
+  const total = Object.fromEntries(
+    USAGE_KEYS.map((k) => [k, results.every((r) => isNum(r.usage[k])) ? results.reduce((s, r) => s + r.usage[k], 0) : null]),
+  );
+  const sources = new Set(results.map((r) => r.usage.source ?? null));
+  const source = sources.size === 1 && !sources.has(null) ? [...sources][0] : sources.has(null) ? null : 'mixed';
+  const seconds = results.every((r) => isNum(r.seconds)) ? Math.round(results.reduce((s, r) => s + r.seconds, 0)) : null;
+  return { ...total, runtimeSeconds: seconds, source };
+}
+
 export function toRawRun(id, label, role, { run, results, truth, catalogs, phaseMeta }) {
   const passed = results.reduce((s, r) => s + (r.passed ?? 0), 0);
   const scored = results.reduce((s, r) => s + (r.scored ?? 0), 0);
@@ -333,6 +349,7 @@ export function toRawRun(id, label, role, { run, results, truth, catalogs, phase
       modelRequests: requests,
       runtimeSeconds: Math.round(seconds),
     },
+    efficiency: efficiencyOf(results),
     stages: buildStages(results, phaseMeta),
     recordedActivity: null,
     generatedWorkflows: buildWorkflows(results, catalogs),
