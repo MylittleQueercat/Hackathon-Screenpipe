@@ -104,7 +104,7 @@ export default function History() {
           <Block title={PHASE_NAME[3]} note="0 captures">
             <div className="grid grid-cols-[130px_1fr] gap-4">
               <span />
-              <div className="flex h-9 items-center border-b border-dashed border-line font-serif text-xl italic text-muted">nothing is recorded before the next cycle</div>
+              <div className="flex h-9 items-center border-b border-dashed border-line font-serif text-xl italic text-muted">nothing is recorded before the next round</div>
             </div>
           </Block>
         </Card>

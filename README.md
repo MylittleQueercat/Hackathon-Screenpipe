@@ -11,7 +11,7 @@ recorded week of work whose answers we know, grades what they publish, and measu
 cost. We used it on Workflows itself: it found waste, validated fixes, and stopped us from
 claiming more than the data shows.
 
-![The verdict screen](docs/screenshots/pipeops-verdict.png)
+![The result slide](docs/screenshots/slide-4-result.png)
 
 ## What we found
 
@@ -20,7 +20,7 @@ both sides, engine `a8aaee2d6`). The agents run three cycles on synthetic histor
 after 4 recorded days, cycle 2 after a short session where a receipt naming rule changes,
 cycle 3 with nothing new recorded.
 
-| | Baseline | Our changes |
+| | screenpipe today (baseline) | With our fixes |
 |---|---:|---:|
 | Checks passed | 14/14 | **14/14** |
 | Model requests | 213 | **111** (−48%) |
@@ -57,20 +57,23 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Five screens on a fixed 16:9 canvas that scales to the window (`←` `→` or `1`–`5`):
+Four slides tell the story; an annex holds the detail for questions. Fixed 16:9 canvas that
+scales to the window (`←` `→`, or `1`–`4`):
 
-1. **Workflows.** What screenpipe Workflows does: four agents turn recorded history into
-   workflows that cite their sources. The question PipeOps answers.
-2. **History.** The week of captures. *Show the planted jobs* reveals what Workflows should
-   find: receipt filing with four exceptions, email attachments, a one-off printer setup
-   that must not become a workflow, and noise.
-3. **Agents.** Discover, Maintain, Deepen and Review on both sides, replayed from their
-   request logs: every model request, every write the Workflows API refused, every reply
-   cut off. Switch to *Cycle 3 · nothing new* to see the idle cycle disappear.
-4. **Findings.** The checks next to the documents the agents published. Click a step to open
-   the capture it cites. *Break it* damages the baseline's workflows four ways; the real
-   grader catches each one with exactly the check it should.
-5. **Verdict.** The numbers above, the judge, and what ships.
+1. **Workflows.** What screenpipe Workflows does: four AI agents read your recorded screen and
+   write down the work you repeat, each step pointing to the screen it came from.
+2. **The exam.** A made-up person, Morgan, and three rounds with an answer key: Morgan's first
+   4 days (2 jobs to find, a one-off and noise to leave out), a new file-name rule for
+   receipts (update the workflow), Morgan away (change nothing, spend nothing).
+3. **The run.** screenpipe today against screenpipe with our fixes, replayed from the request
+   logs: one tick per AI call, with minutes and the exam score per round.
+4. **Result.** Same score, half the AI calls, none when nothing happened; quality too early to
+   tell; the five pull requests.
+
+Annex: **A1 History** (every planted capture on a timeline), **A2 Agents** (per-agent
+requests, refused writes, cut replies), **A3 Grader** (the published workflows with their
+cited captures; *Break it* damages them and the grader catches each one), **A4 Full
+results** (all metrics, the second pair, the judge document by document).
 
 Everything shown is read from `pipeops/src/data/story.json`, built from the real run
 artifacts by `pipeops/scripts/build-story.py`.
@@ -137,7 +140,7 @@ time. Setup and commands: [`eval/README.md`](eval/README.md).
 
 | Part | What it is |
 |---|---|
-| [`pipeops/`](pipeops/) | The five-screen app (React, TypeScript, Tailwind, screenpipe's design system) |
+| [`pipeops/`](pipeops/) | The slides and annex (React, TypeScript, Tailwind, screenpipe's design system) |
 | [`eval/`](eval/README.md) | `wfeval`: generator, seeding, runs, grader, stage replays, comparisons; `eval/judge/` the LLM judge |
 | [`screenpipe/`](screenpipe/) | screenpipe at `a8aaee2d6` plus our changes |
 

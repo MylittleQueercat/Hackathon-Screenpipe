@@ -34,8 +34,8 @@ export interface Story {
 
 export const story = raw as unknown as Story;
 
-export const SIDE_NAME: Record<Side, string> = { base: 'Baseline', stack: 'Our stack' };
-export const PHASE_NAME: Record<number, string> = { 1: 'Cycle 1 · 4 days recorded', 2: 'Cycle 2 · a rule changes', 3: 'Cycle 3 · nothing new' };
+export const SIDE_NAME: Record<Side, string> = { base: 'screenpipe today', stack: 'With our fixes' };
+export const PHASE_NAME: Record<number, string> = { 1: 'Round 1 · first 4 days', 2: 'Round 2 · new naming rule', 3: 'Round 3 · nothing new' };
 export const JOB_NAME: Record<string, string> = { receipts: 'Receipt filing', email: 'Email attachments', printer: 'Printer setup (one-off)', noise: 'Everything else' };
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);

@@ -68,7 +68,7 @@ function Lane({ side, p, span, now }: { side: Side; p: Phase; span: number; now:
       <div className="flex min-w-0 flex-col border-r border-line px-6 py-3">
         <div className="font-sans text-xl font-medium">{SIDE_NAME[side]}</div>
         {idle ? (
-          <div className="flex flex-1 items-center font-serif text-3xl italic text-muted">No cycle ran: nothing new was recorded.</div>
+          <div className="flex flex-1 items-center font-serif text-3xl italic text-muted">Nothing new, so no cycle ran.</div>
         ) : (
           <div className="flex flex-1 flex-col justify-center gap-0.5">
             {AGENTS.map((a) => (

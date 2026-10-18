@@ -28,15 +28,15 @@ export default function Verdict() {
   return (
     <Screen
       title={`${share}% of the requests. Same checks. Quality not settled.`}
-      lede="One complete run per side on the same history, all three cycles."
+      lede="Annex · one complete run per side on the same history, all three rounds (agent cycles)."
     >
       <div className="grid h-full grid-cols-[1fr_640px] gap-5">
         <Card className="flex flex-col px-7 py-5">
           <div className="mb-3 grid grid-cols-[250px_1fr_100px] items-end gap-4">
             <Label className="text-base">Complete pair</Label>
             <div className="flex gap-5 font-sans text-sm text-muted">
-              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-trace" /> Baseline</span>
-              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-ink" /> Our stack</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-trace" /> {SIDE_NAME.base}</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-ink" /> {SIDE_NAME.stack}</span>
             </div>
             <Label className="text-right text-base">Change</Label>
           </div>
@@ -62,11 +62,11 @@ export default function Verdict() {
             })}
           </div>
           <div className="mt-4 border-t border-line pt-3">
-            <Label className="mb-1 text-base">A second pair, stopped after cycle 1</Label>
+            <Label className="mb-1 text-base">A second pair, stopped after round 1</Label>
             <p className="font-serif text-xl leading-snug">
               Requests <Mono className="text-lg">{p2('base').requests} → {p2('stack').requests}</Mono>, checks{' '}
               <Mono className="text-lg">{p2('base').passed}/{p2('base').scored} → {p2('stack').passed}/{p2('stack').scored}</Mono>
-              <span className="text-muted">: cycle 1 varies from run to run as much as the gap. The idle saving is the certain part.</span>
+              <span className="text-muted">: round 1 varies from run to run as much as the gap. The idle saving is the certain part.</span>
             </p>
           </div>
         </Card>
@@ -77,16 +77,16 @@ export default function Verdict() {
             <div className="grid grid-cols-[210px_1fr_1fr] gap-x-3 gap-y-3">
               <span />
               <Label>Pair 1 (complete)</Label>
-              <Label>Pair 2 (cycle 1 only)</Label>
-              <Cellname>Receipt filing, cycle 1</Cellname>
+              <Label>Pair 2 (round 1 only)</Label>
+              <Cellname>Receipt filing, round 1</Cellname>
               <Verdict1 r={row(pair1, 1, 'receipts')} />
               <Verdict1 r={row(pair2, 1, 'receipts')} />
-              <Cellname>Email attachments, cycle 1</Cellname>
+              <Cellname>Email attachments, round 1</Cellname>
               <Verdict1 r={row(pair1, 1, 'email')} />
               {row(pair2, 1, 'email') ? <Verdict1 r={row(pair2, 1, 'email')} /> : <Note>{p2EmailMissing ? 'baseline merged it into receipts: nothing to compare' : 'not judged'}</Note>}
-              <Cellname>Cycles 2 and 3</Cellname>
+              <Cellname>Rounds 2 and 3</Cellname>
               <Note>
-                <b className="font-sans font-medium text-ink">{SIDE_NAME.base} {later.filter((r) => r.verdict === 'base').length} of {later.length}</b>, revising the cycle-1 documents
+                <b className="font-sans font-medium text-ink">{SIDE_NAME.base} {later.filter((r) => r.verdict === 'base').length} of {later.length}</b>, revising the round-1 documents
               </Note>
               <Note>not run</Note>
             </div>

@@ -30,8 +30,8 @@ export default function Findings() {
         <Card className="flex min-h-0 flex-col p-5">
           <div className="mb-2 grid grid-cols-[1fr_88px_108px] items-end gap-2">
             <Label className="text-base">Check</Label>
-            <Label className="text-center text-base">{breaking ? 'Before' : 'Baseline'}</Label>
-            <Label className="text-center text-base">{breaking ? 'After damage' : 'Our stack'}</Label>
+            <Label className="text-center text-base">{breaking ? 'Before' : SIDE_NAME.base}</Label>
+            <Label className="text-center text-base">{breaking ? 'After damage' : SIDE_NAME.stack}</Label>
           </div>
           <ul className="divide-y divide-line">
             {checks.map((c) => {

@@ -5,10 +5,10 @@ import { fmtTime, story } from '../story';
 
 // Roles as the four shipped pipes describe them (crates/screenpipe-core/assets/pipes/workflow-*/pipe.md).
 const ROLES = [
-  { name: 'Discover', does: 'scans new history for jobs you repeat and drafts each one' },
-  { name: 'Maintain', does: 'checks saved workflows against what changed' },
-  { name: 'Deepen', does: 'goes back to the captures and writes the full steps' },
-  { name: 'Review', does: 're-reads the evidence itself, then publishes or sends back' },
+  { name: 'Discover', does: 'spots a job you repeat' },
+  { name: 'Maintain', does: 'updates it when things change' },
+  { name: 'Deepen', does: 'writes the steps' },
+  { name: 'Review', does: 'double-checks, then publishes' },
 ];
 
 export default function Intro() {
@@ -18,13 +18,13 @@ export default function Intro() {
   return (
     <Screen
       title="screenpipe Workflows writes down the work you repeat"
-      lede="It's built into screenpipe: AI agents read your recorded screen history and turn recurring jobs into step-by-step workflows you can review and automate."
+      lede="So you can see it, check it, and choose what to automate."
     >
       <div className="flex h-full flex-col gap-5">
         <div className="grid min-h-0 flex-1 grid-cols-[1fr_48px_1.15fr_48px_1.3fr] items-stretch">
           <Card className="flex min-h-0 flex-col overflow-hidden p-6">
             <Label className="mb-1 text-base">1 · screenpipe records</Label>
-            <p className="mb-4 font-serif text-xl leading-snug">Everything on screen, kept on your computer.</p>
+            <p className="mb-4 font-serif text-xl leading-snug">Every screen you see, kept on your computer.</p>
             <ul className="space-y-2">
               {captures.map((f, i) => (
                 <li key={i} className="rounded-md border border-line px-3 py-2">
@@ -36,8 +36,8 @@ export default function Intro() {
           </Card>
           <Arrow />
           <Card className="flex min-h-0 flex-col overflow-hidden p-6">
-            <Label className="mb-1 text-base">2 · four agents read it, cycle after cycle</Label>
-            <p className="mb-4 font-serif text-xl leading-snug">Each cycle covers what was recorded since the last one.</p>
+            <Label className="mb-1 text-base">2 · four AI agents read it</Label>
+            <p className="mb-4 font-serif text-xl leading-snug">Again and again, as new screens come in.</p>
             <ol className="flex flex-1 flex-col justify-between gap-3">
               {ROLES.map((r) => (
                 <li key={r.name} className="flex items-baseline gap-4 rounded-md border border-line px-4 py-3">
@@ -49,8 +49,8 @@ export default function Intro() {
           </Card>
           <Arrow />
           <Card className="flex min-h-0 flex-col overflow-hidden p-6">
-            <Label className="mb-1 text-base">3 · a workflow you can check</Label>
-            <p className="mb-4 font-serif text-xl leading-snug">Every step cites the capture it came from.</p>
+            <Label className="mb-1 text-base">3 · a written workflow</Label>
+            <p className="mb-4 font-serif text-xl leading-snug">Each step points to the screen it came from.</p>
             <div className="flex-1 rounded-md border border-ink px-5 py-4">
               <div className="font-sans text-xl font-medium leading-snug">{example.title}</div>
               <p className="mt-1 line-clamp-2 font-serif text-lg leading-snug text-muted"><span className="font-sans text-sm text-ink">When </span>{example.trigger}</p>
@@ -71,12 +71,12 @@ export default function Intro() {
         <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-6 rounded-lg border border-ink bg-surface px-8 py-5">
           <div>
             <Label className="mb-1 text-base">The problem</Label>
-            <p className="font-sans text-2xl font-medium leading-snug">When someone changes these agents, do they still find the right work? And what does it cost?</p>
+            <p className="font-sans text-2xl font-medium leading-snug">Are the agents finding the right work? And what does it cost?</p>
           </div>
           <span className="font-mono text-3xl text-faint">→</span>
           <div>
-            <Label className="mb-1 text-base">PipeOps</Label>
-            <p className="font-serif text-2xl leading-snug">Run them on a week where we know the answers. Grade what they publish. Count every request.</p>
+            <Label className="mb-1 text-base">PipeOps, our project</Label>
+            <p className="font-serif text-2xl leading-snug">We built a way to measure it.</p>
           </div>
         </div>
       </div>

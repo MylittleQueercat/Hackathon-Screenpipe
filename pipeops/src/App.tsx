@@ -2,18 +2,24 @@
 // https://screenpipe.com
 import { useEffect, useState } from 'react';
 import Intro from './screens/Intro';
+import Exam from './screens/Exam';
+import Race from './screens/Race';
+import Result from './screens/Result';
 import History from './screens/History';
 import Agents from './screens/Agents';
 import Findings from './screens/Findings';
 import Verdict from './screens/Verdict';
-import { story } from './story';
 
+// The four slides tell the story; the annex holds the detail for questions.
 const STEPS = [
-  { name: 'Workflows', view: Intro },
-  { name: 'History', view: History },
-  { name: 'Agents', view: Agents },
-  { name: 'Findings', view: Findings },
-  { name: 'Verdict', view: Verdict },
+  { key: '1', name: 'Workflows', view: Intro },
+  { key: '2', name: 'The exam', view: Exam },
+  { key: '3', name: 'The run', view: Race },
+  { key: '4', name: 'Result', view: Result },
+  { key: 'A1', name: 'History', view: History, annex: true },
+  { key: 'A2', name: 'Agents', view: Agents, annex: true },
+  { key: 'A3', name: 'Grader', view: Findings, annex: true },
+  { key: 'A4', name: 'Full results', view: Verdict, annex: true },
 ];
 
 // One fixed 16:9 canvas, scaled to the window: the same layout on a laptop and a projector.
@@ -21,7 +27,7 @@ const W = 1600;
 const H = 900;
 
 export default function App() {
-  const [step, setStep] = useState(() => Math.max(0, Math.min(STEPS.length - 1, Number(new URLSearchParams(location.search).get('step') ?? 1) - 1)));
+  const [step, setStep] = useState(() => Math.max(0, Math.min(STEPS.length - 1, (() => { const q = new URLSearchParams(location.search).get('step') ?? '1'; const i = STEPS.findIndex((x) => x.key.toLowerCase() === q.toLowerCase()); return i >= 0 ? i : Number(q) - 1; })())));
   const [scale, setScale] = useState(1);
 
   useEffect(() => {
@@ -37,7 +43,7 @@ export default function App() {
       if (e.key === 'ArrowRight') setStep((s) => Math.min(STEPS.length - 1, s + 1));
       if (e.key === 'ArrowLeft') setStep((s) => Math.max(0, s - 1));
       const n = Number(e.key);
-      if (n >= 1 && n <= STEPS.length) setStep(n - 1);
+      if (n >= 1 && n <= 4) setStep(n - 1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -54,22 +60,20 @@ export default function App() {
           </div>
           <ol className="flex items-center gap-1">
             {STEPS.map((s, i) => (
-              <li key={s.name}>
+              <li key={s.name} className="flex items-center">
+                {s.key === 'A1' && <span className="ml-4 mr-2 border-l border-line pl-4 font-sans text-sm text-faint">Annex</span>}
                 <button
                   type="button"
                   onClick={() => setStep(i)}
                   aria-current={i === step ? 'step' : undefined}
                   className={`flex h-10 items-center gap-2 rounded-md px-3 font-sans text-base ${i === step ? 'bg-signal text-white' : 'text-muted hover:text-ink'}`}
                 >
-                  <span className="font-mono text-sm">{i + 1}</span>
+                  <span className="font-mono text-sm">{s.key}</span>
                   {s.name}
                 </button>
               </li>
             ))}
           </ol>
-          <span className="font-mono text-sm text-faint">
-            {story.suite} · seed {story.seed} · engine {story.engine}
-          </span>
         </nav>
         <main className="min-h-0 flex-1">
           <View />
