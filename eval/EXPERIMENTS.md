@@ -10,6 +10,9 @@ catalog checks after Review, graded with the current truth
 (`usage.workspace` in `results.jsonl`, logged since 2026-10-17 20:00Z). Run ids are
 `runs/<id>`; ask for a run with `wfeval pack`.
 
+The last section, End to end, compares full three-phase runs of baseline and the final
+stack instead.
+
 Reproduce an engine variant: `./setup-engine.sh <variant>`, then
 `uv run wfeval stage snapshots/20261017T145651Z-baseline-receipts-s1/steps/04-p1-workflow-review --variant variants/<variant>.json --repeat <n>`.
 
@@ -347,10 +350,10 @@ runs so far, only that one was hit.
 ## Output cap: replies cut at 4,096 tokens
 
 Every request asks for up to 128,000 output tokens (`max_completion_tokens`, from the
-gateway's own model list), yet 36 of the 1,077 replies in all runs so far stopped at
-exactly 4,096 ("length"). A cut reply is a tool call that never runs: the model is told to
+gateway's own model list), yet 37 of the 1,162 replies in all runs before `max-tokens`
+stopped at exactly 4,096 ("length"). A cut reply is a tool call that never runs: the model is told to
 re-issue it and often writes the same call again (up to 4 cut replies in a row). Replies
-cut this way hold 16.7% of all output tokens across runs, and 55% in full baseline run r4.
+cut this way hold 15.7% of all output tokens across those runs, and 55% in full baseline run r4.
 
 The harness does not change the request: its logger returns pi's payload unchanged, and
 pi's model settings are written by screenpipe's engine from the gateway's model list.
@@ -363,7 +366,214 @@ Probe, two requests to the screenpipe gateway with Claude Sonnet 5 and a 6,000-t
 | `max_completion_tokens` (pi's default) | length | 4,096 |
 | `max_tokens` | length | 6,000 |
 
-The gateway applies `max_tokens` and ignores `max_completion_tokens`; it also accepts
-`max_tokens` 128,000. `max-tokens` (on explain-evidence) has pi send the budget as
+The gateway applies `max_tokens` and ignores `max_completion_tokens`. A third, streamed
+request with `max_tokens` 128,000 and a prompt asking for a very long answer finished
+normally ("stop") after 51,293 output tokens in 619 seconds, so there is no second,
+lower ceiling near the sizes agents write; sending the advertised budget is enough. `max-tokens` (on explain-evidence) has pi send the budget as
 `max_tokens` for Claude models on screenpipe cloud (`compat.maxTokensField`).
-`patches/variants/max-tokens.patch`. Built and tested, not yet run.
+`patches/variants/max-tokens.patch`.
+
+Deepen + Review chain runs from step 03 (same step and history as sections 7, 8 and 10;
+every request now carries `max_tokens: 128000` instead of `max_completion_tokens`):
+
+| Variant | Replies | Cut at 4,096 | Longest reply | Mean output tokens | Requests per run | Checks |
+|---|---|---|---|---|---|---|
+| full-text | 105 | 1 | 4,096 | 26.9k | 43, 30, 32 | 11, 10, 11 |
+| handoff-check | 101 | 0 | 4,003 | 25.4k | 42, 29, 30 | 11, 11, 10 |
+| explain-evidence | 85 | 1 | 4,096 | 27.8k | 31, 27, 27 | 11, 10, 10 |
+| max-tokens | 91 | 0 | 7,679 | 25.1k | 36, 35, 20 | 11, 11, 11 |
+
+No reply was cut; two replies went past 4,096 (7,679 and 4,177) and would have been cut
+before. The chain runs cannot show more than that: they rarely hit the cap (2 cut replies
+in 291). Of the 37 cut replies in all runs, 34 were in full runs, and by agent 19 were in
+Review, 13 in Maintain and 5 in Deepen. Requests (mean 30 against 28) and checks are
+within the run-to-run spread at n=3. What the fix saves shows only in full runs.
+
+
+## quote-hint (on max-tokens)
+
+Most refused handoffs in the runs above are quotes the engine cannot find in the cited
+capture. Of the 28 failing quotes in the max-tokens runs (`.engines/scratch/quote-fails.py`,
+each quote compared with the seeded capture it cites):
+
+| Why the quote is not in the capture's text | Quotes |
+|---|---|
+| It is the window title or URL, which the agent sees but the text does not hold | 9 (+1 title and text together) |
+| Near-exact: added separators (" / ", " > "), changed punctuation or case | 6 |
+| Lines skipped, or paraphrased | 10 |
+| Taken from another capture | 2 |
+
+Now:
+
+- A capture's window title is put before its text where the agent reads captures (the
+  recorder search and the bundle snippets), unless the text already holds it, so a title
+  the agent quotes is in the text it is checked against.
+- A quote that does not match says where the text is closest: "quote is not in the text
+  of the Finder capture at …; its closest passage is "…". Quote consecutive words exactly
+  as captured: skipped lines, added separators or edited words do not match". If no
+  passage shares a third of the quote's words, it gives the start of the capture's text.
+- A timing quote that is too short or missing says so with the limits ("a timing quote
+  needs 12 to 1,200 characters of the capture's text; this one has 7").
+
+Prompts and tool descriptions are unchanged. `patches/variants/quote-hint.patch`.
+
+Free check (`probe-refusals.py`, the 34 refused handoffs of all chain runs replayed as
+they were): max-tokens accepts 0, quote-hint 3 (window titles now in the text).
+
+| Run | Requests (Deepen + Review) | Seconds | Checks | Failed calls | Refused handoffs | Output tokens |
+|---|---|---|---|---|---|---|
+| quote-hint r1 | 28 (16 + 12) | 188 | 10/11 | 3 | 2, both fixed | 18,649 |
+| quote-hint r2 | 33 (24 + 9) | 314 | 11/11 | 6 | 5, 2 fixed | 33,528 |
+| quote-hint r3 | 25 (15 + 10) | 223 | 10/11 | 4 | 3, 1 fixed | 23,441 |
+
+Runs `20261018T014556Z-quote-hint-…-r1/r2/r3`. Mean 29 requests (max-tokens 30), 242 s,
+25.2k output tokens, no reply cut. Within the spread at n=3. The misses are `type_lookup`
+again (see Keyword audit). Refusals per run did not fall (10 in 3 runs): 6 are timing
+quotes or citations of the wrong app, now with the closest passage or the right times,
+1 is a quote too short (now named as such), and 3, one per run, are procedure items
+citing a capture that is quoted correctly but missing from the stage's `evidence` list,
+which the next variant addresses.
+
+## cited-evidence (on quote-hint)
+
+In the quote-hint runs, a common refusal is "add that capture to this stage's evidence":
+Deepen cites a capture in a procedure item, quotes it correctly, and the handoff is
+refused because the stage's `evidence` list does not name it. The citation already
+says which capture it is, so the engine now counts each procedure item's `{timestamp,
+app}` as stage evidence: when it normalizes the stage, when it checks the procedure, and
+when it reads the recorder for sources (at most 240 reads; payloads seen hold at most 13
+citations). A citation still has to be in the recorder and its quote in that capture.
+
+Prompts and tool descriptions are unchanged. `patches/variants/cited-evidence.patch`.
+
+Free check (same 34 refused handoffs): cited-evidence accepts 10 as they were sent
+(quote-hint 3, max-tokens 0).
+
+| Run | Requests (Deepen + Review) | Seconds | Checks | Failed calls | Refused handoffs | Output tokens |
+|---|---|---|---|---|---|---|
+| cited-evidence r1 | 24 (17 + 7) | 212 | 11/11 | 3 | 2, 1 fixed | 21,215 |
+| cited-evidence r2 | 28 (15 + 13) | 282 | 11/11 | 4 | 4, 2 fixed | 31,254 |
+| cited-evidence r3 | 25 (16 + 9) | 208 | 11/11 | 2 | 1, fixed | 20,230 |
+
+Runs `20261018T015628Z-cited-evidence-…-r1/r2/r3`. Mean 26 requests, the lowest of all
+chain variants (max-tokens 30, quote-hint 29, explain-evidence 28, full-text 35), 234 s,
+24.2k output tokens, 11/11 checks in all three runs, no reply cut. Still n=3. None of the
+7 refusals is a missing stage evidence entry (3 in the quote-hint runs): 5 are timing
+quotes or run order, 1 a procedure item citing the wrong app, 1 a procedure quote not in
+its capture; one more handoff was a "workspace changed" conflict (see Not fixed).
+
+## idle-skip (on cited-evidence)
+
+Phase 3 records nothing, yet in full baseline run r4 it cost 93 requests (Discover 9,
+Review 39, Maintain 45; 82,175 output tokens), more than phase 1 (47) or phase 2 (55),
+and changed one workflow while nothing new had happened ("idle churn"). Upstream reports
+Discover ready one hour after the last cycle ended, whether or not anything was recorded
+since, so every hour of an idle machine opens a cycle over an empty period, and that
+cycle wakes Review and Maintain. The harness's phase 3 is one such cycle.
+
+Now, when the last cycle is complete and the recorder holds no frame or audio after the
+catalog's `checkedThrough`:
+
+- the workspace context reports Discover not ready, with `idle`: "Nothing was recorded
+  after …, the end of the last checked period.", so the scheduler starts no model session;
+- `start` returns that message plus "No cycle was started; stop here." and the current
+  cycle unchanged, instead of opening a new cycle (for callers that start a cycle
+  themselves, as the desktop app and the harness do).
+
+As soon as anything is recorded after that point, Discover is ready again and `start`
+opens a cycle as before (`crates/screenpipe-engine/tests/workflow_idle_test.rs`).
+Prompts and tool descriptions are unchanged. `patches/variants/idle-skip.patch`.
+
+Harness: a phase whose start returns `idle` runs no agent and is graded as it stands
+(`cycle_status: idle`); before, the harness waited for the cycle.
+
+Free check (`.engines/scratch/probe-idle.py`, the end of phase 2 of a baseline run
+restored on each engine): baseline reports Discover ready; idle-skip reports it not
+ready with the message above, and `start` leaves the completed cycle as it was.
+
+Full runs (see End to end): phase 3 cost 0 requests on the stack against 56 on baseline
+r5 (93 on r4), and the stack's catalog was left as it was.
+
+## Not fixed
+
+Seen in the runs above and left as they are, because fixing them would change what the
+model is told (prompts or tool descriptions) or they are too rare to measure here:
+
+- Deepen calls `finish` without a note and gets "Include the evidence decision or
+  remaining question in note." (409), then retries with one: about 1 request per run
+  (4 of the 6 quote-hint and cited-evidence runs). The rule is in the engine, but the
+  tool description does not say a note is required.
+- A handoff refused as "workspace changed" (409) in 3 of the 9 max-tokens, quote-hint
+  and cited-evidence runs: one used a stale revision number, one raced a parallel write,
+  one is unclear. The agent reads the context and hands off again, at the cost of one or
+  two requests.
+- A partial `payload` in an edit replaces the whole draft instead of merging (1 of 113
+  edits), losing the fields it left out.
+- `type_lookup` (the workflow names the client-types lookup) fails on every engine from
+  time to time; see Keyword audit.
+
+## The allowance
+
+All runs use the screenpipe gateway on a screenpipe cloud account. The gateway pauses
+workflow requests (`x-screenpipe-workload: pipe`) with `workflow_allowance_paused` once
+the account's weekly combined allowance is 75% used; a run that hits it is marked
+`rerun` and is not a result. The meter is `/v1/usage` → `hosted_ai.allowances`
+(`used_today` does not move). On this account one point of the weekly allowance was
+about 22 to 25 requests of these agents, so a full baseline run (about 195 requests)
+costs about 8 points. The harness never removes the header to get around the pause.
+
+## End to end: baseline against the final stack
+
+Full runs, all three phases (phase 1: four days of history; phase 2: the naming-rule
+change; phase 3: nothing new), the same history (receipts, seed 1), Claude Sonnet 5
+through the screenpipe gateway. `idle-skip` is the final stack: every engine change
+above in order, from second-precision to idle-skip, in one patch
+(`patches/variants/idle-skip.patch`). Instructions, task prompts and tool definitions of
+all four agents hash the same in every run on both sides (`run.json` → `prompts`); only
+the engine's replies differ.
+
+| Run | Phase | Requests (Discover / Deepen / Review / Maintain) | Seconds | Checks | Output tokens | Replies cut at 4,096 |
+|---|---|---|---|---|---|---|
+| baseline r5 | 1 | 86 (21 / 13 / 47 / 5) | 588 | 11/11 | 63,498 | 0 |
+| | 2 | 71 (14 / 13 / 26 / 18) | 512 | 2/2 | 70,932 | 10 |
+| | 3 | 56 (6 / 0 / 32 / 18) | 438 | 1/1, idle churn | 47,944 | 2 |
+| | all | **213** | **1,538** | | **182,374** | 12 |
+| idle-skip r1 | 1 | 57 (17 / 24 / 12 / 4) | 347 | 11/11 | 42,306 | 0 |
+| | 2 | 54 (13 / 14 / 8 / 19) | 272 | 2/2 | 50,196 | 0 |
+| | 3 | 0, no cycle | 0 | 1/1 | 0 | 0 |
+| | all | **111** | **619** | | **92,502** | 0 |
+| baseline r6 | 1 | 48 (16 / 15 / 12 / 5) | 346 | 10/11 | 47,855 | 6 |
+| idle-skip r2 | 1 | 60 (23 / 20 / 13 / 4) | 362 | 11/11 | 44,924 | 0 |
+
+Runs `20261018T020827Z-baseline-…-r5`, `20261018T020907Z-idle-skip-…-r1`,
+`20261018T020847Z-baseline-…-r6` and `20261018T020927Z-idle-skip-…-r2`, all started
+within 60 s of each other. r6 and r2 were stopped in phase 2 to stay under the
+allowance pause (see The allowance); their phase 1 is complete and graded, the partial
+phase 2 is kept in `stopped-phase2/` and not scored. Seconds are the agents' time in
+each phase, not the hour of waiting between cycles.
+
+On the complete pair, the stack took 111 requests against 213 (−48%), 4.0M input
+tokens against 7.8M (cached included, −48%), 92k output tokens against 182k (−49%) and
+619 s of agent time against 1,538 s (−60%), and lost no check. The earlier full baseline
+run r4 (17 October, the same engine binary, before the latest harness changes) took 195 requests,
+6.8M input and 200k output tokens and 1,569 s, with the same checks as r5 except the
+email job in phase 1.
+
+- Phase 3 is the one change that holds by construction: with nothing recorded after the
+  last checked period, the stack opens no cycle, so it costs nothing and changes nothing.
+  Baseline spent 56 requests there (93 in r4) and rewrote the receipt workflow both
+  times (`idle_churn`) with no new evidence.
+- Phases 1 and 2 spent less on the stack (phase 1: 57 and 60 requests against 86, 48 and
+  r4's 47; phase 2: 54 against 71 and r4's 55), but baseline's own spread is wider than
+  the gap: these phases show the direction, not a proven saving.
+- No reply was cut on the stack (`max-tokens`); baseline cut 12 in r5 and 27 in r4,
+  most of them in Review and Maintain in phases 2 and 3.
+- Checks: the stack passed all 11 in both phase-1 runs; baseline missed the email job
+  once (r6 merged it into the receipt workflow; r4 missed it). `wfeval compare` on the
+  four runs: fixed 1, broken 0, p = 1.0, too few runs to call it. Reported, not scored:
+  the stack put `type_lookup` in the stages in 2 of 2 runs (baseline 0 of 2), and
+  `missing_date` and `steps` in 1 of 2 (baseline 2 of 2).
+
+One complete pair and two phase-1 pairs: the idle saving is certain, the rest is a
+consistent direction that more runs would have to confirm. The weekly allowance (38%
+to 69% for these four runs) did not allow more before it resets on 2026-10-22.

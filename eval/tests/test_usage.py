@@ -41,7 +41,12 @@ def test_request_log_is_the_full_record(tmp_path):
     assert (u["source"], u["input"], u["cacheRead"], u["output"], u["requests"], u["tool_calls"]) == \
         ("request_log", 10, 90, 5, 1, 1)
     assert u["peak_context"] == 100 and u["by_task"]["workflow-review"]["requests"] == 1
-    assert phase_usage([], None, log, "2026-10-18T00:00:00+00:00", "2026-10-18T01:00:00+00:00")["source"] == "pipe_logs"
+    later = ("2026-10-18T00:00:00+00:00", "2026-10-18T01:00:00+00:00")
+    idle = phase_usage([], None, log, *later)  # no agent ran: nothing to log
+    assert (idle["source"], idle["requests"], idle["agent_runs"]) == ("request_log", 0, 0)
+    ran = tmp_path / "workflow-review-1.json"  # an agent ran, yet the log has none of it
+    ran.write_text(json.dumps({"pipe_name": "workflow-review", "success": True, "stdout": ""}))
+    assert phase_usage([ran], None, log, *later)["source"] == "pipe_logs"
 
 
 def test_workspace_rejections_are_counted_by_kind(tmp_path):

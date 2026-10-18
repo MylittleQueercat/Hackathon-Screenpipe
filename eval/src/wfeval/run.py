@@ -172,21 +172,26 @@ def run_phase(engine: Engine, phase: int, doc: dict, run_dir: Path, seeded_out, 
     since = datetime.now(timezone.utc).isoformat()
     try:
         started = engine.start_cycle()
-        cycle_id = (started.get("cycle") or {}).get("id") or engine.workspace()["workspace"]["cycle"]["id"]
-        # A provider or account failure makes the phase a rerun, and a swapped model
-        # makes it invalid; stop paying for either.
-        waited = engine.wait_cycle(cycle_id, timeout=timeout,
-                                   abort=lambda execs: classify(execs, since) == "rerun"
-                                   or model_fallback(run_dir) is not None)
-        meta["cycle_status"] = waited["status"]
-        meta["cycle"] = waited["cycle"]
+        if started.get("idle"):
+            # Nothing new was recorded and the engine started no cycle: the catalog
+            # stays as the last cycle left it, and the phase is graded on that.
+            meta["cycle_status"], meta["cycle"], meta["idle"] = "idle", started.get("cycle"), started["idle"]
+        else:
+            cycle_id = (started.get("cycle") or {}).get("id") or engine.workspace()["workspace"]["cycle"]["id"]
+            # A provider or account failure makes the phase a rerun, and a swapped model
+            # makes it invalid; stop paying for either.
+            waited = engine.wait_cycle(cycle_id, timeout=timeout,
+                                       abort=lambda execs: classify(execs, since) == "rerun"
+                                       or model_fallback(run_dir) is not None)
+            meta["cycle_status"] = waited["status"]
+            meta["cycle"] = waited["cycle"]
     except EngineError as e:
         meta["cycle_status"], meta["error"] = "error", str(e)
     meta["seconds"] = round(time.time() - t0, 1)
     executions = {t: engine.executions(t, 100) for t in TASKS}
     meta["model_fallback"] = model_fallback(run_dir)
     meta["status"] = ("invalid" if meta["model_fallback"] else classify(executions, since)
-                      or ("graded" if meta["cycle_status"] == "complete" else "incomplete"))
+                      or ("graded" if meta["cycle_status"] in ("complete", "idle") else "incomplete"))
     (out / "catalog.json").write_text(json.dumps(engine.catalog(), indent=1))
     (out / "workspace.json").write_text(json.dumps(engine.workspace(), indent=1))
     (out / "executions.json").write_text(json.dumps(executions, indent=1))

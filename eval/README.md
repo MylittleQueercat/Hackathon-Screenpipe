@@ -143,6 +143,9 @@ Every live cycle spends the account's AI allowance. Failures of the provider or 
 (allowance, rate limit, sign-in, 5xx) mark a phase `rerun`; it is never scored. A model
 the account's tier does not offer is silently swapped by the engine (to `auto`); the
 harness catches that in the engine log and marks the phase `invalid`, also never scored.
+An engine that declines to start a cycle (its start returns `idle`: nothing was recorded
+after the last checked period, as in `variants/idle-skip.json`) runs no agent in that
+phase; the phase is graded as it stands, with `cycle_status: idle` in its `phase.json`.
 
 ## Stage runs
 
@@ -270,6 +273,12 @@ The same history gave different catalogs: decide nothing from one run per side. 
 email job is found in half the phase-1 runs, the clearest noise so far. The grader
 catches damage to a real catalog (`tests/test_controls.py`): a dropped job, a lost
 exception, invented evidence and merged jobs each cost exactly their check.
+
+Changes to Workflows, one at a time and then all together, are in `EXPERIMENTS.md`. On
+one complete full-run pair (18 October), the final stack (`variants/idle-skip.json`)
+took 111 requests against baseline's 213, 92k output tokens against 182k and 619 s of
+agent time against 1,538 s, with no check lost. The idle phase went from 56 requests to
+none; the gaps in phases 1 and 2 are within baseline's own spread.
 
 ## Limits
 

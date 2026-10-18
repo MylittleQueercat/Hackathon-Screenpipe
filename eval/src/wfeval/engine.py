@@ -269,6 +269,9 @@ class Engine:
         """`startWorkflowJob`: fix the requested end, then run every ready agent."""
         self.post("/workflows/rollout", {"enabled": True})  # in memory: every engine start
         started = self.post("/workflows/workspace", {"action": "start", "task": TASKS[0]})
+        if started.get("idle"):
+            # An engine that skips a cycle with nothing new recorded starts no agent.
+            return {"cycle": started.get("cycle"), "runs": {}, "idle": started["idle"]}
         ready = [t for t in TASKS if self.workspace(t).get("ready")]
         if not ready:
             raise EngineError("no workflow agent is ready after start")
