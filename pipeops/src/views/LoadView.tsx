@@ -22,6 +22,21 @@ import { Eyebrow, GhostButton, PrimaryButton, Select } from '../components/ui';
 const mock = mockJson as RawExperimentBundle;
 
 /**
+ * The run a card is compared against. A variant pairs with the newest baseline of identical
+ * test conditions (suite, seed, phases, data); a baseline pairs with the newest variant. Runs
+ * of other conditions never pair, so a Step 04 comparison is always like for like.
+ */
+function partnerOf(r: RunSummary, runs: RunSummary[]): RunSummary | undefined {
+  const rivals = runs.filter((x) => x.id !== r.id && x.variant !== r.variant && x.conditions === r.conditions);
+  const baselines = rivals.filter((x) => x.variant === 'baseline');
+  const pool = r.variant === 'baseline' || baselines.length === 0 ? rivals : baselines;
+  return [...pool].sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))[0];
+}
+
+/** "r5" from a run id ending in -r5. */
+const replicateOf = (id: string) => id.match(/-(r\d+)$/)?.[1];
+
+/**
  * Step 01 — the only place an experiment gets chosen or produced. Deliberately shows
  * no quality score, request count or runtime: those belong to later steps. Two real
  * paths, both backed by the pipeops server (server/index.mjs):
@@ -92,9 +107,7 @@ export function LoadView({
       // 04) has something real to compare against instead of the run against itself.
       // Only runs with identical test conditions (suite, seed, phases, data) qualify.
       const picked = runs?.find((r) => r.id === id);
-      const partner = runs
-        ?.filter((r) => r.id !== id && r.variant !== picked?.variant && r.conditions === picked?.conditions)
-        .sort((a, b) => (b.finishedAt ?? '').localeCompare(a.finishedAt ?? ''))[0];
+      const partner = picked && runs ? partnerOf(picked, runs) : undefined;
       // Whichever of the two is actually named "baseline" takes the baseline slot,
       // regardless of which one was clicked.
       const [baselineId, variantId] =
@@ -186,9 +199,16 @@ export function LoadView({
             {runs === null && !backendError && <p className="font-mono text-[13px] text-ink-500">loading runs…</p>}
             {runs?.length === 0 && source === 'local' && <p className="text-[14px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
             {runs?.length === 0 && source === 'demo' && <p className="text-[14px] text-ink-500">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
-            {runs?.map((r) => (
-              <RunCard key={r.id} r={r} active={r.id === currentRunId} loading={loadingId === r.id} onClick={() => loadRecorded(r.id)} />
-            ))}
+            {runs
+              // A baseline that some variant is compared against is shown on that variant's card, not twice.
+              ?.filter((r) => r.variant !== 'baseline' || !runs.some((x) => x.variant !== 'baseline' && partnerOf(x, runs)?.id === r.id))
+              .map((r) => {
+                const partner = partnerOf(r, runs);
+                const pairedWith = partner ? [partner.variant ?? partner.id, replicateOf(partner.id)].filter(Boolean).join(' ') : undefined;
+                return (
+                  <RunCard key={r.id} r={r} pairedWith={pairedWith} active={r.id === currentRunId} loading={loadingId === r.id} onClick={() => loadRecorded(r.id)} />
+                );
+              })}
           </div>
         </section>
 
@@ -423,7 +443,7 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 
 /** Metadata only — no score, requests or runtime. Those are revealed inside the lab. */
-function RunCard({ r, active, loading, onClick }: { r: RunSummary; active: boolean; loading: boolean; onClick: () => void }) {
+function RunCard({ r, pairedWith, active, loading, onClick }: { r: RunSummary; pairedWith?: string; active: boolean; loading: boolean; onClick: () => void }) {
   const when = r.finishedAt ? new Date(r.finishedAt).toLocaleString() : '—';
   return (
     <button
@@ -443,6 +463,7 @@ function RunCard({ r, active, loading, onClick }: { r: RunSummary; active: boole
         <div className="mt-1.5 font-mono text-[12px] text-ink-500">
           suite {r.suite ?? '—'} · seed {r.seed ?? '—'} · phase{r.phases.length > 1 ? 's' : ''} {r.phases.join(', ')}
         </div>
+        {pairedWith && <div className="mt-1 text-[12.5px] text-ink-300">compared with {pairedWith}</div>}
         <div className="mt-1 font-mono text-[11px] text-ink-600">finished {when}</div>
       </div>
       <span className={`text-[13px] font-medium ${loading ? 'text-signal' : 'text-ink-300 group-hover:text-signal'}`}>

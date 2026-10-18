@@ -55,6 +55,21 @@ test('demo files render identically to the Local Runs conversion (modulo disclos
   }
 });
 
+test('baseline r5 and idle-skip r1 are one comparable pair; their phases add up to the run totals', async () => {
+  const docs = await Promise.all(['20261018T020827Z-baseline-receipts-s1-r5', '20261018T020907Z-idle-skip-receipts-s1-r1'].map((id) => readPortableFile(path.join(demoDir, `${id}.json`))));
+  const [a, b] = docs;
+  assert.notEqual(a.conditions.repeat, b.conditions.repeat); // replicate numbers differ...
+  assert.equal(conditionsKey(a.conditions), conditionsKey(b.conditions)); // ...the test they ran does not
+  for (const d of docs) {
+    assert.equal(d.phases.reduce((s, p) => s + p.requests, 0), d.metrics.modelRequests);
+    assert.equal(d.phases.reduce((s, p) => s + p.runtimeSeconds, 0), d.metrics.runtimeSeconds);
+  }
+  const p3 = (d) => d.phases.find((p) => p.phase === 3);
+  assert.equal(p3(a).requests, 56);
+  assert.equal(p3(b).requests, 0);
+  assert.equal(p3(b).cycleStatus, 'idle');
+});
+
 test('export keeps only allowlisted content: no engine log, host paths or secrets', async () => {
   const tmp = await mkdtemp(path.join(os.tmpdir(), 'pipeops-'));
   await fakeRun(tmp, 'r1');
@@ -152,7 +167,7 @@ test('server: Demo Runs work without eval/runs/; new valid files appear; invalid
     assert.deepEqual((await get('/api/runs')).body, []); // Local Runs: empty, not an error
     const demos = (await get('/api/demo-runs')).body;
     assert.equal(demos.length, demoFiles.length);
-    const base = demos.find((r) => r.variant === 'baseline'), variant = demos.find((r) => r.variant === 'episode-routing');
+    const base = demos.find((r) => r.variant === 'baseline' && r.phases.length === 1), variant = demos.find((r) => r.variant === 'episode-routing');
     assert.equal(base.conditions, variant.conditions);
     const exp = await get(`/api/demo-experiment?baseline=${base.id}&variant=${variant.id}`);
     assert.equal(exp.status, 200);

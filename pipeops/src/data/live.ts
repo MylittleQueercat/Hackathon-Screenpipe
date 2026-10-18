@@ -95,6 +95,41 @@ export async function fetchStatus(): Promise<{ running: boolean; runId: string |
   return json(await fetch('/api/wfeval/status'));
 }
 
+/** One recorded `wfeval stage` run. Every number is null when the run did not record it. */
+export interface StageRun {
+  id: string;
+  variant: string | null;
+  suite: string | null;
+  seed: number | null;
+  /** 'workflow-review', or 'workflow-deepen+workflow-review' for Deepen then Review. */
+  stage: string;
+  snapshot: string | null;
+  step: string | null;
+  requests: number | null;
+  seconds: number | null;
+  checksPassed: number | null;
+  checksScored: number | null;
+  inputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  outputTokens: number | null;
+  failedCalls: number | null;
+  tokenSource: string | null;
+  /** false when the harness failed the run (no request logged): excluded from the table, counted. */
+  usable: boolean;
+}
+
+export async function fetchStageRuns(): Promise<StageRun[]> {
+  return json(await fetch('/api/stage-runs'));
+}
+
+/** Checks of each stage run graded again against the suite's current truth; null where it could not be. */
+export type StageRegrades = Record<string, { passed: number; scored: number; truth: string } | null>;
+
+export async function fetchStageRegrades(): Promise<StageRegrades> {
+  return json(await fetch('/api/stage-runs/regraded'));
+}
+
 export async function fetchSnapshots(): Promise<SnapshotSummary[]> {
   return json(await fetch('/api/snapshots'));
 }

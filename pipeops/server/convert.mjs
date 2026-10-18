@@ -57,7 +57,9 @@ async function readPhaseMeta(dir) {
       readJson(path.join(dir, e.name, 'executions.json')).catch(() => null),
       readJson(path.join(dir, e.name, 'phase.json')).catch(() => null),
     ]);
-    meta[Number(m[1])] = { executions, notes: phase?.cycle?.notes ?? null };
+    // An idle phase ran no cycle: its `cycle` is the previous phase's, notes included. Reading
+    // them again would credit that phase's agents twice.
+    meta[Number(m[1])] = { executions, notes: phase?.cycle_status === 'idle' ? null : phase?.cycle?.notes ?? null };
   }
   return meta;
 }
@@ -239,6 +241,25 @@ function buildChecks(results, truth, catalogs) {
 }
 
 const NOTE_MAX = 1500;
+const OUTPUT_MAX = 3900; // the portable format refuses any string over 4000 characters
+
+/** One agent's notes, one per phase, each cut to NOTE_MAX. Only when the joined text would pass the
+ *  format's string limit (long notes in every phase) are they cut further, evenly: a note is never
+ *  dropped, and a run whose notes already fit is exported exactly as before. */
+function joinNotes(items, multi) {
+  if (!items?.length) return null;
+  const build = (max) =>
+    items
+      .map(({ phase, text }) => {
+        const clip = text.length > max ? `${text.slice(0, max)}…` : text;
+        return multi ? `Phase ${phase}: ${clip}` : clip;
+      })
+      .join('\n\n');
+  const full = build(NOTE_MAX);
+  if (full.length <= OUTPUT_MAX) return full;
+  const overhead = items.length * 12 + (items.length - 1) * 2;
+  return build(Math.floor((OUTPUT_MAX - overhead) / items.length) - 1);
+}
 
 function buildStages(results, phaseMeta = {}) {
   const byTask = {};
@@ -253,8 +274,7 @@ function buildStages(results, phaseMeta = {}) {
     for (const [pipe, text] of Object.entries(meta.notes ?? {})) {
       if (typeof text !== 'string' || !text.trim()) continue;
       const id = pipe.replace(/^workflow-/, '');
-      const clip = text.trim().length > NOTE_MAX ? `${text.trim().slice(0, NOTE_MAX)}…` : text.trim();
-      (notes[id] ??= []).push(Object.keys(phaseMeta).length > 1 ? `Phase ${phase}: ${clip}` : clip);
+      (notes[id] ??= []).push({ phase, text: text.trim() });
     }
   }
   for (const r of results) {
@@ -272,7 +292,7 @@ function buildStages(results, phaseMeta = {}) {
       runtimeSeconds: seconds[s.id] != null ? Math.round(seconds[s.id]) : null,
       snapshotId: null, // full evaluations don't save snapshots (wfeval snapshot does)
       // The agent's own end-of-cycle note (phase.json cycle.notes), verbatim.
-      output: notes[s.id]?.join('\n\n') ?? null,
+      output: joinNotes(notes[s.id], Object.keys(phaseMeta).length > 1),
     };
   }
   return stages;
@@ -332,6 +352,26 @@ export function efficiencyOf(results) {
   return { ...total, runtimeSeconds: seconds, source };
 }
 
+/** One entry per graded phase, straight from results.jsonl. Anything a phase did not record
+ *  is null (never 0); `frames` is the history the phase was given, from run.json. */
+export function phasesOf(results, run) {
+  const n = (v) => (isNum(v) ? v : null);
+  return results.map((r) => ({
+    phase: r.phase,
+    cycleStatus: typeof r.cycle === 'string' ? r.cycle : null,
+    frames: n(run.data?.frames?.[String(r.phase)]),
+    checksPassed: n(r.passed),
+    checksScored: n(r.scored),
+    requests: n(r.usage?.requests),
+    runtimeSeconds: n(r.seconds) === null ? null : Math.round(r.seconds),
+    inputTokens: n(r.usage?.input),
+    cacheReadTokens: n(r.usage?.cacheRead),
+    cacheWriteTokens: n(r.usage?.cacheWrite),
+    outputTokens: n(r.usage?.output),
+    mistakes: r.mistakes && typeof r.mistakes === 'object' ? r.mistakes : null,
+  }));
+}
+
 export function toRawRun(id, label, role, { run, results, truth, catalogs, phaseMeta }) {
   const passed = results.reduce((s, r) => s + (r.passed ?? 0), 0);
   const scored = results.reduce((s, r) => s + (r.scored ?? 0), 0);
@@ -350,6 +390,7 @@ export function toRawRun(id, label, role, { run, results, truth, catalogs, phase
       runtimeSeconds: Math.round(seconds),
     },
     efficiency: efficiencyOf(results),
+    phases: phasesOf(results, run),
     stages: buildStages(results, phaseMeta),
     recordedActivity: null,
     generatedWorkflows: buildWorkflows(results, catalogs),
@@ -362,11 +403,57 @@ function verdict(a, b) {
   if (a.id === b.id) return { verdict: 'Single run loaded.', note: 'Pick a variant run to pair it against.' };
   const dq = b.metrics.qualityPassed - a.metrics.qualityPassed;
   const dr = b.metrics.modelRequests - a.metrics.modelRequests;
-  if (dq < 0) return { verdict: 'Regression: quality dropped.', note: `${a.label} ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} -> ${b.label} ${b.metrics.qualityPassed}/${b.metrics.qualityTotal}.` };
-  if (dq > 0) return { verdict: 'Quality improved.', note: `+${dq} checks, ${dr >= 0 ? '+' : ''}${dr} requests.` };
+  const ds = b.metrics.runtimeSeconds - a.metrics.runtimeSeconds;
+  const checks = `${b.metrics.qualityPassed}/${b.metrics.qualityTotal}`;
+  if (dq < 0) return { verdict: 'Regression: quality dropped.', note: `${a.label} ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} -> ${b.label} ${checks}.` };
+  if (dq > 0) return { verdict: 'More checks passed.', note: `+${dq} checks, ${dr >= 0 ? '+' : ''}${dr} requests. Checks do not measure document quality.` };
+  // Passing the same checks does not show the documents are equally good: the checks only ask
+  // whether the right jobs and exceptions are named.
+  if (dr < 0 && ds <= 0) return { verdict: 'Efficiency improved. Document quality needs further validation.', note: `Same ${checks} checks passed; ${-dr} fewer requests.` };
+  if (dr < 0) return { verdict: 'Fewer requests, longer runtime. Document quality needs further validation.', note: `Same ${checks} checks passed.` };
   if (dr > 0) return { verdict: 'No improvement demonstrated.', note: 'Same quality, more requests.' };
-  if (dr < 0) return { verdict: 'Same quality, cheaper.', note: `${-dr} fewer requests.` };
   return { verdict: 'No change detected.', note: 'Identical totals.' };
+}
+
+/** Recorded stage runs (`wfeval stage`): one agent, or Deepen then Review, started from a saved
+ *  snapshot step. They are listed on their own because they are not full evaluations and must
+ *  never be scored or compared against one. `usable` is false for a run the harness itself
+ *  failed (no request logged, or tokens only from the truncated pipe logs): kept in the list so
+ *  the page can say how many were left out, never silently dropped. */
+export async function listStageRuns(runsDir, entries) {
+  const out = [];
+  for (const id of entries) {
+    try {
+      const [row] = await readJsonl(path.join(runsDir, id, 'results.jsonl'));
+      if (!row || row.stage === undefined) continue;
+      const u = row.usage ?? {};
+      const n = (v) => (isNum(v) ? v : null);
+      const [snapshot, step] = String(row.snapshot ?? '').split('/');
+      out.push({
+        id,
+        variant: row.variant ?? null,
+        suite: row.suite ?? null,
+        seed: isNum(row.seed) ? row.seed : null,
+        stage: row.stage,
+        snapshot: snapshot || null,
+        step: step ?? null,
+        requests: n(u.requests),
+        seconds: n(row.seconds) === null ? null : Math.round(row.seconds),
+        checksPassed: n(row.passed),
+        checksScored: n(row.scored),
+        inputTokens: n(u.input),
+        cacheReadTokens: n(u.cacheRead),
+        cacheWriteTokens: n(u.cacheWrite),
+        outputTokens: n(u.output),
+        failedCalls: n(u.workspace?.failed), // null where the run predates that logging
+        tokenSource: u.source ?? null,
+        usable: row.status === 'done' && u.source === 'request_log' && (u.requests ?? 0) > 0,
+      });
+    } catch {
+      // not a stage run directory, or one still running
+    }
+  }
+  return out.sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
 /** Assembles the UI bundle from two already-built RawRuns (local artifacts or demo files). */

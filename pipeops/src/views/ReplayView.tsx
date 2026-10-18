@@ -5,7 +5,8 @@ import type { Experiment, Run, StageId } from '../data/schema';
 import { Badge, Eyebrow, GhostButton, Missing, PlayIcon, PrimaryButton, Select } from '../components/ui';
 import { pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
-import { fetchSnapshots, fetchVariants, streamWfevalStage, type SnapshotSummary, type VariantSummary } from '../data/live';
+import { fetchSnapshots, fetchStageRegrades, fetchStageRuns, fetchVariants, streamWfevalStage, type SnapshotSummary, type StageRegrades, type StageRun, type VariantSummary } from '../data/live';
+import { StageRunsTable } from '../components/StageRunsTable';
 
 /* graph geometry */
 const GW = 1680;
@@ -48,11 +49,15 @@ export function ReplayView({
   const [realVariant, setRealVariant] = useState('');
   const [stageError, setStageError] = useState<string | null>(null);
   const [realOpen, setRealOpen] = useState(false);
+  const [stageRuns, setStageRuns] = useState<StageRun[] | null>(null);
+  const [regrades, setRegrades] = useState<StageRegrades | null>(null);
+  const [recordedOpen, setRecordedOpen] = useState(false);
   const [stageRunning, setStageRunning] = useState(false);
   const [stageLog, setStageLog] = useState('');
   const stageLogRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  const loadSnapshots = () => {
+    setBackendDown(false);
     fetchSnapshots()
       .then(setSnapshots)
       .catch(() => {
@@ -60,6 +65,11 @@ export function ReplayView({
         setSnapshots([]);
       });
     fetchVariants().then(setVariants).catch(() => setVariants([]));
+  };
+  useEffect(loadSnapshots, []);
+  useEffect(() => {
+    fetchStageRuns().then(setStageRuns).catch(() => setStageRuns([]));
+    fetchStageRegrades().then(setRegrades).catch(() => setRegrades(null));
   }, []);
   useEffect(() => {
     stageLogRef.current?.scrollTo({ top: stageLogRef.current.scrollHeight });
@@ -74,6 +84,7 @@ export function ReplayView({
     clear();
     setSim(0);
     if (!stageRunning) setRealOpen(false); // switching stage collapses the real-execution panel
+    setRecordedOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selIdx, configId, run.id]);
 
@@ -129,11 +140,17 @@ export function ReplayView({
     }
   };
 
+  // Recorded stage runs exist for Review alone and for Deepen then Review (the chain starts at Deepen's step).
+  const recordedStage =
+    sel.id === 'discover' ? 'workflow-discover' : sel.id === 'maintain' ? 'workflow-maintain' : sel.id === 'review' ? 'workflow-review' : sel.id === 'deepen' ? 'workflow-deepen+workflow-review' : null;
+  const recordedRuns = recordedStage ? (stageRuns ?? []).filter((r) => r.stage === recordedStage) : [];
+  const recordedVariants = new Set(recordedRuns.filter((r) => r.usable).map((r) => r.variant)).size;
+
   const forkX = snapX(selIdx);
   const branchPath = `M ${forkX} ${MAIN_Y} C ${forkX} ${BRANCH_Y - 40}, ${forkX + 40} ${BRANCH_Y}, ${forkX + 110} ${BRANCH_Y} L ${END_X} ${BRANCH_Y}`;
 
   return (
-    <div className="flex h-full flex-col px-[120px] pt-8">
+    <div className="relative flex h-full flex-col px-[120px] pt-8">
       {/* header */}
       <div className="flex items-end justify-between">
         <div>
@@ -372,6 +389,19 @@ export function ReplayView({
             <OutcomeRow label="Replay result">
               <span className="text-[14px] text-ink-300">Replay not yet executed. This is a preview of the plan.</span>
             </OutcomeRow>
+            <OutcomeRow label="Recorded stage runs">
+              {stageRuns === null ? (
+                <span className="font-mono text-[12px] text-ink-500">loading…</span>
+              ) : recordedVariants > 0 ? (
+                <button onClick={() => setRecordedOpen(true)} className="text-left text-[14px] text-signal hover:underline">
+                  {recordedVariants} variants, {recordedRuns.filter((r) => r.usable).length} runs on {sel.name} →
+                </button>
+              ) : (
+                <span className="text-[14px] text-ink-400">
+                  None recorded for {sel.name}.
+                </span>
+              )}
+            </OutcomeRow>
           </div>
           <PrimaryButton className="mt-auto self-start" onClick={preview}>
             <PlayIcon /> {sim > 0 && sim < lastSim ? 'Previewing…' : 'Preview Replay Plan'}
@@ -380,33 +410,46 @@ export function ReplayView({
           {/* Real execution: hidden until asked for. The button only reveals the panel; nothing
               runs until the explicit Confirm inside it, and only when a saved snapshot has a
               step for this stage. Never fabricated. */}
-          {snapshots === null ? null : backendDown ? (
-            <p className="mt-4 text-[13px] leading-relaxed text-ink-400">
-              Real execution unavailable: the pipeops server isn't reachable. Start it with{' '}
-              <code className="font-mono">npm run server</code>. The preview above still works.
-            </p>
-          ) : !match ? (
-            <p className="mt-4 text-[13px] leading-relaxed text-ink-400">
-              {snapshots.length === 0 ? (
-                <>
-                  Real execution unavailable on this machine: no saved snapshot (<code className="font-mono">eval/snapshots/</code> is
-                  local and not part of the repo). Demo runs can only show the preview above. Create one with{' '}
-                  <code className="font-mono">wfeval snapshot</code>.
-                </>
-              ) : (
-                <>No saved snapshot has a step for {sel.name}.</>
-              )}
-            </p>
-          ) : !realOpen ? (
+          {snapshots === null ? null : !realOpen ? (
             <div className="mt-4 flex items-center gap-3">
               <button
-                onClick={() => setRealOpen(true)}
+                onClick={() => {
+                  loadSnapshots(); // re-check on every open, so a snapshot just added is picked up
+                  setRealOpen(true);
+                }}
                 className="rounded-full border border-cost/60 px-4 py-2 text-[13px] font-semibold text-cost transition hover:bg-cost/10"
               >
                 Run Stage Replay
               </button>
               <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-500">spends AI allowance</span>
             </div>
+          ) : backendDown ? (
+            <MissingPanel
+              title="The pipeops server isn't reachable"
+              onRecheck={loadSnapshots}
+              onClose={() => setRealOpen(false)}
+            >
+              Run <code className="font-mono">npm run server</code> in <code className="font-mono">pipeops/</code>, then check again.
+            </MissingPanel>
+          ) : !match ? (
+            <MissingPanel
+              title={snapshots.length === 0 ? 'No saved snapshot on this machine' : `No saved snapshot has a step for ${sel.name}`}
+              onRecheck={loadSnapshots}
+              onClose={() => setRealOpen(false)}
+            >
+              <p>
+                Put a snapshot in <code className="font-mono">eval/snapshots/&lt;id&gt;/</code> (local, not in git), then check again.
+              </p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                <li>
+                  From a teammate: <code className="font-mono">uv run wfeval pack snapshots/&lt;id&gt;</code>, then{' '}
+                  <code className="font-mono">unzip &lt;id&gt;.zip</code> in <code className="font-mono">eval/</code>.
+                </li>
+                <li>
+                  Or take one (spends allowance): <code className="font-mono">uv run wfeval snapshot --suite receipts --seed 1 --phases 1,2</code>
+                </li>
+              </ul>
+            </MissingPanel>
           ) : (
             <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
               <div className="flex items-center justify-between">
@@ -464,6 +507,36 @@ export function ReplayView({
           )}
 
         </div>
+      </div>
+      {recordedOpen && recordedStage && (
+        <div className="absolute inset-x-[120px] bottom-3 top-[120px] z-30 flex flex-col rounded-2xl border border-ink-700 bg-ink-950 p-6 shadow-2xl">
+          <StageRunsTable runs={recordedRuns} variants={variants} regrades={regrades} title={recordedStage.includes('+') ? `${sel.name} → Review` : sel.name} onClose={() => setRecordedOpen(false)} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** What a real replay needs and does not have, and how to get it. Shown after the button is pressed. */
+function MissingPanel({
+  title,
+  children,
+  onRecheck,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  onRecheck: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mt-4 rounded-xl border border-cost/30 p-3.5">
+      <Eyebrow>Real execution unavailable</Eyebrow>
+      <div className="mt-2 text-[14px] font-medium text-ink-100">{title}</div>
+      <div className="mt-2 text-[12.5px] leading-relaxed text-ink-400">{children}</div>
+      <div className="mt-3 flex gap-2">
+        <GhostButton onClick={onRecheck}>Check again</GhostButton>
+        <GhostButton onClick={onClose}>Close</GhostButton>
       </div>
     </div>
   );

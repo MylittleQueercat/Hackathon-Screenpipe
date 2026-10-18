@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-17T22:41:08.412Z",
+  "exportedAt": "2026-10-18T08:52:47.480Z",
   "run": {
     "id": "20261017T161442Z-baseline-receipts-s1-r1",
     "label": "baseline",
@@ -125,6 +125,22 @@
       }
     }
   },
+  "phases": [
+    {
+      "phase": 1,
+      "cycleStatus": "complete",
+      "frames": 586,
+      "checksPassed": 11,
+      "checksScored": 11,
+      "requests": 89,
+      "runtimeSeconds": 650,
+      "inputTokens": 187643,
+      "cacheReadTokens": 3715310,
+      "cacheWriteTokens": 0,
+      "outputTokens": 64007,
+      "mistakes": {}
+    }
+  ],
   "stages": {
     "discover": {
       "modelRequests": 14,
