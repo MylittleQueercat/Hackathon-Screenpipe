@@ -1,6 +1,8 @@
 import timelinesRaw from './data/timelines.json'
 
-export type CandidateId = 'baseline' | 'conflict' | 'preflight'
+export type CandidateId = 'baseline' | 'clearer' | 'preflight'
+/** Engines we have a request log and exact numbers for. The upstream baseline only has README ranges. */
+export type Measured = Exclude<CandidateId, 'baseline'>
 
 export type TimelineEvent =
   | { t: number; k: 'req' }
@@ -8,35 +10,30 @@ export type TimelineEvent =
   | { t: number; k: 'ws'; action: string; ok: boolean; msg?: string }
 
 export const timelines = {
-  baseline: (timelinesRaw as Record<string, TimelineEvent[]>)['baseline'],
-  conflict: (timelinesRaw as Record<string, TimelineEvent[]>)['conflict-revision'],
+  clearer: (timelinesRaw as Record<string, TimelineEvent[]>)['baseline'],
   preflight: (timelinesRaw as Record<string, TimelineEvent[]>)['preflight-conflict'],
-} satisfies Record<CandidateId, TimelineEvent[]>
+} satisfies Record<Measured, TimelineEvent[]>
 
 export const candidates: Record<
   CandidateId,
-  { name: string; label: string; owner: string; color: 'base' | 'mid' | 'ours'; summary: string }
+  { name: string; label: string; color: 'base' | 'mid' | 'ours'; summary: string }
 > = {
   baseline: {
-    name: 'clearer-rejection',
-    label: 'Baseline',
-    owner: 'reference engine',
+    name: 'baseline',
+    label: 'Upstream Workflows',
     color: 'base',
-    summary:
-      'The reference engine. Rejections explain which items failed and why, but Review only learns that after a publish is refused.',
+    summary: 'Screenpipe Workflows as shipped, pinned to Claude Sonnet 5. The point every change is measured against.',
   },
-  conflict: {
-    name: 'conflict-revision',
-    label: 'Conflict',
-    owner: 'candidate',
+  clearer: {
+    name: 'clearer-rejection',
+    label: 'Clearer rejections',
     color: 'mid',
     summary:
-      'A 409 revision conflict now carries the current revision and the open drafts, so Review retries without another context read.',
+      'Rejections name each failing item and why, and citation matching works to the second. Review retries far less, but still only learns what is wrong after a publish is refused.',
   },
   preflight: {
     name: 'preflight-conflict',
-    label: 'Preflight + Conflict',
-    owner: 'our candidate',
+    label: 'Preflight + conflict',
     color: 'ours',
     summary:
       'Every draft read already contains the publish verdict, computed by a dry run of the real validation. Review fixes before it sends. 409s carry the revision too.',
@@ -45,23 +42,18 @@ export const candidates: Record<
 
 /** Sonnet (claude-sonnet-5), Review stage 04 of snapshot receipts-s1, 1 run each. */
 export const sonnetReview: Record<
-  CandidateId,
+  Measured,
   { requests: number; seconds: number; rejected: number; input: number; cacheRead: number; output: number; tools: number; checks: string }
 > = {
-  baseline: { requests: 18, seconds: 161.5, rejected: 5, input: 54307, cacheRead: 625723, output: 17004, tools: 22, checks: '11/11' },
-  conflict: { requests: 14, seconds: 106.2, rejected: 4, input: 43104, cacheRead: 401173, output: 10369, tools: 18, checks: '11/11' },
+  clearer: { requests: 18, seconds: 161.5, rejected: 5, input: 54307, cacheRead: 625723, output: 17004, tools: 22, checks: '11/11' },
   preflight: { requests: 14, seconds: 96.1, rejected: 0, input: 32889, cacheRead: 340104, output: 8683, tools: 16, checks: '11/11' },
 }
 
-export const sonnetRejections: Record<CandidateId, { kind: string; n: number }[]> = {
-  baseline: [
+export const sonnetRejections: Record<Measured, { kind: string; n: number }[]> = {
+  clearer: [
     { kind: '409 Workspace changed', n: 2 },
     { kind: '422 Stage retained N of M items', n: 2 },
     { kind: 'Output token limit (call not executed)', n: 1 },
-  ],
-  conflict: [
-    { kind: '409 Workspace changed (+ revision)', n: 2 },
-    { kind: '422 Stage retained N of M items', n: 2 },
   ],
   preflight: [],
 }
@@ -122,3 +114,24 @@ export const pct = (a: number, b: number) => {
 
 /** Candidate colours are theme tokens; `tone` returns a CSS colour, optionally with alpha. */
 export const tone = (id: CandidateId, alpha = 1) => `rgb(var(--${candidates[id].color}) / ${alpha})`
+
+export type MetricKey = 'rejected' | 'seconds' | 'requests' | 'output' | 'cacheRead' | 'input'
+export type Range = [number, number]
+
+/** Review stage, Sonnet, one run each. Single runs have lo = hi. The upstream baseline is the Review step
+ *  of the saved snapshot (step.json), whose request log has no per-call results, so refused calls and
+ *  checks are not measured yet. Anything not measured is simply absent. */
+export const review: Record<CandidateId, { runs: number; checks?: string; m: Partial<Record<MetricKey, Range>> }> = {
+  baseline: { runs: 1, checks: undefined, m: { requests: [60, 60], seconds: [421.8, 421.8], input: [102042, 102042], cacheRead: [3586536, 3586536], output: [40862, 40862] } },
+  clearer: { runs: 1, checks: sonnetReview.clearer.checks, m: toRanges(sonnetReview.clearer) },
+  preflight: { runs: 1, checks: sonnetReview.preflight.checks, m: toRanges(sonnetReview.preflight) },
+}
+
+function toRanges(r: Record<MetricKey, number> & object): Partial<Record<MetricKey, Range>> {
+  const keys: MetricKey[] = ['rejected', 'seconds', 'requests', 'output', 'cacheRead', 'input']
+  return Object.fromEntries(keys.map((k) => [k, [r[k], r[k]] as Range]))
+}
+
+export const mid = (r?: Range) => (r ? (r[0] + r[1]) / 2 : undefined)
+export const fmtRange = (f: (v: number) => string, r?: Range) =>
+  !r ? 'not measured yet' : r[0] === r[1] ? f(r[0]) : `${f(r[0])} to ${f(r[1])}`

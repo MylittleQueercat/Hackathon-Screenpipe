@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { candidates, sonnetReview, timelines, tone, type CandidateId, type TimelineEvent } from '../data'
+import { candidates, sonnetReview, timelines, tone, type Measured, type TimelineEvent } from '../data'
 
-const ORDER: CandidateId[] = ['baseline', 'conflict', 'preflight']
+/** The upstream baseline has no replayable request log, so it is not drawn here. */
+const ORDER: Measured[] = ['clearer', 'preflight']
 const PLAY_MS = 14000
 
 type WsEvent = Extract<TimelineEvent, { k: 'ws' }>
 
-const lastT = (id: CandidateId) => Math.max(sonnetReview[id].seconds, ...timelines[id].map((e) => e.t))
+const lastT = (id: Measured) => Math.max(sonnetReview[id].seconds, ...timelines[id].map((e) => e.t))
 
 /** Workspace calls that land within 2.5 s of each other are nudged apart so every dot stays clickable. */
 function clusterOffsets(evs: TimelineEvent[]) {
@@ -30,7 +31,7 @@ export function Replay() {
   const horizon = useMemo(() => Math.ceil(Math.max(...ORDER.map(lastT)) / 10) * 10 + 5, [])
   const [t, setT] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [selected, setSelected] = useState<{ id: CandidateId; e: WsEvent } | null>(null)
+  const [selected, setSelected] = useState<{ id: Measured; e: WsEvent } | null>(null)
   const raf = useRef<number>()
   const started = useRef<number>()
   const root = useRef<HTMLDivElement>(null)

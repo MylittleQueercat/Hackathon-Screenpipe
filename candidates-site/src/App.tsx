@@ -3,13 +3,12 @@ import { ArchitectureFlow } from './components/Architecture'
 import { Replay } from './components/Replay'
 import { Comparator } from './components/Comparator'
 import {
-  candidates, fmtK, messages, sonnetRejections, sonnetReview, sonnetStages, tone,
+  candidates, fmtK, messages, review, sonnetRejections, sonnetStages, tone,
   type CandidateId,
 } from './data'
 import { toggleTheme, useTheme } from './lib/theme'
 
-const IDS: CandidateId[] = ['baseline', 'conflict', 'preflight']
-const s = sonnetReview
+const IDS: CandidateId[] = ['baseline', 'clearer', 'preflight']
 
 function Section({ id, title, lead, children }: { id: string; title: string; lead?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -87,7 +86,7 @@ function Hero() {
       <div className="mt-12" id="replay">
         <p className="mb-3 text-sm text-muted">The three Review runs, request by request. Press play or drag the slider.</p>
         <Replay />
-        <Note>claude-sonnet-5 · snapshot 20261017T145651Z-baseline-receipts-s1 · stage 04-p1-workflow-review · 1 run per candidate</Note>
+        <Note>claude-sonnet-5 · snapshot 20261017T145651Z-baseline-receipts-s1 · stage 04-p1-workflow-review · 1 run each. The upstream baseline has no replayable request log, so it is not drawn here.</Note>
       </div>
 
       <div className="mt-14" id="compare">
@@ -101,15 +100,14 @@ function Hero() {
 
 function Messages() {
   const rows = [
-    { id: 'baseline' as const, when: 'After a refused publish', lines: [messages.reject422, messages.baseline409] },
-    { id: 'conflict' as const, when: 'After a refused publish', lines: [messages.reject422, messages.conflict409] },
+    { id: 'clearer' as const, when: 'After a refused publish', lines: [messages.reject422, messages.baseline409] },
     { id: 'preflight' as const, when: 'On the draft read, before any publish', lines: [messages.preflightFail, messages.preflightOk] },
   ]
   return (
     <div className="mt-6">
       <h3 className="display text-2xl font-semibold">What the agent reads back</h3>
       <p className="mt-1 text-sm text-muted">Real engine replies from the Sonnet Review runs.</p>
-      <div className="mt-6 grid gap-8 md:grid-cols-3">
+      <div className="mt-6 grid gap-8 md:grid-cols-2">
         {rows.map((r) => (
           <div key={r.id}>
             <div className="font-mono text-[13px] font-semibold" style={{ color: tone(r.id) }}>{candidates[r.id].name}</div>
@@ -153,10 +151,12 @@ export default function App() {
             <div key={id} className="border-t border-line pt-4">
               <div className="flex items-baseline justify-between">
                 <span className="font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>{candidates[id].name}</span>
-                <span className="num text-sm font-semibold">{s[id].checks} checks</span>
+                <span className="num text-sm font-semibold">{review[id].checks ? `${review[id].checks} checks` : 'checks not graded yet'}</span>
               </div>
               <ul className="mt-3 space-y-1.5 text-sm">
-                {sonnetRejections[id].length === 0 ? (
+                {id === 'baseline' ? (
+                  <li className="text-faint">Not measured yet.</li>
+                ) : sonnetRejections[id].length === 0 ? (
                   <li className="text-ours">No refused call.</li>
                 ) : (
                   sonnetRejections[id].map((r) => (
@@ -198,7 +198,7 @@ export default function App() {
                   return (
                     <tr key={k} className={st.stage.includes('Review') ? 'bg-ours/[0.06]' : ''}>
                       <th scope="row" className="py-1.5 pl-1 pr-4 text-left font-medium">{k === 'b' ? st.stage : ''}</th>
-                      <td className="py-1.5 pr-4 font-mono text-[12px]" style={{ color: tone(k === 'b' ? 'baseline' : 'preflight') }}>{k === 'b' ? 'baseline' : 'preflight-conflict'}</td>
+                      <td className="py-1.5 pr-4 font-mono text-[12px]" style={{ color: tone(k === 'b' ? 'clearer' : 'preflight') }}>{k === 'b' ? 'clearer-rejection' : 'preflight-conflict'}</td>
                       <td className={`py-1.5 pr-4 ${k === 'p' && r.checks !== o.checks ? 'font-semibold text-bad' : ''}`}>{r.checks}</td>
                       <td className={`py-1.5 pr-4 ${cmp(r.requests, o.requests)}`}>{r.requests}</td>
                       <td className={`py-1.5 pr-4 ${cmp(r.seconds, o.seconds)}`}>{r.seconds} s</td>
