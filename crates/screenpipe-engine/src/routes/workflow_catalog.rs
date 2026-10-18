@@ -418,7 +418,7 @@ pub(crate) async fn commit(
     let mut normalized = normalize_updates(raw.clone(), &evidence)
         .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
     if body.workspace_revision.is_some() {
-        workspace::validate_publication(&raw, &normalized)
+        workspace::validate_publication(&raw, &normalized, &evidence)
             .map_err(|e| error(StatusCode::UNPROCESSABLE_ENTITY, &e))?;
     }
     let updates = normalized["workflows"].as_array_mut().unwrap();

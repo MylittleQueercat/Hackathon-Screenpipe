@@ -366,7 +366,12 @@ pub fn published(ws: &mut Value, id: Option<&str>, payload: Option<&Value>, rece
 
 /// Publication must preserve the reviewed procedure. Normalization can report
 /// unsupported items, but may not silently save a different, partial procedure.
-pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), String> {
+/// A rejection names each item that failed and why, from the same checks.
+pub fn validate_publication(
+    raw: &Value,
+    normalized: &Value,
+    catalog: &super::EvidenceCatalog,
+) -> Result<(), String> {
     let proposed = raw["workflows"].as_array().ok_or("Missing workflows")?;
     let saved = normalized["workflows"]
         .as_array()
@@ -374,6 +379,7 @@ pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), Strin
     if proposed.len() != saved.len() {
         return Err("Some workflows could not be verified.".into());
     }
+    let mut failures = Vec::new();
     for (before, after) in proposed.iter().zip(saved) {
         let stages = before["stages"]
             .as_array()
@@ -386,15 +392,59 @@ pub fn validate_publication(raw: &Value, normalized: &Value) -> Result<(), Strin
                 "Some stages could not be verified. Revise the draft before publishing.".into(),
             );
         }
+        // Every failing stage at once, so one revision can fix them all.
         for (index, (stage, saved)) in stages.iter().zip(verified).enumerate() {
             let requested = stage["procedure"].as_array().map_or(0, Vec::len);
             let retained = saved["procedure"].as_array().map_or(0, Vec::len);
             if requested != retained {
-                return Err(format!("Stage {} retained {retained} of {requested} proposed procedure items. Check exact timestamp/app/quote references and the output contract, or explicitly revise unsupported claims. No workflow was saved.", index + 1));
+                failures.push(format!(
+                    "Stage {} retained {retained} of {requested} proposed procedure items. {}",
+                    index + 1,
+                    procedure_problems(stage, catalog)
+                ));
             }
         }
     }
-    Ok(())
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("{} No workflow was saved.", failures.join(" ")))
+    }
+}
+
+/// Why a stage's procedure items fail, at most five, each with its position.
+fn procedure_problems(stage: &Value, catalog: &super::EvidenceCatalog) -> String {
+    let evidence = super::clean_evidence(
+        stage.get("evidence").unwrap_or(&Value::Null),
+        catalog.points.len(),
+        catalog,
+    );
+    let items = stage["procedure"].as_array().map_or(&[][..], Vec::as_slice);
+    let mut problems: Vec<String> = items
+        .iter()
+        .enumerate()
+        .filter_map(|(index, item)| {
+            super::check_procedure_item(item, &evidence)
+                .err()
+                .map(|why| format!("procedure[{index}]: {why}."))
+        })
+        .collect();
+    if problems.is_empty() && items.len() > super::MAX_PROCEDURE_ITEMS {
+        problems.push(format!(
+            "Keep at most {} procedure items per stage.",
+            super::MAX_PROCEDURE_ITEMS
+        ));
+    }
+    let more = problems.len().saturating_sub(5);
+    problems.truncate(5);
+    if more > 0 {
+        problems.push(format!("{more} more."));
+    }
+    if problems.is_empty() {
+        "Check exact timestamp/app/quote references and the output contract, or explicitly revise unsupported claims.".into()
+    } else {
+        problems.join(" ")
+    }
 }
 
 #[cfg(test)]
@@ -693,14 +743,18 @@ mod tests {
 
     #[test]
     fn publication_cannot_silently_drop_reviewed_steps() {
+        let catalog = super::super::EvidenceCatalog::default();
         let raw = json!({"workflows":[{"stages":[{"procedure":[{"text":"Open invoice"},{"text":"Save receipt"}]}]}]});
-        assert!(validate_publication(&raw, &raw).is_ok());
+        assert!(validate_publication(&raw, &raw, &catalog).is_ok());
         let partial = json!({"workflows":[{"stages":[{"procedure":[{"text":"Open invoice"}]}]}]});
-        assert!(validate_publication(&raw, &partial)
+        assert!(validate_publication(&raw, &partial, &catalog)
             .unwrap_err()
             .contains("1 of 2"));
-        assert!(validate_publication(&raw, &json!({"workflows":[]})).is_err());
-        assert!(validate_publication(&json!({"workflows":[]}), &json!({"workflows":[]})).is_ok());
+        assert!(validate_publication(&raw, &json!({"workflows":[]}), &catalog).is_err());
+        assert!(
+            validate_publication(&json!({"workflows":[]}), &json!({"workflows":[]}), &catalog)
+                .is_ok()
+        );
     }
     #[test]
     fn publish_uses_reviewed_payload_and_retry_cannot_hide_a_different_edit() {

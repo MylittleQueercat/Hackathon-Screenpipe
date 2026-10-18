@@ -510,50 +510,89 @@ pub fn normalize_procedure(stage: &Value, evidence: &[Value]) -> Vec<Value> {
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
-        .filter_map(|detail| {
-            let kind = detail.get("kind")?.as_str()?;
-            if !matches!(kind, "action" | "input" | "output" | "decision" | "check") {
-                return None;
-            }
-            let text = non_empty_string(detail, "text")?;
-            let quote = non_empty_string(detail, "quote")?;
-            // Short user instructions and control labels are valid evidence.
-            // Source identity and exact matching, not character count, establish
-            // provenance; Review still evaluates what the quote actually proves.
-            if quote.chars().count() > 1_200 {
-                return None;
-            }
-            let timestamp =
-                DateTime::parse_from_rfc3339(detail.get("timestamp")?.as_str()?).ok()?;
-            let app = detail.get("app")?.as_str()?;
-            let source = evidence.iter().find(|source| {
-                source
-                    .get("timestamp")
+        .filter_map(|detail| check_procedure_item(detail, evidence).ok())
+        .take(MAX_PROCEDURE_ITEMS)
+        .collect()
+}
+
+pub const MAX_PROCEDURE_ITEMS: usize = 12;
+
+/// One procedure item checked against its stage's verified evidence: the saved
+/// item, or why it cannot be saved. Publication rejections repeat the reason so an
+/// agent can fix the item instead of guessing which one failed.
+pub fn check_procedure_item(detail: &Value, evidence: &[Value]) -> Result<Value, String> {
+    let kind = detail
+        .get("kind")
+        .and_then(Value::as_str)
+        .filter(|kind| matches!(*kind, "action" | "input" | "output" | "decision" | "check"))
+        .ok_or("kind must be action, input, output, decision or check")?;
+    let text = non_empty_string(detail, "text").ok_or("needs text")?;
+    let quote = non_empty_string(detail, "quote").ok_or("needs a quote from its source")?;
+    // Short user instructions and control labels are valid evidence.
+    // Source identity and exact matching, not character count, establish
+    // provenance; Review still evaluates what the quote actually proves.
+    if quote.chars().count() > 1_200 {
+        return Err("quote is over 1,200 characters".into());
+    }
+    let timestamp = detail
+        .get("timestamp")
+        .and_then(Value::as_str)
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .ok_or("needs an RFC 3339 timestamp")?;
+    let app = detail
+        .get("app")
+        .and_then(Value::as_str)
+        .ok_or("needs the source app")?;
+    let cited: Vec<&Value> = evidence
+        .iter()
+        .filter(|source| {
+            source
+                .get("timestamp")
+                .and_then(Value::as_str)
+                .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
+                .is_some_and(|time| {
+                    cites_capture(timestamp.with_timezone(&Utc), time.with_timezone(&Utc))
+                })
+                && source
+                    .get("app")
                     .and_then(Value::as_str)
-                    .and_then(|time| DateTime::parse_from_rfc3339(time).ok())
-                    .is_some_and(|time| {
-                        cites_capture(timestamp.with_timezone(&Utc), time.with_timezone(&Utc))
-                    })
-                    && source
-                        .get("app")
-                        .and_then(Value::as_str)
-                        .is_some_and(|name| name.eq_ignore_ascii_case(app))
-                    && !matches!(
-                        source.get("source").and_then(Value::as_str),
-                        Some("audio" | "meeting")
-                    )
-                    && source
-                        .get("detail")
-                        .and_then(Value::as_str)
-                        .is_some_and(|body| contains_source_quote(body, &quote))
-            })?;
-            Some(
-                json!({"kind": kind, "text": text.chars().take(800).collect::<String>(),
-                "quote": quote, "timestamp": source["timestamp"], "app": source["app"]}),
+                    .is_some_and(|name| name.eq_ignore_ascii_case(app))
+        })
+        .collect();
+    let at = timestamp.to_rfc3339();
+    if cited.is_empty() {
+        return Err(format!(
+            "cites {app} at {at}, which is not one of this stage's verified evidence entries; \
+             add that capture to this stage's evidence or cite one that is there"
+        ));
+    }
+    let screen: Vec<&&Value> = cited
+        .iter()
+        .filter(|source| {
+            !matches!(
+                source.get("source").and_then(Value::as_str),
+                Some("audio" | "meeting")
             )
         })
-        .take(12)
-        .collect()
+        .collect();
+    if screen.is_empty() {
+        return Err(format!(
+            "cites audio at {at}; cite a screen or input capture"
+        ));
+    }
+    let source = screen
+        .into_iter()
+        .find(|source| {
+            source
+                .get("detail")
+                .and_then(Value::as_str)
+                .is_some_and(|body| contains_source_quote(body, &quote))
+        })
+        .ok_or_else(|| format!("quote is not in the text of the {app} capture at {at}"))?;
+    Ok(
+        json!({"kind": kind, "text": text.chars().take(800).collect::<String>(),
+        "quote": quote, "timestamp": source["timestamp"], "app": source["app"]}),
+    )
 }
 
 // Validate an agent-selected occurrence. Never manufacture a sequence from
@@ -1711,7 +1750,7 @@ mod quote_tests {
             "totalMinutes":500,"durationSource":"measured","timing":{"averageMinutes":500},
             "quality":{"evidenceCount":999,"screenshotCount":999}}]});
         let mut result = normalize_analysis(raw.clone(), 90, &catalog).unwrap();
-        workspace::validate_publication(&raw, &result).unwrap();
+        workspace::validate_publication(&raw, &result, &catalog).unwrap();
         // Reused citations count once. Model-proposed totals cannot invent
         // observations, screenshots or a measured duration from text alone.
         attach_screenshot_quality(&mut result);
@@ -1767,7 +1806,7 @@ mod quote_tests {
             {"name":"Save","description":"Save the receipt","evidence":[references[1]],"procedure":[step(1)]}
         ]}]});
         let result = normalize_analysis(raw.clone(), 90, &catalog).unwrap();
-        workspace::validate_publication(&raw, &result).unwrap();
+        workspace::validate_publication(&raw, &result, &catalog).unwrap();
         let stage = &result["workflows"][0]["stages"][0];
         assert_eq!(stage["procedure"].as_array().unwrap().len(), 2);
         let sources = stage["evidence"].as_array().unwrap();
@@ -1793,7 +1832,53 @@ mod quote_tests {
         invalid["workflows"][0]["stages"][0]["procedure"][1]["quote"] =
             json!("An invented receipt action.");
         let normalized = normalize_analysis(invalid.clone(), 90, &catalog).unwrap();
-        assert!(workspace::validate_publication(&invalid, &normalized).is_err());
+        let rejection =
+            workspace::validate_publication(&invalid, &normalized, &catalog).unwrap_err();
+        // The rejection names the failing item and why, not only a count.
+        assert!(
+            rejection.contains("procedure[1]: quote is not in the text of the Receipts capture"),
+            "{rejection}"
+        );
+    }
+
+    #[test]
+    fn each_failing_procedure_item_says_why() {
+        let evidence = vec![
+            json!({"timestamp":"2026-10-16T11:29:54.697Z","app":"TextEdit","source":"screen","detail":"tracker.csv Edited"}),
+            json!({"timestamp":"2026-10-16T11:30:00Z","app":"Zoom","source":"audio","detail":"send the tracker"}),
+        ];
+        let item = |at: &str, app: &str, quote: &str| json!({"kind":"action","text":"Save the tracker","timestamp":at,"app":app,"quote":quote});
+        assert!(check_procedure_item(
+            &item("2026-10-16T11:29:54.697Z", "TextEdit", "tracker.csv"),
+            &evidence
+        )
+        .is_ok());
+        let missing = check_procedure_item(
+            &item("2026-10-16T11:29:51.530Z", "TextEdit", "tracker.csv"),
+            &evidence,
+        )
+        .unwrap_err();
+        assert!(
+            missing.contains("not one of this stage's verified evidence entries"),
+            "{missing}"
+        );
+        let quote = check_procedure_item(
+            &item("2026-10-16T11:29:54.697Z", "TextEdit", "an invented row"),
+            &evidence,
+        )
+        .unwrap_err();
+        assert!(
+            quote.starts_with("quote is not in the text of the TextEdit capture"),
+            "{quote}"
+        );
+        let audio = check_procedure_item(
+            &item("2026-10-16T11:30:00Z", "Zoom", "send the tracker"),
+            &evidence,
+        )
+        .unwrap_err();
+        assert!(audio.starts_with("cites audio"), "{audio}");
+        let kind = check_procedure_item(&json!({"kind":"note"}), &evidence).unwrap_err();
+        assert!(kind.starts_with("kind must be"), "{kind}");
     }
 
     #[test]
@@ -1846,27 +1931,50 @@ mod quote_tests {
             "timestamp":"2026-09-18T10:00:00.725+00:00", "app":"Receipts", "source":"screen",
             "detail":"Receipt saved successfully."
         })];
-        let step = |at: &str| json!({"procedure":[{"kind":"check", "text":"Check the save",
-            "timestamp":at, "app":"Receipts", "quote":"Receipt saved successfully."}]});
+        let step = |at: &str| {
+            json!({"procedure":[{"kind":"check", "text":"Check the save",
+            "timestamp":at, "app":"Receipts", "quote":"Receipt saved successfully."}]})
+        };
         let kept = normalize_procedure(&step("2026-09-18T10:00:00Z"), &evidence);
         assert_eq!(kept.len(), 1);
         assert_eq!(kept[0]["timestamp"], "2026-09-18T10:00:00.725+00:00");
-        for other in ["2026-09-18T10:00:01Z", "2026-09-18T09:59:59Z", "2026-09-18T10:00:00.500Z"] {
-            assert!(normalize_procedure(&step(other), &evidence).is_empty(), "{other}");
+        for other in [
+            "2026-09-18T10:00:01Z",
+            "2026-09-18T09:59:59Z",
+            "2026-09-18T10:00:00.500Z",
+        ] {
+            assert!(
+                normalize_procedure(&step(other), &evidence).is_empty(),
+                "{other}"
+            );
         }
 
         let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
         let point = |s: &str| EvidencePoint {
-            timestamp: at(s), app: "Receipts".into(), detail: "Receipt".into(),
-            source: "screen".into(), speaker: None,
+            timestamp: at(s),
+            app: "Receipts".into(),
+            detail: "Receipt".into(),
+            source: "screen".into(),
+            speaker: None,
         };
         let mut catalog = EvidenceCatalog::default();
         catalog.points.push(point("2026-09-18T10:00:00.725Z"));
-        let resolved = catalog.resolve(at("2026-09-18T10:00:00Z"), "receipts").unwrap();
+        let resolved = catalog
+            .resolve(at("2026-09-18T10:00:00Z"), "receipts")
+            .unwrap();
         assert_eq!(resolved.timestamp, at("2026-09-18T10:00:00.725Z"));
-        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Mail").is_none());
+        assert!(catalog
+            .resolve(at("2026-09-18T10:00:00Z"), "Mail")
+            .is_none());
         catalog.points.push(point("2026-09-18T10:00:00.900Z"));
-        assert!(catalog.resolve(at("2026-09-18T10:00:00Z"), "Receipts").is_none(), "ambiguous");
-        assert!(catalog.resolve(at("2026-09-18T10:00:00.900Z"), "Receipts").is_some());
+        assert!(
+            catalog
+                .resolve(at("2026-09-18T10:00:00Z"), "Receipts")
+                .is_none(),
+            "ambiguous"
+        );
+        assert!(catalog
+            .resolve(at("2026-09-18T10:00:00.900Z"), "Receipts")
+            .is_some());
     }
 }
