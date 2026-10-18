@@ -16,8 +16,9 @@ claiming more than the data shows.
 ## What we found
 
 One complete run per side on the same history (receipts suite, seed 1, Claude Sonnet 5 on
-both sides, engine `a8aaee2d6`), all three phases: a first week, a day where a naming rule
-changes, and a cycle with nothing new.
+both sides, engine `a8aaee2d6`). The agents run three cycles on synthetic history: cycle 1
+after 4 recorded days, cycle 2 after a short session where a receipt naming rule changes,
+cycle 3 with nothing new recorded.
 
 | | Baseline | Our changes |
 |---|---:|---:|
@@ -30,13 +31,17 @@ changes, and a cycle with nothing new.
 
 - **The idle saving is certain:** with nothing new recorded, unchanged Workflows still ran 56
   requests; ours runs no cycle at all.
-- **The rest is a direction, not a proof.** A second pair, stopped after the first week, went
-  48 → 60 requests (checks 10/11 → 11/11): first-week runs vary as much as the change.
-- **Quality is not settled.** A blind LLM judge read every published document, both orders.
-  On the complete pair it preferred baseline's 6 times out of 6; on the second pair's
-  receipts document it preferred ours. Two pairs, noise in both directions: this proves quality neither better
-  nor worse. The checks alone would not have shown it, which is why the judge is part of
-  the eval.
+- **The rest is a direction, not a proof.** A second pair, stopped after cycle 1, went
+  48 → 60 requests (checks 10/11 → 11/11): cycle 1 varies from run to run as much as the
+  gap.
+- **Quality is not settled.** A blind LLM judge compared every published document, both
+  orders. Like for like, on the cycle-1 receipts document, it preferred baseline's in the
+  complete pair and ours in the second pair. In the complete pair it also preferred
+  baseline's email document and all 4 later documents, which revise the cycle-1 ones; in
+  the second pair baseline merged email into receipts, so there was nothing to compare.
+  Two pairs, judged both ways, are not enough: the noise goes both directions, so this
+  proves quality neither better nor worse. The checks alone would not have shown any of
+  it, which is why the judge is part of the eval.
 
 The full log, with every run and every change tried, is in
 [`eval/EXPERIMENTS.md`](eval/EXPERIMENTS.md).
@@ -52,18 +57,20 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-Four screens (`←` `→` or `1`–`4`):
+Five screens on a fixed 16:9 canvas that scales to the window (`←` `→` or `1`–`5`):
 
-1. **History.** The week of captures. *Show the planted jobs* reveals what Workflows should
+1. **Workflows.** What screenpipe Workflows does: four agents turn recorded history into
+   workflows that cite their sources. The question PipeOps answers.
+2. **History.** The week of captures. *Show the planted jobs* reveals what Workflows should
    find: receipt filing with four exceptions, email attachments, a one-off printer setup
    that must not become a workflow, and noise.
-2. **Agents.** Discover, Maintain, Deepen and Review on both sides, replayed from their
+3. **Agents.** Discover, Maintain, Deepen and Review on both sides, replayed from their
    request logs: every model request, every write the Workflows API refused, every reply
-   cut off. Switch to *Nothing new* to see the idle cycle disappear.
-3. **Findings.** The checks next to the documents the agents published. Click a step to open
+   cut off. Switch to *Cycle 3 · nothing new* to see the idle cycle disappear.
+4. **Findings.** The checks next to the documents the agents published. Click a step to open
    the capture it cites. *Break it* damages the baseline's workflows four ways; the real
    grader catches each one with exactly the check it should.
-4. **Verdict.** The numbers above, the judge, and what ships.
+5. **Verdict.** The numbers above, the judge, and what ships.
 
 Everything shown is read from `pipeops/src/data/story.json`, built from the real run
 artifacts by `pipeops/scripts/build-story.py`.
@@ -122,7 +129,7 @@ on current screenpipe before it is proposed.
 ## Run a real evaluation (spends AI allowance)
 
 An Apple Silicon Mac with the screenpipe desktop app (quit while running), a screenpipe
-account with Workflows, Rust, `uv` and Docker. A full three-phase run is about 200 model
+account with Workflows, Rust, `uv` and Docker. A full three-cycle run is about 200 model
 requests (about 8 points of our weekly AI allowance) and 10 to 26 minutes of agent
 time. Setup and commands: [`eval/README.md`](eval/README.md).
 
@@ -130,7 +137,7 @@ time. Setup and commands: [`eval/README.md`](eval/README.md).
 
 | Part | What it is |
 |---|---|
-| [`pipeops/`](pipeops/) | The four-screen app (React, TypeScript, Tailwind, screenpipe's design system) |
+| [`pipeops/`](pipeops/) | The five-screen app (React, TypeScript, Tailwind, screenpipe's design system) |
 | [`eval/`](eval/README.md) | `wfeval`: generator, seeding, runs, grader, stage replays, comparisons; `eval/judge/` the LLM judge |
 | [`screenpipe/`](screenpipe/) | screenpipe at `a8aaee2d6` plus our changes |
 

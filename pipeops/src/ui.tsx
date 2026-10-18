@@ -39,11 +39,11 @@ export function Choice<T extends string | number>({ value, options, onChange }: 
 
 export function Screen({ title, lede, children, actions }: { title: string; lede?: ReactNode; children: ReactNode; actions?: ReactNode }) {
   return (
-    <section className="mx-auto flex h-full w-full max-w-[1360px] flex-col px-10 pb-8 pt-6">
-      <header className="mb-6 flex items-end justify-between gap-6">
+    <section className="flex h-full w-full flex-col px-10 pb-7 pt-6">
+      <header className="mb-5 flex items-end justify-between gap-6">
         <div>
-          <h1 className="font-sans text-[34px] font-medium leading-tight tracking-tight">{title}</h1>
-          {lede && <p className="mt-1 max-w-[780px] font-serif text-xl text-muted">{lede}</p>}
+          <h1 className="font-sans text-[36px] font-medium leading-tight tracking-tight">{title}</h1>
+          {lede && <p className="mt-1 max-w-[1100px] font-serif text-[22px] leading-snug text-muted">{lede}</p>}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
@@ -61,7 +61,9 @@ export function Label({ children, className = '' }: { children: ReactNode; class
 }
 
 export function Mono({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <span className={`font-mono text-[13px] ${className}`}>{children}</span>;
+  // A size in className replaces the default; two font sizes would leave the winner to CSS order.
+  const sized = /(^|\s)text-(xs|sm|base|lg|[2-9]?xl|\[\d+px\])(\s|$)/.test(className);
+  return <span className={`font-mono ${sized ? '' : 'text-[13px]'} ${className}`}>{children}</span>;
 }
 
 /** Pass or fail, by shape and word as well as tone. */

@@ -1,7 +1,7 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 import { Card, Label, Mono, Screen } from '../ui';
-import { JOB_NAME, SIDE_NAME, fmtInt, fmtK, story, totals, type Side } from '../story';
+import { SIDE_NAME, fmtInt, fmtK, story, totals, type JudgeRow, type Side } from '../story';
 
 const REPO = 'github.com/MylittleQueercat/Hackathon-Screenpipe';
 const PRS = ['Eval harness', 'Workflows bug fixes', 'Agent feedback', 'Idle skip', 'Cut replies fix + cloud report'];
@@ -20,89 +20,109 @@ export default function Verdict() {
     { label: 'Replies cut off', base: b.cut, stack: s.cut, fmt: fmtInt },
   ];
 
+  const [pair1, pair2] = story.judge;
+  const row = (j: typeof pair1 | undefined, phase: number, job: string) => j?.rows.find((r) => r.phase === phase && r.job === job);
+  const later = pair1.rows.filter((r) => r.phase > 1);
+  const p2EmailMissing = p2('base').checks.email_separate === false;
+
   return (
     <Screen
       title={`${share}% of the requests. Same checks. Quality not settled.`}
-      lede="One complete run per side, all three phases. Cost is what we can claim."
+      lede="One complete run per side on the same history, all three cycles."
     >
-      <div className="grid grid-cols-[1fr_420px] gap-5">
-        <Card className="p-6">
-          <div className="mb-4 grid grid-cols-[240px_1fr_120px] items-end gap-4">
-            <Label>Complete pair</Label>
-            <Label>Baseline above, our stack below</Label>
-            <Label className="text-right">Change</Label>
+      <div className="grid h-full grid-cols-[1fr_640px] gap-5">
+        <Card className="flex flex-col px-7 py-5">
+          <div className="mb-3 grid grid-cols-[250px_1fr_100px] items-end gap-4">
+            <Label className="text-base">Complete pair</Label>
+            <div className="flex gap-5 font-sans text-sm text-muted">
+              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-trace" /> Baseline</span>
+              <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-5 bg-ink" /> Our stack</span>
+            </div>
+            <Label className="text-right text-base">Change</Label>
           </div>
-          <div className="mb-5 grid grid-cols-[240px_1fr_120px] items-center gap-4 border-b border-line pb-4">
+          <div className="mb-4 grid grid-cols-[250px_1fr_100px] items-center gap-4 border-b border-line pb-3">
             <span className="font-serif text-xl">Checks passed</span>
-            <Mono className="text-xl">{b.passed}/{b.scored} <span className="text-faint">→</span> {s.passed}/{s.scored}</Mono>
-            <Mono className="text-right text-muted">{s.passed === b.passed ? 'same' : `${s.passed - b.passed}`}</Mono>
+            <Mono className="text-2xl">{b.passed}/{b.scored} <span className="text-faint">→</span> {s.passed}/{s.scored}</Mono>
+            <Mono className="text-right text-xl text-muted">{s.passed === b.passed ? 'same' : `${s.passed - b.passed}`}</Mono>
           </div>
-          <div className="space-y-5">
+          <div className="flex flex-1 flex-col justify-between">
             {rows.map((r) => {
               const max = Math.max(r.base, r.stack, 1);
               const delta = r.base ? Math.round(((r.stack - r.base) / r.base) * 100) : 0;
               return (
-                <div key={r.label} className="grid grid-cols-[240px_1fr_120px] items-center gap-4">
+                <div key={r.label} className="grid grid-cols-[250px_1fr_100px] items-center gap-4">
                   <span className="font-serif text-xl leading-tight">{r.label}</span>
                   <div className="space-y-1.5">
                     <Bar value={r.base} max={max} text={r.fmt(r.base)} tone="trace" />
                     <Bar value={r.stack} max={max} text={r.fmt(r.stack)} tone="ink" />
                   </div>
-                  <Mono className="text-right text-xl">{r.base === 0 && r.stack === 0 ? 'same' : `${delta > 0 ? '+' : ''}${delta}%`}</Mono>
+                  <Mono className="text-right text-2xl">{r.base === 0 && r.stack === 0 ? 'same' : `${delta > 0 ? '+' : ''}${delta}%`}</Mono>
                 </div>
               );
             })}
           </div>
-          <div className="mt-6 border-t border-line pt-4">
-            <Label className="mb-1">A second pair, stopped after the first week</Label>
-            <p className="font-serif text-xl">
+          <div className="mt-4 border-t border-line pt-3">
+            <Label className="mb-1 text-base">A second pair, stopped after cycle 1</Label>
+            <p className="font-serif text-xl leading-snug">
               Requests <Mono className="text-lg">{p2('base').requests} → {p2('stack').requests}</Mono>, checks{' '}
               <Mono className="text-lg">{p2('base').passed}/{p2('base').scored} → {p2('stack').passed}/{p2('stack').scored}</Mono>
-              <span className="text-muted">: the first-week gap is within the runs’ own spread. The idle saving is the certain part.</span>
+              <span className="text-muted">: cycle 1 varies from run to run as much as the gap. The idle saving is the certain part.</span>
             </p>
           </div>
         </Card>
 
-        <div className="flex flex-col gap-5">
-          <Card className="p-6">
-            <Label className="mb-3">A blind LLM judge read the documents, both orders</Label>
-            {story.judge.map((j) => {
-              const won = (side: Side) => j.rows.filter((r) => r.verdict === side).length;
-              return (
-                <div key={j.name} className="mb-4">
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-sans text-base font-medium">{j.name}</span>
-                    <Mono className="text-muted">{j.rows.length} document{j.rows.length > 1 ? 's' : ''}</Mono>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {j.rows.map((r) => (
-                      <span
-                        key={`${r.phase}${r.job}`}
-                        title={`Phase ${r.phase}, ${JOB_NAME[r.job]}: ${r.orders.map((o) => o.strength).join(' / ')}`}
-                        className={`rounded-sm border px-2 py-1 font-mono text-[12px] ${r.verdict === 'stack' ? 'border-ink bg-ink text-bone' : 'border-line bg-surface text-ink'}`}
-                      >
-                        {r.verdict === 'base' ? 'Baseline' : r.verdict === 'stack' ? 'Our stack' : 'Split'} · p{r.phase} {r.job}
-                      </span>
-                    ))}
-                  </div>
-                  <Mono className="mt-1 block text-faint">preferred: {SIDE_NAME.base} {won('base')}, {SIDE_NAME.stack} {won('stack')}</Mono>
-                </div>
-              );
-            })}
-            <p className="font-serif text-xl leading-snug">
-              Two pairs, each judged both ways round. The noise goes in both directions, so this proves quality neither better nor worse.
+        <div className="flex min-h-0 flex-col gap-5">
+          <Card className="px-6 py-5">
+            <Label className="mb-3 text-base">A blind LLM judge compared the documents, both ways round</Label>
+            <div className="grid grid-cols-[210px_1fr_1fr] gap-x-3 gap-y-3">
+              <span />
+              <Label>Pair 1 (complete)</Label>
+              <Label>Pair 2 (cycle 1 only)</Label>
+              <Cellname>Receipt filing, cycle 1</Cellname>
+              <Verdict1 r={row(pair1, 1, 'receipts')} />
+              <Verdict1 r={row(pair2, 1, 'receipts')} />
+              <Cellname>Email attachments, cycle 1</Cellname>
+              <Verdict1 r={row(pair1, 1, 'email')} />
+              {row(pair2, 1, 'email') ? <Verdict1 r={row(pair2, 1, 'email')} /> : <Note>{p2EmailMissing ? 'baseline merged it into receipts: nothing to compare' : 'not judged'}</Note>}
+              <Cellname>Cycles 2 and 3</Cellname>
+              <Note>
+                <b className="font-sans font-medium text-ink">{SIDE_NAME.base} {later.filter((r) => r.verdict === 'base').length} of {later.length}</b>, revising the cycle-1 documents
+              </Note>
+              <Note>not run</Note>
+            </div>
+            <p className="mt-4 border-t border-line pt-3 font-serif text-xl leading-snug">
+              Where both pairs compare, one each. Two pairs judged both ways are not enough: the noise goes both directions, so quality is proven neither better nor worse.
             </p>
           </Card>
-          <Card className="p-6">
-            <Label className="mb-3">Planned as separate pull requests to screenpipe</Label>
-            <ul className="space-y-1">
+          <Card className="flex-1 px-6 py-5">
+            <Label className="mb-2 text-base">Planned as separate pull requests to screenpipe</Label>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
               {PRS.map((x) => <li key={x} className="font-serif text-xl"><Mono className="mr-2 text-faint">→</Mono>{x}</li>)}
             </ul>
-            <Mono className="mt-4 block text-muted">{REPO}</Mono>
+            <Mono className="mt-3 block text-base text-muted">{REPO}</Mono>
           </Card>
         </div>
       </div>
     </Screen>
+  );
+}
+
+function Cellname({ children }: { children: React.ReactNode }) {
+  return <span className="font-serif text-lg leading-tight">{children}</span>;
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+  return <span className="font-serif text-lg leading-tight text-muted">{children}</span>;
+}
+
+function Verdict1({ r }: { r: JudgeRow | undefined }) {
+  if (!r) return <Note>not judged</Note>;
+  const strength = r.orders.every((o) => o.strength === r.orders[0].strength) ? r.orders[0].strength : r.orders.map((o) => o.strength).join(' / ');
+  const who = r.verdict === 'base' ? SIDE_NAME.base : r.verdict === 'stack' ? SIDE_NAME.stack : 'Split';
+  return (
+    <span className={`self-start rounded-sm border px-2 py-1 font-sans text-base ${r.verdict === 'stack' ? 'border-ink bg-ink text-bone' : 'border-ink bg-surface text-ink'}`}>
+      {who} <span className="opacity-70">· {strength}</span>
+    </span>
   );
 }
 
@@ -112,7 +132,7 @@ function Bar({ value, max, text, tone }: { value: number; max: number; text: str
       <div className="h-3 flex-1 bg-subtle">
         <div className={`h-3 ${tone === 'ink' ? 'bg-ink' : 'bg-trace'} transition-[width]`} style={{ width: `${(value / max) * 100}%` }} />
       </div>
-      <Mono className="w-20 text-right">{text}</Mono>
+      <Mono className="w-24 text-right text-base">{text}</Mono>
     </div>
   );
 }

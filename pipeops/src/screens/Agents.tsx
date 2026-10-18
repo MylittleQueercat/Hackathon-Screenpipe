@@ -41,13 +41,14 @@ export default function Agents() {
         </>
       }
     >
-      <div className="space-y-4">
+      <div className="flex h-full flex-col gap-4">
+        <div className="flex shrink-0 items-center gap-8 font-sans text-base text-muted">
+          <span className="flex items-center gap-2"><span className="inline-block h-5 w-[2px] bg-ink" /> one model request</span>
+          <span className="flex items-center gap-2"><span className="font-mono text-base text-ink">✕</span> the Workflows API refused a write</span>
+          <span className="flex items-center gap-2"><span className="font-mono text-sm text-ink">▲</span> a reply cut off at its length limit</span>
+          <span className="flex items-center gap-2"><span className="rounded-sm bg-phosphor px-2 font-sans text-sm text-ink">Agent</span> working now, during a replay</span>
+        </div>
         {lanes.map(({ side, p }) => <Lane key={side} side={side} p={p} span={span} now={now} />)}
-      </div>
-      <div className="mt-3 flex justify-between font-mono text-[11px] text-faint">
-        <span>0 s</span>
-        <span>one mark per model request · ✕ the Workflows API refused a write · ▲ a reply cut off at its length limit</span>
-        <span>{Math.round(span)} s of agent time</span>
       </div>
     </Screen>
   );
@@ -63,29 +64,37 @@ function Lane({ side, p, span, now }: { side: Side; p: Phase; span: number; now:
   const idle = p.requests === 0;
 
   return (
-    <Card className="grid grid-cols-[1fr_220px]">
-      <div className="min-w-0 border-r border-line px-6 py-4">
-        <div className="mb-2 font-sans text-base font-medium">{SIDE_NAME[side]}</div>
+    <Card className="grid min-h-0 flex-1 grid-cols-[1fr_260px]">
+      <div className="flex min-w-0 flex-col border-r border-line px-6 py-4">
+        <div className="mb-2 font-sans text-xl font-medium">{SIDE_NAME[side]}</div>
         {idle ? (
-          <div className="flex h-[136px] items-center font-serif text-2xl italic text-muted">No cycle ran: nothing new was recorded.</div>
+          <div className="flex flex-1 items-center font-serif text-3xl italic text-muted">No cycle ran: nothing new was recorded.</div>
         ) : (
-          <div className="space-y-1">
+          <div className="flex flex-1 flex-col justify-center gap-1">
             {AGENTS.map((a) => (
-              <div key={a} className="grid grid-cols-[96px_1fr] items-center gap-3">
-                <span className={`rounded-sm px-2 py-0.5 font-sans text-sm transition-colors ${active(a) ? 'bg-phosphor text-ink' : 'text-muted'}`}>
+              <div key={a} className="grid grid-cols-[110px_1fr] items-center gap-3">
+                <span className={`rounded-sm px-2 py-0.5 font-sans text-lg transition-colors ${active(a) ? 'bg-phosphor text-ink' : 'text-muted'}`}>
                   {a[0].toUpperCase() + a.slice(1)}
                 </span>
-                <div className="relative h-7 border-b border-line">
+                <div className="relative h-9 border-b border-line">
                   {p.stream.filter((e) => e.agent === a && e.t <= now).map((e, i) => <Tick key={i} e={e} span={span} />)}
                   {live && <span className="absolute -top-1 bottom-0 w-px bg-ink" style={{ left: `${(now / span) * 100}%` }} />}
                 </div>
               </div>
             ))}
+            <div className="grid grid-cols-[110px_1fr] gap-3">
+              <span />
+              <div className="relative h-5 font-mono text-sm text-faint">
+                {axisTicks(span).map((t) => (
+                  <span key={t} className="absolute -translate-x-1/2" style={{ left: `${(t / span) * 100}%` }}>{t} s</span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-        <div className="mt-2 h-5 truncate font-mono text-xs text-muted">{last ? `${last.agent} · ${last.action} refused: ${last.reply}` : ''}</div>
+        <div className="mt-2 h-6 truncate font-mono text-sm text-muted">{last ? `Last refusal · ${last.agent}: ${last.reply}` : ''}</div>
       </div>
-      <dl className="grid grid-cols-2 content-center gap-x-4 gap-y-3 px-5 py-4">
+      <dl className="grid grid-cols-2 content-center gap-x-4 gap-y-5 px-6 py-4">
         <Stat label="Requests" value={count('request')} />
         <Stat label="Seconds" value={Math.round(live ? Math.min(now, p.seconds) : p.seconds)} />
         <Stat label="Refused writes" value={refused.length} />
@@ -97,17 +106,22 @@ function Lane({ side, p, span, now }: { side: Side; p: Phase; span: number; now:
 
 function Tick({ e, span }: { e: StreamEvent; span: number }) {
   const left = `${(e.t / span) * 100}%`;
-  if (e.kind === 'request') return <span className="absolute bottom-0 h-4 w-px bg-ink" style={{ left }} />;
-  if (e.kind === 'workflows' && !e.ok) return <span className="absolute -top-0.5 -translate-x-1/2 font-mono text-[10px] leading-none text-ink" style={{ left }}>✕</span>;
-  if (e.kind === 'cut') return <span className="absolute -top-0.5 -translate-x-1/2 font-mono text-[9px] leading-none text-ink" style={{ left }}>▲</span>;
+  if (e.kind === 'request') return <span className="absolute bottom-0 h-5 w-[2px] bg-ink" style={{ left }} />;
+  if (e.kind === 'workflows' && !e.ok) return <span className="absolute top-0 -translate-x-1/2 font-mono text-[13px] leading-none text-ink" style={{ left }}>✕</span>;
+  if (e.kind === 'cut') return <span className="absolute top-0 -translate-x-1/2 font-mono text-[12px] leading-none text-ink" style={{ left }}>▲</span>;
   return null;
+}
+
+function axisTicks(span: number) {
+  const step = span > 400 ? 100 : span > 200 ? 50 : 25;
+  return Array.from({ length: Math.floor(span / step) + 1 }, (_, i) => i * step).filter((t) => t < span - step / 3);
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div>
-      <dt className="font-sans text-xs text-muted">{label}</dt>
-      <dd className="font-mono text-2xl">{value}</dd>
+      <dt className="font-sans text-sm text-muted">{label}</dt>
+      <dd className="font-mono text-4xl">{value}</dd>
     </div>
   );
 }

@@ -23,46 +23,54 @@ export default function Findings() {
   return (
     <Screen
       title="What they wrote, checked against the truth"
-      lede="Each check asks one thing of the published workflows. Every claim cites a capture you can open."
+      lede="Each check asks one thing of the published workflows. Every step cites a capture you can open."
       actions={<Choice value={phase} onChange={(v) => pick(() => { setPhase(v); setWi(0); setBreaking(false); setDamage(null); })} options={[1, 2, 3].map((x) => ({ value: x, label: PHASE_NAME[x] }))} />}
     >
-      <div className="grid h-full grid-cols-[460px_1fr] gap-5">
-        <Card className="flex flex-col p-5">
-          <div className="mb-3 grid grid-cols-[1fr_72px_72px] items-end gap-2">
-            <Label>Check</Label>
-            <Label className="text-center">{breaking ? 'Damaged' : 'Baseline'}</Label>
-            <Label className="text-center">{breaking ? 'Grader' : 'Our stack'}</Label>
+      <div className="grid h-full grid-cols-[600px_1fr] gap-5">
+        <Card className="flex min-h-0 flex-col p-5">
+          <div className="mb-2 grid grid-cols-[1fr_88px_108px] items-end gap-2">
+            <Label className="text-base">Check</Label>
+            <Label className="text-center text-base">{breaking ? 'Before' : 'Baseline'}</Label>
+            <Label className="text-center text-base">{breaking ? 'After damage' : 'Our stack'}</Label>
           </div>
           <ul className="divide-y divide-line">
             {checks.map((c) => {
-              const failedHere = !!control?.failed.includes(c);
+              const broke = !!control?.failed.includes(c);
+              const before = p('base').checks[c];
               return (
-                <li key={c} className={`grid grid-cols-[1fr_72px_72px] items-center gap-2 py-2 ${failedHere ? 'bg-subtle' : ''}`}>
-                  <span className="font-serif text-lg leading-tight">{story.checks[c] ?? c}</span>
-                  <span className="text-center">
-                    <Mark pass={breaking ? (control ? !failedHere && p('base').checks[c] : p('base').checks[c]) : p('base').checks[c]} />
+                <li key={c} className={`grid grid-cols-[1fr_88px_108px] items-center gap-2 py-[6px] ${broke ? '-mx-2 bg-subtle px-2' : ''}`}>
+                  <span className="font-serif text-lg leading-tight">
+                    {story.checks[c] ?? c}
+                    {broke && <span className="ml-2 font-sans text-sm font-medium">now fails</span>}
                   </span>
-                  <span className="text-center">
-                    {breaking ? (failedHere ? <Mono className="text-ink">caught</Mono> : <Mono className="text-faint">·</Mono>) : <Mark pass={p('stack').checks[c]} />}
-                  </span>
+                  <span className="text-center"><Mark pass={breaking ? before : p('base').checks[c]} /></span>
+                  <span className="text-center"><Mark pass={breaking ? (broke ? false : before) : p('stack').checks[c]} /></span>
                 </li>
               );
             })}
           </ul>
-          <div className="mt-auto pt-4">
+          <div className="mt-2 flex gap-5 font-sans text-sm text-muted">
+            <span className="flex items-center gap-1.5"><Mark pass /> check passes</span>
+            <span className="flex items-center gap-1.5"><Mark pass={false} /> check fails</span>
+          </div>
+          <div className="mt-auto border-t border-line pt-3">
             {phase === 1 && !breaking && (
-              <Button onClick={() => pick(() => { setBreaking(true); setSide('base'); })}>Break it: would the checks notice?</Button>
+              <div className="flex items-center justify-between gap-3">
+                <span className="font-serif text-lg leading-snug text-muted">Would the checks notice a bad workflow?</span>
+                <Button onClick={() => pick(() => { setBreaking(true); setSide('base'); })}>Break it</Button>
+              </div>
             )}
             {breaking && (
               <div>
-                <Label className="mb-2">Damage the baseline's workflows, then grade them again</Label>
-                <div className="flex flex-wrap gap-2">
+                <div className="mb-2 font-serif text-lg leading-snug">
+                  {control
+                    ? <>The grader caught it: <b className="font-sans font-medium">{control.failed.map((f) => story.checks[f] ?? f).join(', ')}</b> now fails, every other check still passes.</>
+                    : <>Damage the baseline’s published workflows one way, and the real grader checks them again.</>}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   {story.controls.map((c) => <Button key={c.id} active={damage === c.id} onClick={() => setDamage(c.id)}>{c.label}</Button>)}
                 </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <Mono className="text-muted">{control ? `costs exactly: ${control.failed.map((f) => story.checks[f] ?? f).join(', ')}` : 'graded by the real wfeval grader'}</Mono>
-                  <Button onClick={() => { setBreaking(false); setDamage(null); }}>Done</Button>
-                </div>
+                <div className="mt-2 text-right"><Button onClick={() => { setBreaking(false); setDamage(null); }}>Done</Button></div>
               </div>
             )}
           </div>
@@ -128,13 +136,13 @@ function Capture({ step, w }: { step: Step; w: Workflow }) {
   const full = step.at ? w.evidence.find((e) => sameCapture(e.at, step.at!) && e.app === step.app) : undefined;
   return (
     <div>
-      <Mono className="block text-ink">{step.app ?? 'no app cited'}</Mono>
-      <Mono className="block text-muted">{step.at ? fmtTime(step.at) : 'no time cited'}</Mono>
+      <Mono className="block text-base text-ink">{step.app ?? 'no app cited'}</Mono>
+      <Mono className="block text-base text-muted">{step.at ? fmtTime(step.at) : 'no time cited'}</Mono>
       {step.quote && (
-        <blockquote className="mt-3 border-l-2 border-ink pl-3 font-mono text-[13px] leading-relaxed">{step.quote}</blockquote>
+        <blockquote className="mt-3 border-l-2 border-ink pl-3 font-mono text-[15px] leading-relaxed">{step.quote}</blockquote>
       )}
-      {full && <pre className="mt-3 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-muted">{full.text}</pre>}
-      <p className="mt-3 font-mono text-[11px] text-faint">The grader resolved this citation against the recorded captures.</p>
+      {full && <pre className="mt-3 whitespace-pre-wrap font-mono text-[13px] leading-relaxed text-muted">{full.text}</pre>}
+      <p className="mt-3 font-mono text-[13px] text-faint">The grader resolved this citation against the recorded captures.</p>
     </div>
   );
 }
