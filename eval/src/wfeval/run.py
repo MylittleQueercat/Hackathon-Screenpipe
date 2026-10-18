@@ -37,6 +37,7 @@ from .engine import (APP, ENGINES, EVAL_TZ, LIVE, PORT, SLOTS, TASKS, Engine, En
                      clone_template, slot)
 from .grade import grade_run
 from .sandbox import Sandbox, image_id, is_published
+from .stories import SUITES
 from .usage import phase_usage
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -390,7 +391,9 @@ def run(variant_path: Path, suite: str, seed: int, repeat: int, phases: list[int
         slot_no: int | None = None) -> Path:
     variant = json.loads(variant_path.read_text())
     data = ROOT / "data" / f"{suite}-s{seed}"
-    if not (data / "manifest.json").exists():
+    # A custom suite is a file someone may have edited since the data was written; the
+    # generator is deterministic and cheap, so it is always rendered again.
+    if suite not in SUITES or not (data / "manifest.json").exists():
         generate.write(suite, seed)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = f"{stamp}-{variant['name']}-{suite}-s{seed}-r{repeat}"

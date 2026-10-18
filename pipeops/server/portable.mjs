@@ -25,8 +25,11 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
 function sumTokens(results) {
   const keys = ['input', 'cacheRead', 'cacheWrite', 'output', 'reasoning', 'requests', 'tool_calls'];
-  const total = Object.fromEntries(keys.map((k) => [k, 0]));
-  for (const r of results) for (const k of keys) total[k] += r.usage?.[k] ?? 0;
+  // null, not 0, when a phase did not record a field: absent is not the same as none.
+  const total = Object.fromEntries(
+    keys.map((k) => [k, results.length && results.every((r) => num(r.usage?.[k]) !== null) ? results.reduce((s, r) => s + r.usage[k], 0) : null]),
+  );
+  const sources = new Set(results.map((r) => str(r.usage?.source)));
   return {
     inputTokens: total.input,
     cacheReadTokens: total.cacheRead,
@@ -35,6 +38,7 @@ function sumTokens(results) {
     reasoningTokens: total.reasoning,
     requests: total.requests,
     toolCalls: total.tool_calls,
+    source: sources.size === 1 && !sources.has(null) ? [...sources][0] : sources.has(null) ? null : 'mixed',
   };
 }
 
@@ -252,6 +256,21 @@ export async function readPortableFile(file) {
 
 /* ------------------- load into the UI's RawRun shape ------------------- */
 
+function portableEfficiency(doc) {
+  const t = doc.modelUsage?.total;
+  const n = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  return {
+    requests: n(t?.requests),
+    runtimeSeconds: n(doc.metrics.runtimeSeconds),
+    input: n(t?.inputTokens),
+    cacheRead: n(t?.cacheReadTokens),
+    cacheWrite: n(t?.cacheWriteTokens),
+    output: n(t?.outputTokens),
+    reasoning: n(t?.reasoningTokens),
+    source: ['request_log', 'pipe_logs', 'mixed'].includes(t?.source) ? t.source : null,
+  };
+}
+
 export function portableToRawRun(doc, role) {
   return {
     id: doc.run.id,
@@ -268,6 +287,7 @@ export function portableToRawRun(doc, role) {
       phases: Array.isArray(doc.metrics.phases) ? doc.metrics.phases : undefined,
       failedCalls: typeof doc.metrics.failedCalls === 'number' ? doc.metrics.failedCalls : null,
     },
+    efficiency: portableEfficiency(doc),
     stages: doc.stages,
     recordedActivity: null,
     generatedWorkflows: doc.workflows.length ? doc.workflows : null,

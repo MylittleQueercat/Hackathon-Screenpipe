@@ -3,7 +3,20 @@ import { useEffect, useRef, useState } from 'react';
 import mockJson from '../data/mock-experiment.json';
 import type { DataOrigin } from '../data/load';
 import type { RawExperimentBundle } from '../data/schema';
-import { fetchDemoRuns, fetchLiveExperiment, fetchRuns, fetchVariants, streamWfevalRun, type RunSummary, type VariantSummary } from '../data/live';
+import {
+  deleteSuite,
+  fetchDemoRuns,
+  fetchLiveExperiment,
+  fetchRuns,
+  fetchSuiteSpec,
+  fetchSuites,
+  fetchVariants,
+  saveSuite,
+  streamWfevalRun,
+  type RunSummary,
+  type SuiteSummary,
+  type VariantSummary,
+} from '../data/live';
 import { Eyebrow, GhostButton, PrimaryButton, Select } from '../components/ui';
 
 const mock = mockJson as RawExperimentBundle;
@@ -31,6 +44,7 @@ export function LoadView({
   const [demoRuns, setDemoRuns] = useState<RunSummary[] | null>(null);
   const runs = source === 'demo' ? demoRuns : localRuns;
   const [variants, setVariants] = useState<VariantSummary[] | null>(null);
+  const [suites, setSuites] = useState<SuiteSummary[]>([]);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -48,6 +62,11 @@ export function LoadView({
     fetchDemoRuns()
       .then(setDemoRuns)
       .catch((e: Error) => setBackendError(e.message));
+    fetchSuites()
+      .then(setSuites)
+      .catch(() => {
+        /* like variants: a convenience for the run form; the runs list carries the real error */
+      });
     fetchVariants()
       .then((v) => {
         setVariants(v);
@@ -193,10 +212,10 @@ export function LoadView({
             </Labeled>
             <div className="flex gap-3">
               <Labeled label="suite">
-                <input
-                  className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+                <Select
                   value={form.suite}
-                  onChange={(e) => setForm((f) => ({ ...f, suite: e.target.value }))}
+                  onChange={(v) => setForm((f) => ({ ...f, suite: v }))}
+                  options={(suites.length ? suites : [{ name: form.suite, description: '' }]).map((x) => ({ value: x.name, label: x.name }))}
                   disabled={running}
                 />
               </Labeled>
@@ -219,6 +238,8 @@ export function LoadView({
                 />
               </Labeled>
             </div>
+
+            <CustomSuites suites={suites} onChange={refresh} onUse={(name) => setForm((f) => ({ ...f, suite: name }))} disabled={running} />
 
             {!confirming ? (
               <PrimaryButton className="self-start" onClick={() => setConfirming(true)} disabled={running || !form.variant}>
@@ -246,6 +267,148 @@ export function LoadView({
           )}
         </section>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Developer-written test suites, collapsed by default. A suite is a JSON file (the format is
+ * documented at the top of eval/src/wfeval/custom.py) saved to eval/suites/; the harness
+ * renders and validates it on save, so a suite that can't be run is never listed.
+ */
+function CustomSuites({
+  suites,
+  onChange,
+  onUse,
+  disabled,
+}: {
+  suites: SuiteSummary[];
+  onChange: () => void;
+  onUse: (name: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const custom = suites.filter((s) => !s.builtin);
+
+  const edit = async (n: string) => {
+    try {
+      setName(n);
+      setText(JSON.stringify(await fetchSuiteSpec(n), null, 2));
+      setError(null);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const save = async () => {
+    let spec: unknown;
+    try {
+      spec = JSON.parse(text);
+    } catch (e) {
+      setError(`Not valid JSON: ${(e as Error).message}`);
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveSuite(name.trim(), spec);
+      setError(null);
+      onChange();
+      onUse(name.trim());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (n: string) => {
+    await deleteSuite(n).catch((e: Error) => setError(e.message));
+    onChange();
+  };
+
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setText(await file.text());
+    if (!name) setName(file.name.replace(/\.json$/, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-'));
+    setError(null);
+  };
+
+  return (
+    <div className="rounded-xl border border-ink-700 bg-ink-900/60">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+        aria-expanded={open}
+      >
+        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-400">Custom test suites</span>
+        <span className="flex items-center gap-3 text-[12px] text-ink-500">
+          {custom.length} yours
+          <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+        </span>
+      </button>
+
+      {open && (
+        <div className="space-y-3 border-t border-ink-800 px-4 pb-4 pt-3">
+          <p className="text-[12px] leading-snug text-ink-400">
+            Add your own complete test: the jobs hidden in a week of activity, what they look like on screen, and the checks the
+            agents are graded on. Pick it in <span className="text-ink-200">suite</span> above. Runs of different suites can't be compared.
+          </p>
+
+          {custom.length > 0 && (
+            <ul className="space-y-1.5">
+              {custom.map((s) => (
+                <li key={s.name} className="flex items-center justify-between gap-3 rounded-lg bg-ink-950/60 px-3 py-1.5 text-[12px] text-ink-200">
+                  <span className="min-w-0 truncate font-mono">
+                    {s.name}
+                    <span className="text-ink-500">{s.broken ? ' · unreadable' : ` · ${s.jobs} jobs · ${s.checks} checks`}</span>
+                  </span>
+                  <span className="flex shrink-0 gap-3 text-ink-500">
+                    <button className="hover:text-signal" onClick={() => edit(s.name)}>edit</button>
+                    <button className="hover:text-cost disabled:opacity-40" disabled={disabled} onClick={() => remove(s.name)}>remove</button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">suite name</span>
+            <input
+              className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+              value={name}
+              placeholder="my-suite"
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">suite definition (JSON)</span>
+            <textarea
+              className="h-48 w-full resize-y rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[12px] leading-snug text-ink-100"
+              value={text}
+              spellCheck={false}
+              placeholder='{"jobs": {…}, "phases": {"1": […]}, "checks": […]}'
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
+          {error && <pre className="whitespace-pre-wrap rounded-lg border border-cost/40 bg-cost/[0.06] p-3 font-mono text-[11.5px] text-cost">{error}</pre>}
+          <div className="flex flex-wrap items-center gap-2">
+            <PrimaryButton onClick={save} disabled={saving || !name.trim() || !text.trim()}>
+              {saving ? 'Checking…' : 'Save suite'}
+            </PrimaryButton>
+            {suites.some((s) => s.name === 'standup') && (
+              <GhostButton onClick={() => edit('standup').then(() => setName(''))}>Start from example</GhostButton>
+            )}
+            <label className="cursor-pointer rounded-full border border-ink-700 px-4 py-1.5 text-[13px] text-ink-300 hover:border-ink-500">
+              Upload .json
+              <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

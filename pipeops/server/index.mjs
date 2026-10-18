@@ -6,7 +6,8 @@
 
 import express from 'express';
 import { spawn } from 'node:child_process';
-import { access, readFile, readdir } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundleFromRuns, buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
@@ -19,6 +20,7 @@ const RUNS_DIR = process.env.PIPEOPS_RUNS_DIR ?? path.join(EVAL_DIR, 'runs');
 const DEMO_DIR = process.env.PIPEOPS_DEMO_DIR ?? path.join(__dirname, '..', 'demo-data');
 const VARIANTS_DIR = path.join(EVAL_DIR, 'variants');
 const SNAPSHOTS_DIR = path.join(EVAL_DIR, 'snapshots');
+const SUITES_DIR = path.join(EVAL_DIR, 'suites');
 // Spawned wfeval processes import the package from eval/src directly. On macOS the editable
 // install's .pth file can get the "hidden" flag, which Python 3.13+ ignores ("No module named
 // 'wfeval'"); putting src/ on PYTHONPATH makes Stage Replay and runs independent of that.
@@ -133,6 +135,81 @@ app.get('/api/variants', async (_req, res) => {
     res.status(500).json({ error: String(e.message ?? e) });
   }
 });
+
+// Suites. Two are built into the harness (stories.py); anything in eval/suites/<name>.json
+// is a developer's own (wfeval/custom.py). The harness is the validator: a saved suite is
+// rendered once into a temp dir, and the file only stays if that works.
+const BUILTIN_SUITES = [
+  { name: 'receipts', description: 'Receipt filing, an email job, a one-off printer setup, noise; 11 checks over 3 phases' },
+  { name: 'busy', description: 'Five jobs including look-alikes of each other, two one-offs, noise in the same apps' },
+];
+const SUITE_NAME = /^[a-z][a-z0-9-]{0,30}$/;
+
+app.get('/api/suites', async (_req, res) => {
+  const files = (await readdir(SUITES_DIR).catch(() => [])).filter((f) => f.endsWith('.json')).sort();
+  const custom = [];
+  for (const f of files) {
+    const name = f.replace(/\.json$/, '');
+    try {
+      const spec = JSON.parse(await readFile(path.join(SUITES_DIR, f), 'utf8'));
+      custom.push({ name, builtin: false, description: spec.description ?? '', jobs: Object.keys(spec.jobs ?? {}).length, checks: (spec.checks ?? []).length });
+    } catch {
+      custom.push({ name, builtin: false, description: '', jobs: 0, checks: 0, broken: true });
+    }
+  }
+  res.json([...BUILTIN_SUITES.map((s) => ({ ...s, builtin: true })), ...custom]);
+});
+
+app.get('/api/suites/:name', async (req, res) => {
+  if (!SUITE_NAME.test(req.params.name)) return res.status(400).json({ error: 'bad suite name' });
+  try {
+    res.json(JSON.parse(await readFile(path.join(SUITES_DIR, `${req.params.name}.json`), 'utf8')));
+  } catch {
+    res.status(404).json({ error: 'no such custom suite' });
+  }
+});
+
+app.put('/api/suites/:name', async (req, res) => {
+  const { name } = req.params;
+  if (!SUITE_NAME.test(name)) return res.status(400).json({ error: 'Name: lower case letters, digits and "-", starting with a letter.' });
+  if (BUILTIN_SUITES.some((s) => s.name === name)) return res.status(400).json({ error: `"${name}" is a built-in suite; choose another name.` });
+  const spec = req.body?.spec;
+  if (!spec || typeof spec !== 'object') return res.status(400).json({ error: 'missing spec' });
+  const file = path.join(SUITES_DIR, `${name}.json`);
+  const previous = await readFile(file, 'utf8').catch(() => null);
+  const out = await mkdtemp(path.join(tmpdir(), 'pipeops-suite-'));
+  try {
+    await mkdir(SUITES_DIR, { recursive: true });
+    await writeFile(file, JSON.stringify(spec, null, 1) + '\n');
+    const r = await runPython(['run', 'wfeval', 'generate', name, '--out', out]);
+    if (r.code !== 0) {
+      if (previous === null) await unlink(file).catch(() => {});
+      else await writeFile(file, previous);
+      return res.status(400).json({ error: r.stderr.trim() || r.stdout.trim() || 'the harness refused this suite' });
+    }
+    res.json({ name });
+  } finally {
+    await rm(out, { recursive: true, force: true });
+  }
+});
+
+app.delete('/api/suites/:name', async (req, res) => {
+  if (!SUITE_NAME.test(req.params.name)) return res.status(400).json({ error: 'bad suite name' });
+  await unlink(path.join(SUITES_DIR, `${req.params.name}.json`)).catch(() => {});
+  res.json({ ok: true });
+});
+
+function runPython(args) {
+  return new Promise((resolve) => {
+    const proc = spawn('uv', args, { cwd: EVAL_DIR, env: PY_ENV });
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (b) => (stdout += b));
+    proc.stderr.on('data', (b) => (stderr += b));
+    proc.on('error', (e) => resolve({ code: 1, stdout, stderr: `could not start uv: ${e.message}` }));
+    proc.on('close', (code) => resolve({ code, stdout, stderr }));
+  });
+}
 
 app.get('/api/experiment', async (req, res) => {
   const baselineId = req.query.baseline;

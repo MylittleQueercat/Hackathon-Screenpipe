@@ -97,7 +97,8 @@
       "outputTokens": 98712,
       "reasoningTokens": 0,
       "requests": 111,
-      "toolCalls": 115
+      "toolCalls": 115,
+      "source": "request_log"
     },
     "byTask": {
       "workflow-discover": {
