@@ -58,7 +58,7 @@ function summary(a: CandidateId, b: CandidateId) {
   return parts.length ? parts.join(', ') : 'no difference on the numbers measured so far'
 }
 
-export function Comparator() {
+export function Comparator({ flows = true }: { flows?: boolean }) {
   const [a, setA] = useState<CandidateId>('baseline')
   const [b, setB] = useState<CandidateId>('preflight')
   // Picking the engine already on the other side swaps the two instead of comparing an engine to itself.
@@ -144,6 +144,7 @@ export function Comparator() {
         </table>
       </div>
 
+      {flows && (
       <div className="mt-10">
         <h3 className="display text-2xl font-semibold">What the flow looks like</h3>
         <p className="mt-1 text-sm text-muted">Same Review step, one diagram per engine. “Changed” marks what the engine does differently.</p>
@@ -165,6 +166,7 @@ export function Comparator() {
           ))}
         </div>
       </div>
+      )}
     </div>
   )
 }
