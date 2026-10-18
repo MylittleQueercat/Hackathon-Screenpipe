@@ -73,11 +73,11 @@ export function MissingBlock({ title, path, children }: { title: string; path: s
 }
 
 /** `size="lg"` is the larger type scale (used on the Load page); the default is unchanged. */
-export type UiSize = 'md' | 'lg';
+export type UiSize = 'md' | 'lg' | 'xl';
 
 export function Eyebrow({ children, className = '', size = 'md' }: { children: ReactNode; className?: string; size?: UiSize }) {
   return (
-    <div className={`font-mono ${size === 'lg' ? 'text-[14px]' : 'text-[11px]'} uppercase tracking-[0.18em] text-ink-400 ${className}`}>{children}</div>
+    <div className={`font-mono ${size === 'xl' ? 'text-[16px]' : size === 'lg' ? 'text-[14px]' : 'text-[11px]'} uppercase tracking-[0.18em] text-ink-400 ${className}`}>{children}</div>
   );
 }
 
@@ -127,7 +127,7 @@ export function PrimaryButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`group inline-flex items-center gap-2 rounded-full bg-signal ${size === 'lg' ? 'px-5 py-2.5 text-[16px]' : 'px-4 py-2 text-[13px]'} font-semibold text-on-signal transition hover:shadow-[0_0_28px_-4px_rgb(var(--signal)/0.7)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
+      className={`group inline-flex items-center gap-2 rounded-full bg-signal ${size === 'xl' ? 'px-6 py-3 text-[18px]' : size === 'lg' ? 'px-5 py-2.5 text-[16px]' : 'px-4 py-2 text-[13px]'} font-semibold text-on-signal transition hover:shadow-[0_0_28px_-4px_rgb(var(--signal)/0.7)] disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
     </button>
@@ -150,7 +150,7 @@ export function GhostButton({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-2 rounded-full border ${size === 'lg' ? 'px-4 py-2 text-[16px]' : 'px-3.5 py-1.5 text-[13px]'} transition ${
+      className={`inline-flex items-center gap-2 rounded-full border ${size === 'xl' ? 'px-5 py-2.5 text-[18px]' : size === 'lg' ? 'px-4 py-2 text-[16px]' : 'px-3.5 py-1.5 text-[13px]'} transition ${
         active
           ? 'border-signal/60 bg-signal/10 text-signal'
           : 'border-ink-600 text-ink-200 hover:border-ink-400 hover:text-ink-50'
@@ -199,7 +199,7 @@ export function Select<T extends string>({
   size?: UiSize;
 }) {
   const [open, setOpen] = useState(false);
-  const text = size === 'lg' ? 'text-[16px]' : 'text-[13px]';
+  const text = size === 'xl' ? 'text-[19px]' : size === 'lg' ? 'text-[16px]' : 'text-[13px]';
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -226,7 +226,7 @@ export function Select<T extends string>({
         type="button"
         onClick={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
-        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-ink-900 px-3 ${size === 'lg' ? 'py-2.5' : 'py-2'} font-mono ${text} transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-ink-900 px-3.5 ${size === 'xl' ? 'py-3' : size === 'lg' ? 'py-2.5' : 'py-2'} font-mono ${text} transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
           open ? 'border-signal/50' : 'border-ink-700 hover:border-ink-500'
         }`}
       >
