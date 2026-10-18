@@ -402,15 +402,19 @@ function Inspector({
         <div className="mt-3 truncate whitespace-nowrap text-[34px] font-semibold tracking-tight text-ink-50" title={run.label}>
           {run.label}
         </div>
-        <div className="mt-8 divide-y divide-ink-800 border-y border-ink-800">
-          <BigStat label="model requests" value={<CountUp value={run.metrics.modelRequests} />} />
-          <BigStat
-            label="runtime"
-            value={<CountUp value={run.metrics.runtimeSeconds} format={(n) => `${Math.round(n)}s`} />}
-            sub={fmtSeconds(run.metrics.runtimeSeconds)}
-          />
-        </div>
-        <div className="mt-8">
+        {/* The three blocks share the remaining height with equal gaps between them. */}
+        <div className="mt-6 flex flex-1 flex-col justify-evenly">
+          <div className="border-t border-ink-800">
+            <BigStat label="model requests" value={<CountUp value={run.metrics.modelRequests} />} />
+          </div>
+          <div className="border-t border-ink-800">
+            <BigStat
+              label="runtime"
+              value={<CountUp value={run.metrics.runtimeSeconds} format={(n) => `${Math.round(n)}s`} />}
+              sub={fmtSeconds(run.metrics.runtimeSeconds)}
+            />
+          </div>
+          <div className="border-t border-ink-800 pt-5">
           <Eyebrow size="xl">Per-stage breakdown</Eyebrow>
           <div className="mt-4 space-y-3.5">
             {experiment.stages.map((s) => (
@@ -426,6 +430,7 @@ function Inspector({
                 )}
               </div>
             ))}
+          </div>
           </div>
         </div>
       </div>
