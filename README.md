@@ -143,7 +143,3 @@ time. Setup and commands: [`eval/README.md`](eval/README.md).
 | [`pipeops/`](pipeops/) | The slides and annex (React, TypeScript, Tailwind, screenpipe's design system) |
 | [`eval/`](eval/README.md) | `wfeval`: generator, seeding, runs, grader, stage replays, comparisons; `eval/judge/` the LLM judge |
 | [`screenpipe/`](screenpipe/) | screenpipe at `a8aaee2d6` plus our changes |
-
-## Team
-
-<!-- TODO before submitting: one line per teammate, what they built. -->
