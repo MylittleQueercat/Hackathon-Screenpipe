@@ -1,7 +1,7 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
 import { useEffect, useRef, useState } from 'react';
-import { Button, Card, Label, Mark, Mono, Screen } from '../ui';
+import { Button, Card, Mark, Mono, Screen } from '../ui';
 import { fmtInt, story } from '../story';
 import recorded from '../data/live-recorded.json';
 
@@ -108,8 +108,8 @@ export default function Live() {
 
   return (
     <Screen
-      title="Live: an agent reads Morgan's week, right now"
-      lede="Real screenpipe and a real AI agent on this laptop. Our exam grades it when it finishes."
+      title="Live: how the exam runs, one question at a time"
+      lede="One agent, one question, on this laptop. The full benchmark repeats this for every agent, round and version."
       actions={
         <>
           <Button onClick={playRecorded} disabled={busy && mode === 'live'} active={busy && mode === 'recorded'}>Recorded run</Button>
@@ -117,10 +117,17 @@ export default function Live() {
         </>
       }
     >
-      <div className="flex h-full flex-col gap-5">
-        <div className="grid h-[430px] shrink-0 grid-cols-[0.9fr_48px_1.15fr_48px_1.2fr_48px_1fr]">
+      <div className="flex h-full flex-col gap-4">
+        <div className="-mb-2 grid shrink-0 grid-cols-[0.9fr_48px_1.15fr_48px_1.2fr_48px_1fr]">
+          <Bracket label="our eval harness" />
+          <span />
+          <div className="flex items-end justify-center pb-1 font-sans text-base font-medium text-muted">screenpipe's own agent, unchanged</div>
+          <span />
+          <div className="col-span-3"><Bracket label="our eval harness" /></div>
+        </div>
+        <div className="grid h-[400px] shrink-0 grid-cols-[0.9fr_48px_1.15fr_48px_1.2fr_48px_1fr]">
           <Card className={`flex flex-col p-6 transition-colors ${lit('look') ? 'border-ink' : ''}`}>
-            <Label className="text-base">1 · Morgan's screens</Label>
+            <div className="font-sans text-xl font-medium leading-snug">1 · We load Morgan's week into a private screenpipe</div>
             <div className="relative mt-5 flex-1">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="absolute rounded-md border border-ink bg-surface" style={{ left: `${i * 10}%`, top: `${i * 12}%`, width: '70%', height: '50%' }}>
@@ -131,14 +138,14 @@ export default function Live() {
               {lit('look') && <span className="absolute right-3 top-3 h-3 w-3 rounded-full bg-phosphor" />}
             </div>
             <div className="font-sans text-xl">searched <span className="font-mono">{looks}</span> times</div>
-            <Mono className="mt-1 block text-sm text-faint">{fmtInt(captures)} captures · screenpipe API on 127.0.0.1</Mono>
+            <Mono className="mt-1 block text-sm text-faint">{fmtInt(captures)} captures · same snapshot every run · API on 127.0.0.1</Mono>
           </Card>
           <Arrow on={lit('look')} />
           <Card className={`flex flex-col p-6 ${phase === 'running' ? 'border-ink' : ''}`}>
-            <Label className="text-base">2 · screenpipe's Discover agent</Label>
+            <div className="font-sans text-xl font-medium leading-snug">2 · The real Discover agent answers, sandboxed</div>
             <div className="mt-4 min-h-[96px] font-serif text-[26px] leading-snug">
               {phase === 'idle' && <span className="text-muted">Press Run live.</span>}
-              {phase === 'starting' && <span className="text-muted">Starting a private copy of screenpipe…</span>}
+              {phase === 'starting' && <span className="text-muted">Loading Morgan's week, same data every run…</span>}
               {phase === 'running' && current && <span className="line-clamp-3">{current.text}</span>}
               {phase === 'grading' && <span>Done. Grading…</span>}
               {phase === 'done' && <span>Done in {Math.round(result?.seconds ?? now)} s.</span>}
@@ -155,10 +162,10 @@ export default function Live() {
           </Card>
           <Arrow on={lit('workspace')} />
           <Card className={`flex flex-col p-6 transition-colors ${lit('workspace') ? 'border-ink' : ''}`}>
-            <Label className="text-base">3 · Workflows: jobs it saves</Label>
+            <div className="font-sans text-xl font-medium leading-snug">3 · We log every call and save</div>
             <ul className="mt-3 flex-1 space-y-2">
               {saves.length === 0 && <li className="font-serif text-xl italic text-muted">nothing saved yet</li>}
-              {saves.slice(-4).map((s, i) => (
+              {saves.slice(-3).map((s, i) => (
                 <li key={i} className="flex gap-3">
                   <span className="w-6 shrink-0 text-center font-sans text-xl font-semibold">{s.ok ? '✓' : '✕'}</span>
                   <div className="min-w-0">
@@ -168,11 +175,11 @@ export default function Live() {
                 </li>
               ))}
             </ul>
-            <Mono className="block text-sm text-faint">drafts for the Deepen agent · ✕ = screenpipe refused it</Mono>
+            <Mono className="block text-sm text-faint">logged: {calls} AI calls · {looks} searches · {saves.length} saves</Mono>
           </Card>
           <Arrow on={phase === 'grading'} />
           <Card className={`flex flex-col p-6 ${phase === 'done' ? 'border-ink' : ''}`}>
-            <Label className="text-base">4 · the answer key</Label>
+            <div className="font-sans text-xl font-medium leading-snug">4 · We grade against the answer key</div>
             <ul className="mt-4 flex-1 space-y-4">
               {KEY.map((k) => (
                 <li key={k.job} className="flex items-start gap-3">
@@ -200,6 +207,7 @@ export default function Live() {
             <span className="font-mono text-2xl">{fmtClock(now)}</span>
             <span className="font-sans text-lg text-muted">{saves.filter((s) => s.ok).length} saved · {saves.filter((s) => !s.ok).length} refused</span>
             {error && <span className="truncate font-mono text-sm text-ink">{error}</span>}
+            <span className="ml-auto shrink-0 font-sans text-lg">Full benchmark: 4 agents × 3 rounds × 2 versions <span className="text-muted">→ Result</span></span>
           </div>
           <ol className="mt-3 min-h-0 flex-1 space-y-1 overflow-hidden">
             {events.filter((e) => e.kind !== 'call').slice(-4).map((e, i) => {
@@ -220,6 +228,15 @@ export default function Live() {
 }
 
 const fmtClock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+function Bracket({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="font-sans text-base font-medium">{label}</span>
+      <span className="mt-1 h-2.5 w-full rounded-t-sm border-x-2 border-t-2 border-ink" />
+    </div>
+  );
+}
 
 function Arrow({ on }: { on: boolean }) {
   return (
