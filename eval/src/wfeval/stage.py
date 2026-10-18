@@ -122,10 +122,15 @@ def as_workflow(payload: dict) -> dict:
     w = dict(payload)
     if "title" not in w and w.get("candidateTitle"):
         w["title"] = w["candidateTitle"]
-    if w.get("sources") and not w.get("evidence"):
-        w["evidence"] = [{"timestamp": t, "app": src.get("app")} for src in w["sources"]
+    # The draft shape is the agent's choice: Discover may name the app `source`, or write
+    # sources as plain strings. Only objects can be citations.
+    if isinstance(w.get("evidence"), list):
+        w["evidence"] = [{**e, "app": e.get("app") or e.get("source")} for e in w["evidence"] if isinstance(e, dict)]
+    sources = [src for src in w.get("sources") or [] if isinstance(src, dict)] if isinstance(w.get("sources"), list) else []
+    if sources and not w.get("evidence"):
+        w["evidence"] = [{"timestamp": t, "app": src.get("app")} for src in sources
                          for t in src.get("timestamps") or [] if ts(t) is not None]
-        w["apps"] = sorted({src.get("app") for src in w["sources"] if src.get("app")})
+        w["apps"] = sorted({src.get("app") for src in sources if src.get("app")})
     return w
 
 

@@ -4,18 +4,20 @@ import { useEffect, useState } from 'react';
 import Intro from './screens/Intro';
 import Exam from './screens/Exam';
 import Race from './screens/Race';
+import Live from './screens/Live';
 import Result from './screens/Result';
 import History from './screens/History';
 import Agents from './screens/Agents';
 import Findings from './screens/Findings';
 import Verdict from './screens/Verdict';
 
-// The four slides tell the story; the annex holds the detail for questions.
+// The five slides tell the story; the annex holds the detail for questions.
 const STEPS = [
   { key: '1', name: 'Workflows', view: Intro },
   { key: '2', name: 'The exam', view: Exam },
   { key: '3', name: 'The run', view: Race },
-  { key: '4', name: 'Result', view: Result },
+  { key: '4', name: 'Live', view: Live },
+  { key: '5', name: 'Result', view: Result },
   { key: 'A1', name: 'History', view: History, annex: true },
   { key: 'A2', name: 'Agents', view: Agents, annex: true },
   { key: 'A3', name: 'Grader', view: Findings, annex: true },
@@ -43,7 +45,7 @@ export default function App() {
       if (e.key === 'ArrowRight') setStep((s) => Math.min(STEPS.length - 1, s + 1));
       if (e.key === 'ArrowLeft') setStep((s) => Math.max(0, s - 1));
       const n = Number(e.key);
-      if (n >= 1 && n <= 4) setStep(n - 1);
+      if (n >= 1 && n <= 5) setStep(n - 1);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

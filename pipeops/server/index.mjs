@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bundleFromRuns, buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
+import { mountLive } from './live.mjs';
 import { conditionsKey, portableToRawRun, readPortableFile, validatePortable } from './portable.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -384,6 +385,8 @@ app.post('/api/wfeval/stage', async (req, res) => {
     res.end();
   });
 });
+
+mountLive(app, { EVAL_DIR, RUNS_DIR, PY_ENV });
 
 const exists = (p) => access(p).then(() => true, () => false);
 

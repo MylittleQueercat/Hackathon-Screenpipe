@@ -142,3 +142,10 @@ def test_an_idle_start_runs_no_agent():
     started = e.start_cycle()
     assert started["idle"].startswith("Nothing was recorded") and started["runs"] == {}
     assert not any(p.startswith("/pipes/") for p in posted)
+
+
+def test_as_workflow_reads_discover_draft_shapes():
+    cited = stage.as_workflow({"title": "t", "evidence": [{"source": "TextEdit", "timestamp": "2026-10-16T11:29:54.697+00:00"}, "a note"]})
+    assert cited["evidence"] == [{"source": "TextEdit", "timestamp": "2026-10-16T11:29:54.697+00:00", "app": "TextEdit"}]
+    searched = stage.as_workflow({"title": "t", "sources": ["search:tracker.csv ocr 2026-10-15"]})
+    assert not searched.get("evidence")

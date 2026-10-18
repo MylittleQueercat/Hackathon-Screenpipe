@@ -1,0 +1,213 @@
+{
+ "run": "20261018T125057Z-idle-skip-stage-discover-20261017T145651Z-baseline-receipts-s1-01-p1-workflow-discover-r1",
+ "events": [
+  {
+   "t": 0,
+   "kind": "call",
+   "n": 1
+  },
+  {
+   "t": 2.214,
+   "kind": "workspace",
+   "action": "start",
+   "ok": true,
+   "title": null,
+   "reason": null
+  },
+  {
+   "t": 2.219,
+   "kind": "call",
+   "n": 2
+  },
+  {
+   "t": 4.278,
+   "kind": "workspace",
+   "action": "context",
+   "ok": true,
+   "title": null,
+   "reason": null
+  },
+  {
+   "t": 4.283,
+   "kind": "call",
+   "n": 3
+  },
+  {
+   "t": 6.309,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 6.517,
+   "kind": "call",
+   "n": 4
+  },
+  {
+   "t": 7.799,
+   "kind": "look",
+   "tool": "read"
+  },
+  {
+   "t": 7.982,
+   "kind": "call",
+   "n": 5
+  },
+  {
+   "t": 11.627,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 11.804,
+   "kind": "call",
+   "n": 6
+  },
+  {
+   "t": 13.725,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 13.812,
+   "kind": "call",
+   "n": 7
+  },
+  {
+   "t": 21.08,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 21.224,
+   "kind": "call",
+   "n": 8
+  },
+  {
+   "t": 22.604,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 22.727,
+   "kind": "call",
+   "n": 9
+  },
+  {
+   "t": 26.842,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 26.96,
+   "kind": "call",
+   "n": 10
+  },
+  {
+   "t": 29.773,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 29.931,
+   "kind": "call",
+   "n": 11
+  },
+  {
+   "t": 40.242,
+   "kind": "workspace",
+   "action": "propose",
+   "ok": false,
+   "title": null,
+   "reason": "A draft payload must be an object."
+  },
+  {
+   "t": 40.246,
+   "kind": "call",
+   "n": 12
+  },
+  {
+   "t": 50.365,
+   "kind": "workspace",
+   "action": "propose",
+   "ok": false,
+   "title": "Scan paperwork intake: rename/log receipts and contracts into tracker.csv",
+   "reason": "Include the evidence decision or remaining question in note."
+  },
+  {
+   "t": 50.367,
+   "kind": "call",
+   "n": 13
+  },
+  {
+   "t": 60.889,
+   "kind": "workspace",
+   "action": "propose",
+   "ok": true,
+   "title": "Scan paperwork intake: rename/log receipts and contracts into tracker.csv",
+   "reason": null
+  },
+  {
+   "t": 60.896,
+   "kind": "call",
+   "n": 14
+  },
+  {
+   "t": 72.85,
+   "kind": "workspace",
+   "action": "propose",
+   "ok": true,
+   "title": "File incoming project attachment and send a confirmation reply",
+   "reason": null
+  },
+  {
+   "t": 72.857,
+   "kind": "call",
+   "n": 15
+  },
+  {
+   "t": 77.855,
+   "kind": "look",
+   "tool": "bash"
+  },
+  {
+   "t": 78.043,
+   "kind": "call",
+   "n": 16
+  },
+  {
+   "t": 85.548,
+   "kind": "workspace",
+   "action": "finish",
+   "ok": true,
+   "title": null,
+   "reason": null
+  },
+  {
+   "t": 85.56,
+   "kind": "call",
+   "n": 17
+  }
+ ],
+ "result": {
+  "status": "done",
+  "seconds": 96.1,
+  "requests": 17,
+  "checks": {
+   "found": true,
+   "email_separate": true,
+   "one_off_unpublished": true,
+   "noise_excluded": true,
+   "evidence_resolves": false
+  },
+  "drafts": [
+   {
+    "title": "Scan paperwork intake: rename/log receipts and contracts into tracker.csv",
+    "job": "receipts"
+   },
+   {
+    "title": "File incoming project attachment and send a confirmation reply",
+    "job": "email"
+   }
+  ]
+ }
+}
