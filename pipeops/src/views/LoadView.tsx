@@ -137,11 +137,11 @@ export function LoadView({
   return (
     <div className="flex h-full flex-col overflow-y-auto px-[120px] py-[72px]">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-        <Eyebrow>{standalone ? 'Welcome to the lab' : 'Step 01'} · Load experiment</Eyebrow>
-        <h1 className="mt-5 text-[60px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
+        <Eyebrow size="lg">{standalone ? 'Welcome to the lab' : 'Step 01'} · Load experiment</Eyebrow>
+        <h1 className="mt-5 text-[76px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
           Select or run an experiment.
         </h1>
-        <p className="mt-5 max-w-[860px] text-[17px] leading-relaxed text-ink-300">
+        <p className="mt-5 max-w-[1040px] text-[21px] leading-relaxed text-ink-300">
           See how Screenpipe's agents turn recorded activity into reusable workflows.{' '}
           <span className="text-ink-100">Browsing is free. A model only runs when you start one.</span>
         </p>
@@ -149,15 +149,15 @@ export function LoadView({
 
       {backendError && (
         <div className="mt-8 rounded-2xl border border-cost/40 bg-cost/[0.06] p-5">
-          <div className="text-[15px] font-medium text-cost">pipeops server not reachable</div>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink-300">
+          <div className="text-[18px] font-medium text-cost">pipeops server not reachable</div>
+          <p className="mt-1.5 text-[16px] leading-relaxed text-ink-300">
             {backendError} — start it with <code className="rounded bg-ink-900 px-1.5 py-0.5 font-mono">npm run server</code> inside{' '}
             <code className="rounded bg-ink-900 px-1.5 py-0.5 font-mono">pipeops/</code>, then retry. The app will not quietly show
             placeholder data instead — you choose.
           </p>
           <div className="mt-3 flex gap-2">
-            <GhostButton onClick={refresh}>Retry</GhostButton>
-            <GhostButton onClick={loadMock}>Continue with mock placeholder</GhostButton>
+            <GhostButton size="lg" onClick={refresh}>Retry</GhostButton>
+            <GhostButton size="lg" onClick={loadMock}>Continue with mock placeholder</GhostButton>
           </div>
         </div>
       )}
@@ -166,15 +166,15 @@ export function LoadView({
         {/* A — explore recorded runs */}
         <section className="flex min-h-0 flex-col">
           <div className="flex items-center justify-between">
-            <Eyebrow>A · Explore recorded runs</Eyebrow>
-            <GhostButton onClick={refresh}>refresh</GhostButton>
+            <Eyebrow size="lg">A · Explore recorded runs</Eyebrow>
+            <GhostButton size="lg" onClick={refresh}>refresh</GhostButton>
           </div>
           <div className="mt-4 flex gap-2">
             {(['demo', 'local'] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setSource(s)}
-                className={`rounded-full border px-4 py-1.5 font-mono text-[11.5px] uppercase tracking-[0.12em] transition-colors ${
+                className={`rounded-full border px-5 py-2 font-mono text-[14px] uppercase tracking-[0.12em] transition-colors ${
                   source === s ? 'border-signal/70 text-signal' : 'border-ink-700 text-ink-400 hover:border-ink-500'
                 }`}
               >
@@ -183,9 +183,9 @@ export function LoadView({
             ))}
           </div>
           <div className="mt-5 flex-1 space-y-3 overflow-y-auto pr-2">
-            {runs === null && !backendError && <p className="font-mono text-[13px] text-ink-500">loading runs…</p>}
-            {runs?.length === 0 && source === 'local' && <p className="text-[14px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
-            {runs?.length === 0 && source === 'demo' && <p className="text-[14px] text-ink-500">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
+            {runs === null && !backendError && <p className="font-mono text-[16px] text-ink-500">loading runs…</p>}
+            {runs?.length === 0 && source === 'local' && <p className="text-[17px] text-ink-500">No completed runs in eval/runs/ yet. Run one on the right.</p>}
+            {runs?.length === 0 && source === 'demo' && <p className="text-[17px] text-ink-500">No demo runs in pipeops/demo-data/ yet. See demo-data/CONTRIBUTING.md.</p>}
             {runs?.map((r) => (
               <RunCard key={r.id} r={r} active={r.id === currentRunId} loading={loadingId === r.id} onClick={() => loadRecorded(r.id)} />
             ))}
@@ -194,8 +194,8 @@ export function LoadView({
 
         {/* B — run a new experiment */}
         <section className="flex min-h-0 flex-col border-l border-ink-800 pl-14">
-          <Eyebrow>B · Run new experiment</Eyebrow>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-400">
+          <Eyebrow size="lg">B · Run new experiment</Eyebrow>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-400">
             Executes the real harness on this machine — a genuine model-calling cycle. Takes roughly 8–15 minutes per
             phase and spends the account's AI allowance. Quit the screenpipe desktop app first; both use port 3030.
           </p>
@@ -208,6 +208,7 @@ export function LoadView({
                 options={(variants ?? []).map((v) => ({ value: v.file, label: v.name }))}
                 disabled={running}
                 placeholder="choose a variant"
+                size="lg"
               />
             </Labeled>
             <div className="flex gap-3">
@@ -217,12 +218,13 @@ export function LoadView({
                   onChange={(v) => setForm((f) => ({ ...f, suite: v }))}
                   options={(suites.length ? suites : [{ name: form.suite, description: '' }]).map((x) => ({ value: x.name, label: x.name }))}
                   disabled={running}
+                  size="lg"
                 />
               </Labeled>
               <Labeled label="seed">
                 <input
                   type="number"
-                  className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+                  className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 font-mono text-[16px] text-ink-100"
                   value={form.seed}
                   onChange={(e) => setForm((f) => ({ ...f, seed: Number(e.target.value) }))}
                   disabled={running}
@@ -231,7 +233,7 @@ export function LoadView({
               <Labeled label="phases">
                 <input
                   type="number"
-                  className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+                  className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 font-mono text-[16px] text-ink-100"
                   value={form.phases}
                   onChange={(e) => setForm((f) => ({ ...f, phases: Number(e.target.value) }))}
                   disabled={running}
@@ -242,18 +244,18 @@ export function LoadView({
             <CustomSuites suites={suites} onChange={refresh} onUse={(name) => setForm((f) => ({ ...f, suite: name }))} disabled={running} />
 
             {!confirming ? (
-              <PrimaryButton className="self-start" onClick={() => setConfirming(true)} disabled={running || !form.variant}>
+              <PrimaryButton size="lg" className="self-start" onClick={() => setConfirming(true)} disabled={running || !form.variant}>
                 {running ? 'Running…' : 'Run new experiment'}
               </PrimaryButton>
             ) : (
               <div className="flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
-                <span className="text-[12px] leading-snug text-cost">
+                <span className="text-[15px] leading-snug text-cost">
                   This spends real AI allowance and takes several minutes. Continue?
                 </span>
-                <PrimaryButton className="shrink-0" onClick={startRun}>
+                <PrimaryButton size="lg" className="shrink-0" onClick={startRun}>
                   Confirm
                 </PrimaryButton>
-                <GhostButton className="shrink-0" onClick={() => setConfirming(false)}>
+                <GhostButton size="lg" className="shrink-0" onClick={() => setConfirming(false)}>
                   Cancel
                 </GhostButton>
               </div>
@@ -261,7 +263,7 @@ export function LoadView({
           </div>
 
           {log && (
-            <div ref={logRef} className="mt-5 h-44 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[11px] text-ink-300">
+            <div ref={logRef} className="mt-5 h-44 overflow-y-auto rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[13px] text-ink-300">
               <pre className="whitespace-pre-wrap">{log}</pre>
             </div>
           )}
@@ -344,8 +346,8 @@ function CustomSuites({
         className="flex w-full items-center justify-between px-4 py-3 text-left"
         aria-expanded={open}
       >
-        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-400">Custom test suites</span>
-        <span className="flex items-center gap-3 text-[12px] text-ink-500">
+        <span className="font-mono text-[13px] uppercase tracking-widest text-ink-400">Custom test suites</span>
+        <span className="flex items-center gap-3 text-[15px] text-ink-500">
           {custom.length} yours
           <span className={`inline-block transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
         </span>
@@ -353,7 +355,7 @@ function CustomSuites({
 
       {open && (
         <div className="space-y-3 border-t border-ink-800 px-4 pb-4 pt-3">
-          <p className="text-[12px] leading-snug text-ink-400">
+          <p className="text-[15px] leading-snug text-ink-400">
             Add your own complete test: the jobs hidden in a week of activity, what they look like on screen, and the checks the
             agents are graded on. Pick it in <span className="text-ink-200">suite</span> above. Runs of different suites can't be compared.
           </p>
@@ -361,7 +363,7 @@ function CustomSuites({
           {custom.length > 0 && (
             <ul className="space-y-1.5">
               {custom.map((s) => (
-                <li key={s.name} className="flex items-center justify-between gap-3 rounded-lg bg-ink-950/60 px-3 py-1.5 text-[12px] text-ink-200">
+                <li key={s.name} className="flex items-center justify-between gap-3 rounded-lg bg-ink-950/60 px-3 py-1.5 text-[15px] text-ink-200">
                   <span className="min-w-0 truncate font-mono">
                     {s.name}
                     <span className="text-ink-500">{s.broken ? ' · unreadable' : ` · ${s.jobs} jobs · ${s.checks} checks`}</span>
@@ -376,33 +378,33 @@ function CustomSuites({
           )}
 
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">suite name</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">suite name</span>
             <input
-              className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-[13px] text-ink-100"
+              className="w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 font-mono text-[16px] text-ink-100"
               value={name}
               placeholder="my-suite"
               onChange={(e) => setName(e.target.value)}
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">suite definition (JSON)</span>
+            <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">suite definition (JSON)</span>
             <textarea
-              className="h-48 w-full resize-y rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[12px] leading-snug text-ink-100"
+              className="h-48 w-full resize-y rounded-lg border border-ink-700 bg-ink-950 p-3 font-mono text-[14px] leading-snug text-ink-100"
               value={text}
               spellCheck={false}
               placeholder='{"jobs": {…}, "phases": {"1": […]}, "checks": […]}'
               onChange={(e) => setText(e.target.value)}
             />
           </label>
-          {error && <pre className="whitespace-pre-wrap rounded-lg border border-cost/40 bg-cost/[0.06] p-3 font-mono text-[11.5px] text-cost">{error}</pre>}
+          {error && <pre className="whitespace-pre-wrap rounded-lg border border-cost/40 bg-cost/[0.06] p-3 font-mono text-[14px] text-cost">{error}</pre>}
           <div className="flex flex-wrap items-center gap-2">
-            <PrimaryButton onClick={save} disabled={saving || !name.trim() || !text.trim()}>
+            <PrimaryButton size="lg" onClick={save} disabled={saving || !name.trim() || !text.trim()}>
               {saving ? 'Checking…' : 'Save suite'}
             </PrimaryButton>
             {suites.some((s) => s.name === 'standup') && (
-              <GhostButton onClick={() => edit('standup').then(() => setName(''))}>Start from example</GhostButton>
+              <GhostButton size="lg" onClick={() => edit('standup').then(() => setName(''))}>Start from example</GhostButton>
             )}
-            <label className="cursor-pointer rounded-full border border-ink-700 px-4 py-1.5 text-[13px] text-ink-300 hover:border-ink-500">
+            <label className="cursor-pointer rounded-full border border-ink-700 px-4 py-2 text-[16px] text-ink-300 hover:border-ink-500">
               Upload .json
               <input type="file" accept="application/json,.json" className="hidden" onChange={(e) => upload(e.target.files?.[0])} />
             </label>
@@ -416,7 +418,7 @@ function CustomSuites({
 function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-1 flex-col gap-1.5">
-      <span className="font-mono text-[11px] uppercase tracking-widest text-ink-500">{label}</span>
+      <span className="font-mono text-[13px] uppercase tracking-widest text-ink-500">{label}</span>
       {children}
     </label>
   );
@@ -429,23 +431,23 @@ function RunCard({ r, active, loading, onClick }: { r: RunSummary; active: boole
     <button
       onClick={onClick}
       disabled={loading}
-      className={`group flex w-full items-center justify-between rounded-2xl border px-6 py-5 text-left transition-colors ${
+      className={`group flex w-full items-center justify-between rounded-2xl border px-7 py-6 text-left transition-colors ${
         active ? 'border-signal/70 bg-ink-900' : 'border-ink-700 bg-ink-900/60 hover:border-ink-500'
       }`}
     >
       <div>
         <div className="flex items-center gap-3">
-          <span className="text-[22px] font-semibold tracking-tight text-ink-50">{r.variant ?? r.id}</span>
-          <span className="rounded-full border border-ink-600 px-2 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-300">
+          <span className="text-[28px] font-semibold tracking-tight text-ink-50">{r.variant ?? r.id}</span>
+          <span className="rounded-full border border-ink-600 px-2.5 py-0.5 font-mono text-[12.5px] uppercase tracking-[0.12em] text-ink-300">
             complete
           </span>
         </div>
-        <div className="mt-1.5 font-mono text-[12px] text-ink-500">
+        <div className="mt-2 font-mono text-[15px] text-ink-500">
           suite {r.suite ?? '—'} · seed {r.seed ?? '—'} · phase{r.phases.length > 1 ? 's' : ''} {r.phases.join(', ')}
         </div>
-        <div className="mt-1 font-mono text-[11px] text-ink-600">finished {when}</div>
+        <div className="mt-1 font-mono text-[13.5px] text-ink-600">finished {when}</div>
       </div>
-      <span className={`text-[13px] font-medium ${loading ? 'text-signal' : 'text-ink-300 group-hover:text-signal'}`}>
+      <span className={`text-[16px] font-medium ${loading ? 'text-signal' : 'text-ink-300 group-hover:text-signal'}`}>
         {loading ? 'Loading…' : 'Load →'}
       </span>
     </button>
