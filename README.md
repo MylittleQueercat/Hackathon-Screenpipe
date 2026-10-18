@@ -4,6 +4,8 @@
 
 **Team PipeOps** · Hackathon · Build Agents That Remember · Track 01, *Find what to automate*
 
+**Website:** [pipeops-zeta.vercel.app](https://pipeops-zeta.vercel.app).
+
 Screenpipe Workflows discovers repeatable tasks from recorded activity. When a developer changes one of
 its agents, how can they know the change helped?
 
