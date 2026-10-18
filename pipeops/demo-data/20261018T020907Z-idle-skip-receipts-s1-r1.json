@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-18T08:51:59.516Z",
+  "exportedAt": "2026-10-18T10:02:46.957Z",
   "run": {
     "id": "20261018T020907Z-idle-skip-receipts-s1-r1",
     "label": "idle-skip",
@@ -91,6 +91,7 @@
     "qualityTotal": 14,
     "modelRequests": 111,
     "runtimeSeconds": 619,
+    "failedCalls": 15,
     "costUsd": null
   },
   "modelUsage": {
@@ -214,7 +215,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "no_duplicate-p1",
@@ -228,7 +230,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "steps-p1",
@@ -244,7 +247,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": false
     },
     {
       "id": "missing_date-p1",
@@ -260,7 +264,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": false
     },
     {
       "id": "duplicate-p1",
@@ -275,7 +280,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "high_value-p1",
@@ -291,7 +297,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "type_lookup-p1",
@@ -308,7 +315,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "noise_excluded-p1",
@@ -322,7 +330,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "email_separate-p1",
@@ -339,7 +348,8 @@
         "Mail @ 2026-10-16T10:41:35.028+00:00: \"Get Mail · Compose\"",
         "Mail @ 2026-10-17T12:24:14.622+00:00: \"Get Mail · Compose\"",
         "Mail @ 2026-10-16T10:41:20.343+00:00: \"Get Mail · Compose\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "one_off_unpublished-p1",
@@ -351,7 +361,8 @@
       "reason": null,
       "evidence": [
         "seeded on screen: \"Printers & Scanners\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p1",
@@ -361,7 +372,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "drift-p2",
@@ -377,7 +389,8 @@
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T10:10:51.036+00:00: \"scan-0420.pdf · Page 1 of 1\"",
         "Preview @ 2026-10-16T11:49:08.843+00:00: \"scan-0418.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p2",
@@ -387,7 +400,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p3",
@@ -397,7 +411,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     }
   ],
   "workflows": [

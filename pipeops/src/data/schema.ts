@@ -55,6 +55,9 @@ export interface CheckRecord {
   actual: string | null;
   reason: string | null;
   evidence: string[] | null;
+  /** Keyword checks only: true when the words are in the stages (what to do), false when
+   *  they appear only in a variation, question or limitation. null/absent otherwise. */
+  inStages?: boolean | null;
 }
 
 export interface RunMetrics {
@@ -62,6 +65,9 @@ export interface RunMetrics {
   qualityTotal: number;
   modelRequests: number;
   runtimeSeconds: number;
+  /** Workflows calls the engine refused (usage.workspace.failed, summed over phases).
+   *  null when the run predates that logging (started before 2026-10-17 20:00Z). */
+  failedCalls?: number | null;
 }
 
 /**

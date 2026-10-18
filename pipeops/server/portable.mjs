@@ -94,7 +94,7 @@ export async function exportRun(runsDir, runId, { now = new Date() } = {}) {
   const raw = toRawRun(runId, run.variant?.name ?? runId, 'baseline', artifacts);
   const checks = (raw.checks ?? []).map((c) => ({
     id: c.id, name: c.name, lens: c.lens, passed: c.passed,
-    expected: c.expected, actual: c.actual, reason: c.reason, evidence: c.evidence,
+    expected: c.expected, actual: c.actual, reason: c.reason, evidence: c.evidence, inStages: c.inStages ?? null,
   }));
   const workflows = (raw.generatedWorkflows ?? []).map((w) => ({
     id: w.id, title: w.title, steps: w.steps ?? null, matchedTo: w.matchedTo ?? null,
@@ -218,6 +218,7 @@ export function validatePortable(doc, { fileName } = {}) {
   const ints = ['qualityPassed', 'qualityTotal', 'modelRequests', 'runtimeSeconds'];
   need(isObj(m) && ints.every((k) => typeof m[k] === 'number' && m[k] >= 0), `metrics must have non-negative numbers: ${ints.join(', ')}`);
   need(isObj(m) && isNullOr(m.costUsd, 'number'), 'metrics.costUsd must be a number or null');
+  need(isObj(m) && (m.failedCalls === undefined || isNullOr(m.failedCalls, 'number')), 'metrics.failedCalls must be a number, null, or absent');
   need(isObj(doc.modelUsage) && isObj(doc.modelUsage.total) && isObj(doc.modelUsage.byTask), 'modelUsage needs total and byTask objects');
   need(isObj(doc.stages), 'stages must be an object');
   if (doc.phases !== undefined) errs.push(...validatePhases(doc));
@@ -226,6 +227,7 @@ export function validatePortable(doc, { fileName } = {}) {
     const okShape = doc.checks.every((k) => isObj(k) && typeof k.id === 'string' && typeof k.passed === 'boolean'
       && isNullOr(k.name, 'string') && isNullOr(k.lens, 'string') && isNullOr(k.expected, 'string')
       && isNullOr(k.actual, 'string') && isNullOr(k.reason, 'string')
+      && (k.inStages === undefined || isNullOr(k.inStages, 'boolean'))
       && (k.evidence === null || (Array.isArray(k.evidence) && k.evidence.every((e) => typeof e === 'string'))));
     need(okShape, 'every check needs {id, passed:boolean} and string-or-null name/lens/expected/actual/reason, string[]-or-null evidence');
     if (okShape && isObj(m)) {
@@ -293,6 +295,8 @@ export function portableToRawRun(doc, role) {
       qualityTotal: doc.metrics.qualityTotal,
       modelRequests: doc.metrics.modelRequests,
       runtimeSeconds: doc.metrics.runtimeSeconds,
+      // Optional in the format: older files (and single-phase runs) may omit these.
+      failedCalls: typeof doc.metrics.failedCalls === 'number' ? doc.metrics.failedCalls : null,
     },
     efficiency: portableEfficiency(doc),
     phases: Array.isArray(doc.phases) ? doc.phases : null,

@@ -233,6 +233,9 @@ function buildChecks(results, truth, catalogs) {
         expected: describeExpected(t),
         actual: describeActual(phaseResult, catalog, t),
         reason: c.reason ?? null,
+        // Keyword checks only: true when the words are in the stages (what to do), false when
+        // they appear only in a variation, question or limitation. Reported, never scored.
+        inStages: typeof c.in_stages === 'boolean' ? c.in_stages : null,
         evidence: evidenceForCheck(phaseResult, catalog, t),
       });
     }
@@ -336,6 +339,21 @@ function buildGroundTruth(truth) {
   return Object.entries(truth.jobs).map(([id, j]) => ({ id, title: j.summary ?? id }));
 }
 
+/** Workflows calls the engine refused, summed across phases (usage.workspace.failed). null when
+ *  no phase carries the field — the run predates the logging (started before 2026-10-17 20:00Z). */
+function failedCalls(results) {
+  let present = false;
+  let total = 0;
+  for (const r of results) {
+    const n = r.usage?.workspace?.failed;
+    if (typeof n === 'number') {
+      present = true;
+      total += n;
+    }
+  }
+  return present ? total : null;
+}
+
 const USAGE_KEYS = ['requests', 'input', 'cacheRead', 'cacheWrite', 'output', 'reasoning'];
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
@@ -388,6 +406,7 @@ export function toRawRun(id, label, role, { run, results, truth, catalogs, phase
       qualityTotal: scored,
       modelRequests: requests,
       runtimeSeconds: Math.round(seconds),
+      failedCalls: failedCalls(results),
     },
     efficiency: efficiencyOf(results),
     phases: phasesOf(results, run),
@@ -405,13 +424,15 @@ function verdict(a, b) {
   const dr = b.metrics.modelRequests - a.metrics.modelRequests;
   const ds = b.metrics.runtimeSeconds - a.metrics.runtimeSeconds;
   const checks = `${b.metrics.qualityPassed}/${b.metrics.qualityTotal}`;
+  const rel = a.metrics.modelRequests ? Math.round((dr / a.metrics.modelRequests) * 100) : null;
+  const relTxt = rel === null ? '' : ` (${rel > 0 ? '+' : '−'}${Math.abs(rel)}%)`;
   if (dq < 0) return { verdict: 'Regression: quality dropped.', note: `${a.label} ${a.metrics.qualityPassed}/${a.metrics.qualityTotal} -> ${b.label} ${checks}.` };
   if (dq > 0) return { verdict: 'More checks passed.', note: `+${dq} checks, ${dr >= 0 ? '+' : ''}${dr} requests. Checks do not measure document quality.` };
   // Passing the same checks does not show the documents are equally good: the checks only ask
   // whether the right jobs and exceptions are named.
-  if (dr < 0 && ds <= 0) return { verdict: 'Efficiency improved. Document quality needs further validation.', note: `Same ${checks} checks passed; ${-dr} fewer requests.` };
+  if (dr < 0 && ds <= 0) return { verdict: 'Efficiency improved. Document quality needs further validation.', note: `Same ${checks} checks passed; ${-dr} fewer requests${relTxt}.` };
   if (dr < 0) return { verdict: 'Fewer requests, longer runtime. Document quality needs further validation.', note: `Same ${checks} checks passed.` };
-  if (dr > 0) return { verdict: 'No improvement demonstrated.', note: 'Same quality, more requests.' };
+  if (dr > 0) return { verdict: 'No improvement demonstrated.', note: `Same quality, ${dr} more requests${relTxt}.` };
   return { verdict: 'No change detected.', note: 'Identical totals.' };
 }
 
@@ -500,4 +521,55 @@ export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtif
       note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is the summed agent execution time from executions.json.',
     },
   });
+}
+
+/** One stage run (`wfeval stage`): one agent, or a chain with --through, from a saved
+ *  snapshot step. Read straight from its results.jsonl line — never a full-evaluation score. */
+export function stageResultSummary(id, run, line) {
+  const usage = line.usage ?? {};
+  const tasks = String(line.stage ?? run.task ?? '').split('+').filter(Boolean);
+  const byTask = tasks.length > 1 && usage.by_task
+    ? Object.fromEntries(Object.entries(usage.by_task).map(([t, u]) => [t, u?.requests ?? null]))
+    : null;
+  const scoreOf = (v) => (typeof v?.score === 'number' ? v.score : null);
+  return {
+    id,
+    variant: line.variant ?? run.variant?.name ?? null,
+    tasks,
+    snapshot: line.snapshot ?? null,
+    phase: typeof line.phase === 'number' ? line.phase : null,
+    view: line.view ?? null,
+    status: line.status ?? null,
+    passed: typeof line.passed === 'number' ? line.passed : null,
+    scored: typeof line.scored === 'number' ? line.scored : null,
+    scoreBefore: scoreOf(line.before?.[line.view]),
+    requests: typeof usage.requests === 'number' ? usage.requests : null,
+    seconds: typeof line.seconds === 'number' ? Math.round(line.seconds) : null,
+    output: typeof usage.output === 'number' ? usage.output : null,
+    failedCalls: typeof usage.workspace?.failed === 'number' ? usage.workspace.failed : null,
+    byTask,
+    clipped: line.clipped && typeof line.clipped.fields === 'number' ? { fields: line.clipped.fields, chars: line.clipped.chars ?? null } : null,
+    inStages: typeof line.in_stages === 'number' ? line.in_stages : null,
+    keywordChecks: typeof line.keyword_checks === 'number' ? line.keyword_checks : null,
+    truth: line.truth ?? null,
+    startedAt: run.started_at ?? null,
+  };
+}
+
+/** Every stage run in the runs dir with its graded result, newest first. A dir without stage.json is a full run
+ *  (listed by listRuns); an unreadable one is skipped, as listRuns does. */
+export async function listStageResults(runsDir, entries) {
+  const out = [];
+  for (const id of entries) {
+    const dir = path.join(runsDir, id);
+    try {
+      await readFile(path.join(dir, 'stage.json'), 'utf8');
+      const run = JSON.parse(await readFile(path.join(dir, 'run.json'), 'utf8'));
+      const line = JSON.parse((await readFile(path.join(dir, 'results.jsonl'), 'utf8')).split('\n').find((l) => l.trim()));
+      out.push(stageResultSummary(id, run, line));
+    } catch {
+      // not a stage run, or one still in progress / aborted
+    }
+  }
+  return out.sort((a, b) => (a.id < b.id ? 1 : -1));
 }

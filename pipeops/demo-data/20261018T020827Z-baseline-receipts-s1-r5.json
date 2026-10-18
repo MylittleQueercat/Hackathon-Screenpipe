@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-18T08:51:59.291Z",
+  "exportedAt": "2026-10-18T10:02:46.805Z",
   "run": {
     "id": "20261018T020827Z-baseline-receipts-s1-r5",
     "label": "baseline",
@@ -91,6 +91,7 @@
     "qualityTotal": 14,
     "modelRequests": 213,
     "runtimeSeconds": 1538,
+    "failedCalls": 34,
     "costUsd": null
   },
   "modelUsage": {
@@ -216,7 +217,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "no_duplicate-p1",
@@ -230,7 +232,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "steps-p1",
@@ -246,7 +249,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "missing_date-p1",
@@ -262,7 +266,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "duplicate-p1",
@@ -277,7 +282,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "high_value-p1",
@@ -293,7 +299,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": true
     },
     {
       "id": "type_lookup-p1",
@@ -310,7 +317,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": false
     },
     {
       "id": "noise_excluded-p1",
@@ -324,7 +332,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "email_separate-p1",
@@ -341,7 +350,8 @@
         "Mail @ 2026-10-14T10:15:13.653+00:00: \"Get Mail · Compose\"",
         "Mail @ 2026-10-14T10:16:07.684+00:00: \"Save As: · Atlas-project-brief.pdf\"",
         "Mail @ 2026-10-14T10:17:10.750+00:00: \"Get Mail · Compose\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "one_off_unpublished-p1",
@@ -353,7 +363,8 @@
       "reason": null,
       "evidence": [
         "seeded on screen: \"Printers & Scanners\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p1",
@@ -363,7 +374,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "drift-p2",
@@ -379,7 +391,8 @@
         "TextEdit @ 2026-10-14T13:04:27.109+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:39.102+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p2",
@@ -389,7 +402,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p3",
@@ -399,7 +413,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     }
   ],
   "workflows": [

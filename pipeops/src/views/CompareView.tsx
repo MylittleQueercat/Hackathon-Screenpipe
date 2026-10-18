@@ -206,6 +206,7 @@ export function CompareView({ experiment }: { experiment: Experiment }) {
                   )}
                 </p>
                 {!extras && <p className="mt-1 font-mono text-[12px] text-ink-500">{experiment.comparison.note}</p>}
+                <RejectedCalls a={a} b={b} />
               </div>
               {phaseRows && <PhaseTable rows={phaseRows} a={a} b={b} />}
               {experiment.comparison.review && <ReviewCard review={experiment.comparison.review} a={a} b={b} />}
@@ -652,6 +653,34 @@ function Lane({
           <AnimatePresence>{delta}</AnimatePresence>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Workflows calls the engine refused (usage.workspace.failed), each one a retry for the agent.
+ *  Shown only when at least one run logged it; "not logged" is not zero. */
+function RejectedCalls({ a, b }: { a: Run; b: Run }) {
+  const av = a.metrics.failedCalls ?? null;
+  const bv = b.metrics.failedCalls ?? null;
+  if (av === null && bv === null) return null;
+  const side = (label: string, v: number | null) => (
+    <span>
+      <span className="text-ink-500">{label} </span>
+      {v === null ? <span className="text-ink-500">not logged</span> : <span className="tnum text-ink-100">{v}</span>}
+    </span>
+  );
+  return (
+    <div
+      className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px]"
+      title="Workflows calls the engine refused (usage.workspace.failed); each one costs the agent a retry"
+    >
+      <span className="text-[11px] uppercase tracking-widest text-ink-500">Rejected calls</span>
+      {side(a.label, av)}
+      <span className="text-ink-600">→</span>
+      {side(b.label, bv)}
+      {av !== null && bv !== null && av !== bv && av > 0 && (
+        <span className={bv > av ? 'text-cost' : 'text-signal'}>{signedPct(av, bv)}</span>
+      )}
     </div>
   );
 }

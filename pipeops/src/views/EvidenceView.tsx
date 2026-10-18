@@ -189,6 +189,18 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
                 <Badge kind="recorded" />
               </div>
               <p className="mt-3 text-[14px] leading-relaxed text-ink-300">Verdict recorded in the evaluation artifact.</p>
+              {/* in_stages: reported by the grader for passing keyword checks, never scored */}
+              {check.passed && check.inStages != null && (
+                <p
+                  className={`mt-2 flex items-start gap-2 text-[13px] leading-relaxed ${check.inStages ? 'text-ink-300' : 'text-cost'}`}
+                  title="Reported by the grader (in_stages), not scored"
+                >
+                  <span className="mt-[3px] font-mono text-[10px] uppercase tracking-widest text-ink-500">in steps</span>
+                  {check.inStages
+                    ? 'Its words are in the workflow’s steps: the workflow says what to do.'
+                    : 'Passes on wording only: the words appear in a variation, question or limitation, not in the steps.'}
+                </p>
+              )}
             </div>
 
             {/* why */}

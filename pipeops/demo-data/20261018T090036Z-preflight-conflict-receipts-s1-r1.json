@@ -2,7 +2,7 @@
   "format": "pipeops.run",
   "formatVersion": 1,
   "kind": "full",
-  "exportedAt": "2026-10-18T09:51:20.681Z",
+  "exportedAt": "2026-10-18T10:02:47.109Z",
   "run": {
     "id": "20261018T090036Z-preflight-conflict-receipts-s1-r1",
     "label": "preflight-conflict",
@@ -91,6 +91,7 @@
     "qualityTotal": 14,
     "modelRequests": 189,
     "runtimeSeconds": 1356,
+    "failedCalls": 32,
     "costUsd": null
   },
   "modelUsage": {
@@ -219,7 +220,8 @@
       "evidence": [
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "no_duplicate-p1",
@@ -232,7 +234,8 @@
       "evidence": [
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "steps-p1",
@@ -247,7 +250,8 @@
         "seeded on screen: \"original_file,new_filename,date,amount,type,status,notes\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "missing_date-p1",
@@ -262,7 +266,8 @@
         "seeded on screen: \"missing date\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "duplicate-p1",
@@ -276,7 +281,8 @@
         "seeded on screen: \"duplicate,same as 2026-10-05_Acme-Office-Supplies_receipt.pdf\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "high_value-p1",
@@ -291,7 +297,8 @@
         "seeded on screen: \"review needed\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "type_lookup-p1",
@@ -307,7 +314,8 @@
         "seeded on screen: \"2026-10-14_Northwind_contract.pdf\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "noise_excluded-p1",
@@ -320,7 +328,8 @@
       "evidence": [
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "email_separate-p1",
@@ -337,7 +346,8 @@
         "Mail @ 2026-10-14T10:14:55.215+00:00: \"Get Mail · Compose\"",
         "Mail @ 2026-10-14T10:16:07.684+00:00: \"Save As: · Atlas-project-brief.pdf\"",
         "Mail @ 2026-10-14T10:17:10.750+00:00: \"Get Mail · Compose\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "one_off_unpublished-p1",
@@ -349,7 +359,8 @@
       "reason": null,
       "evidence": [
         "seeded on screen: \"Printers & Scanners\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p1",
@@ -359,7 +370,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "2 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "drift-p2",
@@ -374,7 +386,8 @@
         "seeded on screen: \"receipt_2026-10-15_Hardware-Store.pdf\"",
         "TextEdit @ 2026-10-17T11:29:54.697+00:00: \"tracker.csv · original_file,new_filename,date,amount,type,status,notes\"",
         "Preview @ 2026-10-17T11:28:22.677+00:00: \"scan-0421.pdf · Page 1 of 1\""
-      ]
+      ],
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p2",
@@ -384,7 +397,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "3 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     },
     {
       "id": "evidence_resolves-p3",
@@ -394,7 +408,8 @@
       "expected": "Every citation in every published workflow resolves to a real seeded frame.",
       "actual": "3 workflow(s) in the published catalog this phase.",
       "reason": null,
-      "evidence": null
+      "evidence": null,
+      "inStages": null
     }
   ],
   "workflows": [
