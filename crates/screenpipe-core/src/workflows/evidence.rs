@@ -6,6 +6,8 @@
 use super::*;
 
 const MAX_SOURCE_READS: usize = 240;
+/// Unresolved citations explained per verification, from the recorder around each.
+const MAX_EXPLAINED: usize = 20;
 
 fn references(
     value: &Value,
@@ -196,6 +198,7 @@ pub async fn resolve_references(
         .ok_or("Missing capture period")?;
     let refs = references(value, start, end)?;
     let reads = refs.len();
+    let cited = refs.clone();
     let client = reqwest::Client::new();
     let results = stream::iter(refs)
         .map(|(at, app)| {
@@ -297,10 +300,85 @@ pub async fn resolve_references(
             catalog.points.push(point);
         }
     }
+    // Only on failure: what the recorder holds where a citation found nothing, so
+    // the rejection can name it. Best effort; a failed read only loses the hint.
+    let misses: Vec<_> = cited
+        .into_iter()
+        .filter(|(at, app)| catalog.resolve(*at, app).is_none())
+        .take(MAX_EXPLAINED)
+        .collect();
+    let around = stream::iter(misses)
+        .map(|(at, app)| {
+            let client = &client;
+            async move {
+                let exact = recorded(endpoint, client, at, at + citation_span(at), None).await;
+                let near = recorded(
+                    endpoint,
+                    client,
+                    at - ChronoDuration::seconds(60),
+                    at + ChronoDuration::seconds(60),
+                    Some(&app),
+                )
+                .await;
+                (at, app, exact.zip(near))
+            }
+        })
+        .buffered(HISTORY_QUERY_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    for (at, app, found) in around {
+        if let Some((mut exact, near)) = found {
+            exact.extend(near);
+            exact.sort();
+            exact.dedup();
+            catalog.nearby.insert((at, app.to_lowercase()), exact);
+        }
+    }
     catalog
         .points
         .retain(|p| p.timestamp >= start && p.timestamp < end);
     Ok((catalog, reads))
+}
+
+/// The (timestamp, app) of screen captures in [start, end), of one app or any.
+async fn recorded(
+    endpoint: &RecorderEndpoint,
+    client: &reqwest::Client,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+    app: Option<&str>,
+) -> Option<Vec<(DateTime<Utc>, String)>> {
+    let mut url = reqwest::Url::parse(&format!("{}/search", endpoint.base_url)).ok()?;
+    url.query_pairs_mut()
+        .append_pair("start_time", &start.to_rfc3339())
+        .append_pair("end_time", &end.to_rfc3339())
+        .append_pair("content_type", "all")
+        .append_pair("include_frames", "false")
+        .append_pair("limit", "100");
+    if let Some(app) = app {
+        url.query_pairs_mut().append_pair("app_name", app);
+    }
+    let response = apply_auth(endpoint, client.get(url).timeout(Duration::from_secs(20)))
+        .send()
+        .await
+        .ok()?
+        .error_for_status()
+        .ok()?;
+    let payload = response.json::<Value>().await.ok()?;
+    Some(
+        payload["data"]
+            .as_array()?
+            .iter()
+            .filter_map(|row| {
+                let content = &row["content"];
+                let at = DateTime::parse_from_rfc3339(content["timestamp"].as_str()?).ok()?;
+                Some((
+                    at.with_timezone(&Utc),
+                    content["app_name"].as_str()?.to_string(),
+                ))
+            })
+            .collect(),
+    )
 }
 
 #[cfg(test)]

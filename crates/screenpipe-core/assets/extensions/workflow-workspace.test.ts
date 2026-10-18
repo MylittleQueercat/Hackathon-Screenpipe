@@ -163,6 +163,20 @@ test("finish explains missing revisions before making a request and accepts a co
   expect(JSON.parse(result.content[0].text).saved).toBe(true);
   expect(requests[0]).toMatchObject({action:"finish",expected_revision:1,catalog_revision:4});
 });
+test("a write without a revision uses the latest one the agent was shown, and a conflict still stops it",async()=>{
+  server.reload({fetch:async(req:Request)=>{
+    const body=req.method==="POST"?await req.json():null;requests.push(body);
+    return new URL(req.url).pathname==="/workflows/workspace"&&req.method!=="POST"
+      ? Response.json({workspace:{revision:9,cycle:null,drafts:{}},catalogRevision:4,ready:true})
+      : Response.json({saved:true,revision:9});
+  }});
+  await tool.execute("id",{action:"handoff",expected_revision:8,draft_id:"a",assignee:"workflow-review",note:"checked",payload:{}},new AbortController().signal);
+  await tool.execute("id",{action:"finish",catalog_revision:4,note:"Done"},new AbortController().signal);
+  expect(requests.filter(Boolean).at(-1)).toMatchObject({action:"finish",expected_revision:9});
+  await expect(tool.execute("id",{action:"finish",expected_revision:"9",catalog_revision:4,note:"Done"},new AbortController().signal)).rejects.toThrow("expected_revision is required");
+  server.reload({fetch:()=>Response.json({error:"Workspace changed"},{status:409})});
+  await expect(tool.execute("id",{action:"finish",catalog_revision:4,note:"Done"},new AbortController().signal)).rejects.toThrow("Workspace changed");
+});
 test("Maintenance can finish with its workspace revision without a publication revision",async()=>{
   process.env.SCREENPIPE_PIPE_NAME="workflow-maintain";
   extension({registerTool:(t:any)=>{tool=t}} as any);

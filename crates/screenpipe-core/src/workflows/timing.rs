@@ -16,7 +16,7 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
     if proposed.len() > 30 {
         return Err("Keep at most 30 representative timing runs per workflow or step".into());
     }
-    let boundary = |value: &Value| -> Result<(DateTime<Utc>, Value), String> {
+    let boundary = |value: &Value, at_key: String| -> Result<(DateTime<Utc>, Value), String> {
         let at = value["timestamp"]
             .as_str()
             .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
@@ -28,25 +28,40 @@ pub fn normalize_timing(value: &Value, catalog: &EvidenceCatalog) -> Result<Valu
             .map(str::trim)
             .filter(|q| (12..=1200).contains(&q.chars().count()))
             .ok_or("Cite the source text supporting each timing boundary")?;
-        let point = catalog
+        let captures: Vec<_> = catalog
             .points
             .iter()
-            .find(|p| {
+            .filter(|p| {
                 cites_capture(at, p.timestamp)
                     && p.app.eq_ignore_ascii_case(app)
                     && matches!(p.source.as_str(), "screen" | "parsed")
-                    && contains_source_quote(&p.detail, quote)
             })
-            .ok_or("Timing boundary does not match captured source text")?;
+            .collect();
+        // Say which boundary failed and why, so it can be fixed in one revision.
+        let at_text = at.to_rfc3339();
+        let point = captures
+            .iter()
+            .find(|p| contains_source_quote(&p.detail, quote))
+            .ok_or_else(
+                || match (captures.is_empty(), explain_unresolved(catalog, at, app)) {
+                    (true, Some(why)) => format!("{at_key} cites {app} at {at_text}, but {why}"),
+                    (true, None) => format!(
+                        "{at_key} cites {app} at {at_text}, which is not a recorded screen capture"
+                    ),
+                    (false, _) => format!(
+                        "{at_key}: the quote is not in the text of the {app} capture at {at_text}"
+                    ),
+                },
+            )?;
         Ok((
             point.timestamp,
             json!({"timestamp":point.timestamp.to_rfc3339(),"app":point.app,"quote":quote}),
         ))
     };
     let mut runs = Vec::new();
-    for run in proposed {
-        let (start, start_source) = boundary(&run["start"])?;
-        let (end, end_source) = boundary(&run["end"])?;
+    for (index, run) in proposed.iter().enumerate() {
+        let (start, start_source) = boundary(&run["start"], format!("[{index}].start"))?;
+        let (end, end_source) = boundary(&run["end"], format!("[{index}].end"))?;
         if end <= start {
             return Err("A timing run must finish after it starts".into());
         }
@@ -90,6 +105,26 @@ mod tests {
             json!({"start":source(start,"Begin the research review"), "end":source(start + ChronoDuration::minutes(minutes),"Research review is complete"), "summary":"One research review from start to completion"})
         }).collect();
         (json!({"timingRuns":runs,"totalMinutes":9999}), catalog)
+    }
+    #[test]
+    fn a_failing_boundary_says_which_and_why() {
+        let (mut input, mut catalog) = fixture();
+        input["timingRuns"][1]["end"]["quote"] = json!("A sentence nobody wrote");
+        let quote = normalize_timing(&input, &catalog).unwrap_err();
+        assert!(
+            quote.starts_with("[1].end: the quote is not in the text of the Docs capture at"),
+            "{quote}"
+        );
+        let (mut input, _) = fixture();
+        input["timingRuns"][0]["start"]["app"] = json!("Finder");
+        let at = DateTime::parse_from_rfc3339("2026-09-01T09:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        catalog
+            .nearby
+            .insert((at, "finder".into()), vec![(at, "Docs".into())]);
+        let app = normalize_timing(&input, &catalog).unwrap_err();
+        assert!(app.starts_with("[0].start cites Finder at 2026-09-01T09:00:00+00:00, but the capture at that time is Docs, not Finder"), "{app}");
     }
     #[test]
     fn average_uses_distinct_runs_not_days_or_model_numbers() {

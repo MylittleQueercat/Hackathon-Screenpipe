@@ -424,6 +424,24 @@ pub fn validate_publication(
     }
 }
 
+/// A procedure item citing a capture the recorder does not have: adding it to the
+/// stage's evidence cannot help, so say what was recorded there instead.
+fn unrecorded(item: &Value, catalog: &super::EvidenceCatalog) -> Option<String> {
+    let at = item["timestamp"]
+        .as_str()
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())?
+        .with_timezone(&Utc);
+    let app = item["app"].as_str()?;
+    if catalog.resolve(at, app).is_some() {
+        return None;
+    }
+    let why = super::explain_unresolved(catalog, at, app)?;
+    Some(format!(
+        "cites {app} at {}, but {why}. Cite a recorded capture with its exact timestamp and app, and list it in this stage's evidence",
+        at.to_rfc3339()
+    ))
+}
+
 /// Why a stage's procedure items fail, at most five, each with its position.
 fn procedure_problems(stage: &Value, catalog: &super::EvidenceCatalog) -> String {
     let evidence = super::clean_evidence(
@@ -438,7 +456,12 @@ fn procedure_problems(stage: &Value, catalog: &super::EvidenceCatalog) -> String
         .filter_map(|(index, item)| {
             super::check_procedure_item(item, &evidence)
                 .err()
-                .map(|why| format!("procedure[{index}]: {why}."))
+                .map(|why| {
+                    format!(
+                        "procedure[{index}]: {}.",
+                        unrecorded(item, catalog).unwrap_or(why)
+                    )
+                })
         })
         .collect();
     if problems.is_empty() && items.len() > super::MAX_PROCEDURE_ITEMS {

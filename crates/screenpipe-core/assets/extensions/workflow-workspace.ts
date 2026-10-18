@@ -35,6 +35,10 @@ export default function (pi: ExtensionAPI) {
   if (task === "workflow-discover") actions.push("start", "propose");
   if (task === "workflow-maintain") actions.push("propose");
   if (task === "workflow-review") actions.push("reject", "publish");
+  // The latest workspace revision this agent was shown (context or a write's
+  // remaining state): what it is told to copy. A write that omits it uses it; a
+  // stale one still gets the server's conflict.
+  let shownRevision: number | undefined;
   pi.registerTool({
     name: "workflow_workspace",
     label: "Workflow drafts",
@@ -54,6 +58,9 @@ export default function (pi: ExtensionAPI) {
     async execute(_id: string, input: Record<string, any>, signal: AbortSignal) {
       try {
         signal.throwIfAborted();
+        if (input.action !== "context" && input.action !== "start" && input.expected_revision === undefined && shownRevision !== undefined) {
+          input = {...input, expected_revision: shownRevision};
+        }
         if (input.action !== "context" && input.action !== "start" && (!Number.isSafeInteger(input.expected_revision) || input.expected_revision < 0)) {
           throw new Error("expected_revision is required for this write. Copy revision from the latest context or remaining state and include it in the call. No changes were saved.");
         }
@@ -124,6 +131,8 @@ export default function (pi: ExtensionAPI) {
         // visible when agents revisit their workspace, without choosing their
         // research steps or treating an incomplete investigation as finished.
         result = {...result, observedAt:new Date().toISOString()};
+        const shown = result.remaining?.revision ?? result.revision;
+        if (Number.isSafeInteger(shown)) shownRevision = shown;
         const text = JSON.stringify(result);
         // Use the existing snapshot path before the smallest supported
         // transport's 8K text boundary can cut JSON in the middle. Preserve the

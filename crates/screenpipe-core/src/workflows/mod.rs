@@ -42,6 +42,9 @@ pub struct EvidenceCatalog {
     pub points: Vec<EvidencePoint>,
     pub apps: HashMap<String, String>,
     pub meetings: Vec<MeetingWindow>,
+    /// For each cited (timestamp, lowercase app) that resolved to no capture, the
+    /// captures recorded around it, so a rejection can say what is there instead.
+    pub nearby: HashMap<(DateTime<Utc>, String), Vec<(DateTime<Utc>, String)>>,
 }
 
 impl EvidenceCatalog {
@@ -499,6 +502,60 @@ pub fn normalized_frequency(repetitions: u64, days: u16) -> String {
 /// Whether a cited time names this capture. Agents often cite whole seconds
 /// (copied from drafts and summaries) while captures carry milliseconds; a
 /// whole-second citation names a capture in that second. Never nearer seconds.
+/// Why a cited (timestamp, app) is not a recorded capture, from what the recorder
+/// holds around it: another app at that time, several captures of the app in a
+/// whole second, or the app's captures within a minute. None when nothing was read.
+pub fn explain_unresolved(
+    catalog: &EvidenceCatalog,
+    at: DateTime<Utc>,
+    app: &str,
+) -> Option<String> {
+    let nearby = catalog.nearby.get(&(at, app.to_lowercase()))?;
+    let same_app = |(_, a): &&(DateTime<Utc>, String)| a.eq_ignore_ascii_case(app);
+    let list = |points: &[&(DateTime<Utc>, String)]| {
+        points
+            .iter()
+            .map(|(t, _)| t.to_rfc3339())
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let in_second: Vec<_> = nearby
+        .iter()
+        .filter(same_app)
+        .filter(|(t, _)| cites_capture(at, *t))
+        .collect();
+    if in_second.len() > 1 {
+        return Some(format!(
+            "{} {app} captures share that second ({}); cite one with its milliseconds",
+            in_second.len(),
+            list(&in_second)
+        ));
+    }
+    let mut others: Vec<&str> = nearby
+        .iter()
+        .filter(|(t, a)| cites_capture(at, *t) && !a.eq_ignore_ascii_case(app))
+        .map(|(_, a)| a.as_str())
+        .collect();
+    others.sort_unstable();
+    others.dedup();
+    let mut near: Vec<_> = nearby.iter().filter(same_app).collect();
+    near.sort_by_key(|(t, _)| (*t - at).num_milliseconds().abs());
+    near.truncate(3);
+    let there = if others.is_empty() {
+        format!("the recorder has no {app} capture at that time")
+    } else {
+        format!(
+            "the capture at that time is {}, not {app}",
+            others.join(", ")
+        )
+    };
+    Some(if near.is_empty() {
+        format!("{there}, and none within a minute of it")
+    } else {
+        format!("{there}; {app} captures within a minute: {}", list(&near))
+    })
+}
+
 pub fn cites_capture(cited: DateTime<Utc>, capture: DateTime<Utc>) -> bool {
     use chrono::{SubsecRound, Timelike};
     cited == capture || (cited.nanosecond() == 0 && capture.trunc_subsecs(0) == cited)
@@ -772,7 +829,8 @@ pub fn normalize_analysis(
             stages.push(json!({
                 "name": name,
                 "description": stage_description,
-                "timing": timing::normalize_timing(stage, catalog)?,
+                "timing": timing::normalize_timing(stage, catalog)
+                    .map_err(|why| format!("Stage \"{name}\" timingRuns: {why}"))?,
                 "procedure": procedure,
                 "openQuestions": open_questions,
                 "activeMinutes": 0,
@@ -1021,12 +1079,13 @@ pub fn normalize_analysis(
             "waitingMinutes": 0,
             "durationSource": duration_source,
             "durationSampleCount": duration_sample_count,
-            "timing": timing::normalize_timing(item, catalog)?,
+            "timing": timing::normalize_timing(item, catalog)
+                .map_err(|why| format!("Workflow timingRuns: {why}"))?,
             "appSwitches": 0,
             "confidence": confidence,
             "apps": apps,
             "handoffs": string_list(item, "handoffs", 10),
-            "variations": string_list(item, "variations", 10),
+            "variations": bounded_list(item, "variations", 10, NOTE_CHARS),
             "stages": stages,
             "bottlenecks": bottlenecks,
             "evidence": evidence,
@@ -1910,6 +1969,51 @@ mod quote_tests {
             rejection.contains("procedure[1]: quote is not in the text of the Receipts capture"),
             "{rejection}"
         );
+    }
+
+    #[test]
+    fn an_unrecorded_citation_says_what_the_recorder_holds_there() {
+        let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
+        let mut catalog = EvidenceCatalog::default();
+        let cited = at("2026-10-16T12:23:34.093Z");
+        catalog.nearby.insert(
+            (cited, "preview".into()),
+            vec![
+                (cited, "Finder".into()),
+                (at("2026-10-16T12:22:50.095Z"), "Preview".into()),
+                (at("2026-10-16T12:23:02.476Z"), "Preview".into()),
+            ],
+        );
+        let why = explain_unresolved(&catalog, cited, "Preview").unwrap();
+        assert_eq!(why, "the capture at that time is Finder, not Preview; Preview captures within a minute: 2026-10-16T12:23:02.476+00:00, 2026-10-16T12:22:50.095+00:00");
+        let second = at("2026-10-16T11:27:44Z");
+        catalog.nearby.insert(
+            (second, "preview".into()),
+            vec![
+                (at("2026-10-16T11:27:44.100Z"), "Preview".into()),
+                (at("2026-10-16T11:27:44.600Z"), "Preview".into()),
+            ],
+        );
+        let why = explain_unresolved(&catalog, second, "Preview").unwrap();
+        assert!(
+            why.starts_with("2 Preview captures share that second"),
+            "{why}"
+        );
+        assert!(explain_unresolved(&catalog, at("2026-10-16T09:00:00Z"), "Preview").is_none());
+        let lonely = at("2026-10-16T09:00:00.500Z");
+        catalog.nearby.insert((lonely, "mail".into()), vec![]);
+        assert_eq!(
+            explain_unresolved(&catalog, lonely, "Mail").unwrap(),
+            "the recorder has no Mail capture at that time, and none within a minute of it"
+        );
+        // A publication rejection carries it instead of "add that capture".
+        let stage = json!({"name":"Review","description":"Review the scan","evidence":[{"timestamp":"2026-10-16T12:23:34.093Z","app":"Preview"}],
+            "procedure":[{"kind":"action","text":"Open the scan","timestamp":"2026-10-16T12:23:34.093Z","app":"Preview","quote":"scan-0421.pdf"}]});
+        let raw = json!({"workflows":[{"stages":[stage]}]});
+        let saved = json!({"workflows":[{"stages":[{"procedure":[]}]}]});
+        let rejection = workspace::validate_publication(&raw, &saved, &catalog).unwrap_err();
+        assert!(rejection.contains("procedure[0]: cites Preview at 2026-10-16T12:23:34.093+00:00, but the capture at that time is Finder, not Preview"), "{rejection}");
+        assert!(!rejection.contains("add that capture"), "{rejection}");
     }
 
     #[test]
