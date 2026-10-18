@@ -278,7 +278,13 @@ Changes to Workflows, one at a time and then all together, are in `EXPERIMENTS.m
 one complete full-run pair (18 October), the final stack (`variants/idle-skip.json`)
 took 111 requests against baseline's 213, 92k output tokens against 182k and 619 s of
 agent time against 1,538 s, with no check lost. The idle phase went from 56 requests to
-none; the gaps in phases 1 and 2 are within baseline's own spread.
+none; the gaps in phases 1 and 2 are within baseline's own spread. But an LLM judge,
+blind to which run is which, preferred baseline's documents in all 6 pairs (2 workflows ×
+3 phases, both orders): its documents miss occurrences and steps the checks do not
+test. Traced through the agents, the gaps start in one Discover proposal and one Review
+rewrite, not in the review changes. On a second pair, stopped after phase 1, the judge
+preferred the stack's receipts document strongly in both orders (baseline's had merged
+the email job in). See "LLM judge" in `EXPERIMENTS.md`.
 
 ## Limits
 
