@@ -207,12 +207,11 @@ export function CanvasView({
             <button onClick={() => setSel({ kind: 'workflows' })} className="w-[190px] shrink-0 text-left">
               <div className="font-mono text-[13px] uppercase tracking-[0.18em] text-ink-400">output</div>
               <div className="mt-1 flex items-baseline gap-2.5">
-                <span className="text-[23px] font-medium text-ink-50">Workflows</span>
                 {run.generatedWorkflows && (
-                  <span className="tnum text-[32px] font-semibold text-ink-50">{run.generatedWorkflows.length}</span>
+                  <span className="tnum text-[32px] font-semibold text-signal">{run.generatedWorkflows.length}</span>
                 )}
+                <span className="text-[23px] font-medium text-ink-50">workflows</span>
               </div>
-              {run.generatedWorkflows && <div className="mt-1 font-mono text-[12px] text-ink-400">click one to inspect</div>}
             </button>
             {run.generatedWorkflows ? (
               <div className="flex min-w-0 flex-1 items-stretch gap-3">
@@ -220,11 +219,12 @@ export function CanvasView({
                   <button
                     key={w.id}
                     onClick={() => setSel({ kind: 'workflow', id: w.id })}
-                    className={`min-w-0 flex-1 rounded-xl border px-4 py-2.5 text-left transition-colors hover:border-signal/70 ${
+                    title={w.title}
+                    className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-left transition-colors hover:border-signal/70 ${
                       sel.kind === 'workflow' && sel.id === w.id ? 'border-signal bg-signal/[0.06]' : 'border-ink-700 bg-ink-950/40'
                     }`}
                   >
-                    <div className="line-clamp-2 text-[15.5px] font-medium leading-snug text-ink-100">{w.title}</div>
+                    <div className="truncate text-[17px] font-medium text-ink-100">{w.title}</div>
                   </button>
                 ))}
                 {run.generatedWorkflows.length > 3 && (
