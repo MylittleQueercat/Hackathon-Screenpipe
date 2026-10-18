@@ -231,6 +231,9 @@ function buildChecks(results, truth, catalogs) {
         expected: describeExpected(t),
         actual: describeActual(phaseResult, catalog, t),
         reason: c.reason ?? null,
+        // Keyword checks only: true when the words are in the stages (what to do), false when
+        // they appear only in a variation, question or limitation. Reported, never scored.
+        inStages: typeof c.in_stages === 'boolean' ? c.in_stages : null,
         evidence: evidenceForCheck(phaseResult, catalog, t),
       });
     }
@@ -328,6 +331,9 @@ function buildPhases(results) {
       agentRuns: typeof r.usage?.agent_runs === 'number' ? r.usage.agent_runs : null,
       idleChurn: typeof r.mistakes?.idle_churn === 'number' && r.mistakes.idle_churn > 0,
       status: r.status ?? null,
+      // The engine's cycle status: 'idle' means it declined to start a cycle (nothing was
+      // recorded after the last checked period), so no agent ran. null in older runs.
+      cycle: typeof r.cycle === 'string' ? r.cycle : null,
     }))
     .sort((a, b) => a.phase - b.phase);
 }
@@ -447,4 +453,55 @@ export function buildExperimentBundle({ baselineId, baselineLabel, baselineArtif
       note: 'Live from wfeval run artifacts via the pipeops server. Per-stage runtime is the summed agent execution time from executions.json.',
     },
   });
+}
+
+/** One stage run (`wfeval stage`): one agent, or a chain with --through, from a saved
+ *  snapshot step. Read straight from its results.jsonl line — never a full-evaluation score. */
+export function stageRunSummary(id, run, line) {
+  const usage = line.usage ?? {};
+  const tasks = String(line.stage ?? run.task ?? '').split('+').filter(Boolean);
+  const byTask = tasks.length > 1 && usage.by_task
+    ? Object.fromEntries(Object.entries(usage.by_task).map(([t, u]) => [t, u?.requests ?? null]))
+    : null;
+  const scoreOf = (v) => (typeof v?.score === 'number' ? v.score : null);
+  return {
+    id,
+    variant: line.variant ?? run.variant?.name ?? null,
+    tasks,
+    snapshot: line.snapshot ?? null,
+    phase: typeof line.phase === 'number' ? line.phase : null,
+    view: line.view ?? null,
+    status: line.status ?? null,
+    passed: typeof line.passed === 'number' ? line.passed : null,
+    scored: typeof line.scored === 'number' ? line.scored : null,
+    scoreBefore: scoreOf(line.before?.[line.view]),
+    requests: typeof usage.requests === 'number' ? usage.requests : null,
+    seconds: typeof line.seconds === 'number' ? Math.round(line.seconds) : null,
+    output: typeof usage.output === 'number' ? usage.output : null,
+    failedCalls: typeof usage.workspace?.failed === 'number' ? usage.workspace.failed : null,
+    byTask,
+    clipped: line.clipped && typeof line.clipped.fields === 'number' ? { fields: line.clipped.fields, chars: line.clipped.chars ?? null } : null,
+    inStages: typeof line.in_stages === 'number' ? line.in_stages : null,
+    keywordChecks: typeof line.keyword_checks === 'number' ? line.keyword_checks : null,
+    truth: line.truth ?? null,
+    startedAt: run.started_at ?? null,
+  };
+}
+
+/** Every stage run in the runs dir, newest first. A dir without stage.json is a full run
+ *  (listed by listRuns); an unreadable one is skipped, as listRuns does. */
+export async function listStageRuns(runsDir, entries) {
+  const out = [];
+  for (const id of entries) {
+    const dir = path.join(runsDir, id);
+    try {
+      await readFile(path.join(dir, 'stage.json'), 'utf8');
+      const run = JSON.parse(await readFile(path.join(dir, 'run.json'), 'utf8'));
+      const line = JSON.parse((await readFile(path.join(dir, 'results.jsonl'), 'utf8')).split('\n').find((l) => l.trim()));
+      out.push(stageRunSummary(id, run, line));
+    } catch {
+      // not a stage run, or one still in progress / aborted
+    }
+  }
+  return out.sort((a, b) => (a.id < b.id ? 1 : -1));
 }

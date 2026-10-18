@@ -449,6 +449,11 @@ function PhaseStrip({ a, b }: { a: Run; b: Run }) {
               </span>
               {bar(find(ap, n), 'bg-ink-300')}
               {bar(bPhase, 'bg-signal')}
+              {bPhase?.cycle === 'idle' && (
+                <span className="font-mono text-[11px] text-signal" title="The engine started no cycle: nothing was recorded after the last checked period">
+                  no cycle · nothing new
+                </span>
+              )}
             </div>
           );
         })}

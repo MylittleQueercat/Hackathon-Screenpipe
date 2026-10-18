@@ -55,6 +55,9 @@ export interface CheckRecord {
   actual: string | null;
   reason: string | null;
   evidence: string[] | null;
+  /** Keyword checks only: true when the words are in the stages (what to do), false when
+   *  they appear only in a variation, question or limitation. null/absent otherwise. */
+  inStages?: boolean | null;
 }
 
 /** One phase of a full cycle (phase 1: history; phase 2: a rule change; phase 3: nothing new).
@@ -69,6 +72,8 @@ export interface PhaseMetric {
   /** idle_churn tag: this cycle created or revised a workflow with no new history. */
   idleChurn: boolean;
   status: string | null;
+  /** The engine's cycle status for this phase; 'idle' = it started no cycle, so no agent ran. */
+  cycle?: string | null;
 }
 
 export interface RunMetrics {

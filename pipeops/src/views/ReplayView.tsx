@@ -5,7 +5,7 @@ import type { Experiment, Run, StageId } from '../data/schema';
 import { Badge, Eyebrow, GhostButton, Missing, PlayIcon, PrimaryButton, Select } from '../components/ui';
 import { pad2 } from '../lib/format';
 import { usePlayKey } from '../lib/events';
-import { fetchSnapshots, fetchVariants, streamWfevalStage, type SnapshotSummary, type VariantSummary } from '../data/live';
+import { fetchSnapshots, fetchStageRuns, fetchVariants, streamWfevalStage, type SnapshotSummary, type StageRunSummary, type VariantSummary } from '../data/live';
 
 /* graph geometry */
 const GW = 1680;
@@ -51,6 +51,10 @@ export function ReplayView({
   const [stageRunning, setStageRunning] = useState(false);
   const [stageLog, setStageLog] = useState('');
   const stageLogRef = useRef<HTMLDivElement>(null);
+  // Graded stage runs already on this machine (eval/runs/*/stage.json), and the one just run.
+  const [stageRuns, setStageRuns] = useState<StageRunSummary[]>([]);
+  const [lastRunId, setLastRunId] = useState<string | null>(null);
+  const [chain, setChain] = useState(false); // --through: also run the agents after this one
 
   useEffect(() => {
     fetchSnapshots()
@@ -60,6 +64,7 @@ export function ReplayView({
         setSnapshots([]);
       });
     fetchVariants().then(setVariants).catch(() => setVariants([]));
+    fetchStageRuns().then(setStageRuns).catch(() => setStageRuns([]));
   }, []);
   useEffect(() => {
     stageLogRef.current?.scrollTo({ top: stageLogRef.current.scrollHeight });
@@ -73,7 +78,10 @@ export function ReplayView({
   useEffect(() => {
     clear();
     setSim(0);
-    if (!stageRunning) setRealOpen(false); // switching stage collapses the real-execution panel
+    if (!stageRunning) {
+      setRealOpen(false); // switching stage collapses the real-execution panel
+      setLastRunId(null); // and a just-run result belongs to the stage it ran from
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selIdx, configId, run.id]);
 
@@ -90,6 +98,11 @@ export function ReplayView({
   const reusedRequests = upstreamReq.every((v) => v !== null) ? upstreamReq.reduce<number>((t, v) => t + (v ?? 0), 0) : null;
 
   const task = `workflow-${sel.id}`;
+  const lastStage = stages[stages.length - 1];
+  const throughTask = downstream.length > 1 ? `workflow-${lastStage.id}` : null;
+  const runChain = chain && throughTask !== null;
+  const recorded = stageRuns.filter((r) => r.tasks[0] === task && r.status === 'done');
+  const lastRun = lastRunId ? stageRuns.find((r) => r.id === lastRunId) ?? null : null;
   const match = (snapshots ?? []).flatMap((snap) => snap.steps.filter((s) => s.task === task).map((s) => ({ snap, s })))[0];
 
   // The real replay runs the variant picked here, defaulting to the "Replay with config"
@@ -110,7 +123,7 @@ export function ReplayView({
     let log = '';
     try {
       await streamWfevalStage(
-        { step: `snapshots/${match.snap.id}/steps/${match.s.step}`, task, variant: chosen.file, repeat: 1 },
+        { step: `snapshots/${match.snap.id}/steps/${match.s.step}`, task, variant: chosen.file, repeat: 1, ...(runChain ? { through: throughTask! } : {}) },
         (chunk) => {
           log += chunk;
           setStageLog((l) => l + chunk);
@@ -121,6 +134,13 @@ export function ReplayView({
         const lines = log.split('\n').map((l) => l.trim()).filter(Boolean);
         const cause = [...lines].reverse().find((l) => /^\w*(Error|Exception)\b|exited with code|failed to start/.test(l));
         setStageError(`The stage replay did not complete${cause ? `: ${cause.replace(/^\[pipeops\]\s*/, '')}` : '.'}`);
+      }
+      // The server names the new run dir; read its graded result instead of leaving only a log.
+      const done = log.match(/\[pipeops\] stage complete: (\S+)/)?.[1];
+      if (done) {
+        const fresh = await fetchStageRuns().catch(() => null);
+        if (fresh) setStageRuns(fresh);
+        setLastRunId(done);
       }
     } catch (e) {
       setStageError((e as Error).message);
@@ -369,8 +389,14 @@ export function ReplayView({
                 <Missing size="sm" path="stages.*.modelRequests" />
               )}
             </OutcomeRow>
-            <OutcomeRow label="Replay result">
-              <span className="text-[14px] text-ink-300">Replay not yet executed. This is a preview of the plan.</span>
+            <OutcomeRow label={lastRun ? 'Replay result · just run' : recorded.length ? `Recorded stage runs · from ${sel.name}` : 'Replay result'}>
+              {lastRun ? (
+                <StageRunTable runs={[lastRun]} />
+              ) : recorded.length ? (
+                <StageRunTable runs={recorded} />
+              ) : (
+                <span className="text-[14px] text-ink-300">Replay not yet executed. This is a preview of the plan.</span>
+              )}
             </OutcomeRow>
           </div>
           <PrimaryButton className="mt-auto self-start" onClick={preview}>
@@ -416,8 +442,25 @@ export function ReplayView({
                 </span>
               </div>
               <p className="mt-2 text-[13px] leading-relaxed text-ink-400">
-                Replays {sel.name} alone from <span className="text-ink-200">{match.snap.id}</span>
+                Replays {runChain ? downstream.map((s) => s.name).join(' → ') : `${sel.name} alone`} from{' '}
+                <span className="text-ink-200">{match.snap.id}</span>
               </p>
+              {throughTask && (
+                <div className="mt-2 flex gap-2">
+                  {[false, true].map((c) => (
+                    <button
+                      key={String(c)}
+                      onClick={() => setChain(c)}
+                      disabled={stageRunning}
+                      className={`rounded-full border px-3 py-1 text-[12px] transition ${
+                        chain === c ? 'border-signal/60 bg-signal/10 text-signal' : 'border-ink-700 text-ink-300 hover:text-ink-100'
+                      }`}
+                    >
+                      {c ? `Through ${lastStage.name}` : `${sel.name} only`}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="mt-3">
                 <Select
                   value={realVariant}
@@ -435,7 +478,7 @@ export function ReplayView({
               )}
               <div className="mt-3 flex items-center gap-3 rounded-xl border border-cost/40 bg-cost/[0.06] p-3">
                 <span className="text-[12px] leading-snug text-cost">
-                  Run {sel.name} with “{chosen?.name}” for real? Takes a few minutes.
+                  Run {runChain ? downstream.map((s) => s.name).join(' → ') : sel.name} with “{chosen?.name}” for real? Takes a few minutes.
                 </span>
                 <PrimaryButton className="shrink-0" onClick={runStageReplay} disabled={stageRunning || !chosen?.engineReady}>
                   {stageRunning ? 'Running…' : 'Confirm'}
@@ -548,6 +591,55 @@ function OutcomeRow({ label, children }: { label: string; children: ReactNode })
     <div className="border-b border-ink-800 pb-3">
       <div className="font-mono text-[11px] uppercase tracking-widest text-ink-500">{label}</div>
       <div className="mt-1.5">{children}</div>
+    </div>
+  );
+}
+
+const range = (xs: (number | null)[]) => {
+  const v = xs.filter((x): x is number => x !== null);
+  if (!v.length) return '—';
+  const lo = Math.min(...v);
+  const hi = Math.max(...v);
+  return lo === hi ? String(lo) : `${lo}–${hi}`;
+};
+
+/** Graded stage runs, one row per variant (and chain), ranges over its repeats. Read from
+ *  each run's results.jsonl; a dash is "not recorded", never zero. */
+function StageRunTable({ runs }: { runs: StageRunSummary[] }) {
+  const groups = new Map<string, StageRunSummary[]>();
+  for (const r of runs) {
+    const key = `${r.variant ?? '?'}|${r.tasks.join('+')}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  const short = (t: string) => t.replace(/^workflow-/, '');
+  return (
+    <div className="font-mono text-[11.5px]">
+      <div className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 pb-1 text-[10px] uppercase tracking-widest text-ink-500">
+        <span>variant</span>
+        <span title="checks passed in the graded view (drafts, or the catalog after Review)">checks</span>
+        <span>requests</span>
+        <span>seconds</span>
+        <span title="Workflows calls the engine refused">rejected</span>
+        <span title="fields the catalog saved shorter than Review published">clipped</span>
+      </div>
+      {[...groups.values()].map((g) => {
+        const r0 = g[0];
+        const checks = g.every((r) => r.passed !== null && r.scored !== null) ? range(g.map((r) => r.passed)) + `/${r0.scored}` : '—';
+        return (
+          <div key={r0.id} className="grid grid-cols-[2.2fr_0.7fr_0.8fr_0.8fr_0.7fr_0.6fr] gap-x-2 border-t border-ink-800 py-1 text-ink-200">
+            <span className="truncate" title={g.map((r) => r.id).join('\n')}>
+              {r0.variant ?? '?'}
+              {r0.tasks.length > 1 && <span className="text-ink-500"> · {r0.tasks.map(short).join('→')}</span>}
+              <span className="text-ink-500"> ×{g.length}</span>
+            </span>
+            <span className="tnum">{checks}</span>
+            <span className="tnum">{range(g.map((r) => r.requests))}</span>
+            <span className="tnum">{range(g.map((r) => r.seconds))}</span>
+            <span className="tnum">{range(g.map((r) => r.failedCalls))}</span>
+            <span className="tnum">{r0.view === 'catalog' ? range(g.map((r) => r.clipped?.fields ?? null)) : '—'}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

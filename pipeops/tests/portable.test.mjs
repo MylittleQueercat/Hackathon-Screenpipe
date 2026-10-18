@@ -9,7 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exportRun, validatePortable, readPortableFile, portableToRawRun, scanForSecrets, conditionsKey } from '../server/portable.mjs';
-import { listRuns, buildExperimentBundle, loadRunArtifacts } from '../server/convert.mjs';
+import { listRuns, listStageRuns, buildExperimentBundle, loadRunArtifacts, toRawRun } from '../server/convert.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const demoDir = path.join(root, 'demo-data');
@@ -285,4 +285,51 @@ test('portableToRawRun maps cleanly to the UI shape', async () => {
   assert.equal(raw.status, 'recorded');
   assert.ok(raw.checks.length && raw.groundTruth.length && raw.generatedWorkflows.length);
   assert.ok(conditionsKey({}) .length);
+});
+
+test('eval fields reach the UI: phase cycle, per-check in_stages, and they round-trip the portable format', async () => {
+  const runsDir = await mkdtemp(path.join(os.tmpdir(), 'pipeops-runs-'));
+  const id = '20261018T000000Z-v-s-s1-r1';
+  const d = await fakeRun(runsDir, id);
+  const row = JSON.parse((await readFile(path.join(d, 'results.jsonl'), 'utf8')).trim());
+  row.checks.c1.in_stages = false;
+  const idle = { ...row, phase: 3, cycle: 'idle', passed: 0, scored: 0, checks: {}, seconds: 0, usage: { ...row.usage, requests: 0 } };
+  await writeFile(path.join(d, 'results.jsonl'), [JSON.stringify({ ...row, cycle: 'complete' }), JSON.stringify(idle)].join('\n') + '\n');
+  await mkdir(path.join(d, 'phase3'), { recursive: true });
+  await writeFile(path.join(d, 'phase3/phase.json'), JSON.stringify({}));
+  const run = toRawRun(id, 'v', 'baseline', await loadRunArtifacts(runsDir, id));
+  assert.deepEqual(run.metrics.phases.map((p) => p.cycle), ['complete', 'idle']);
+  assert.equal(run.checks[0].inStages, false);
+  const doc = await exportRun(runsDir, id);
+  assert.deepEqual(validatePortable(doc), []);
+  const back = portableToRawRun(doc, 'variant');
+  assert.equal(back.metrics.phases[1].cycle, 'idle');
+  assert.equal(back.checks[0].inStages, false);
+  await rm(runsDir, { recursive: true });
+});
+
+test('stage runs are summarised from results.jsonl, apart from full runs', async () => {
+  const runsDir = await mkdtemp(path.join(os.tmpdir(), 'pipeops-runs-'));
+  await fakeRun(runsDir, '20261018T000000Z-v-s-s1-r1'); // a full run: not a stage run
+  const sd = path.join(runsDir, '20261018T010000Z-clearer-stage-review-04-r1');
+  await mkdir(sd, { recursive: true });
+  await writeFile(path.join(sd, 'run.json'), JSON.stringify({ kind: 'stage', task: 'workflow-review', variant: { name: 'clearer' }, started_at: 't' }));
+  await writeFile(path.join(sd, 'stage.json'), '{}');
+  await writeFile(path.join(sd, 'results.jsonl'), JSON.stringify({
+    variant: 'clearer', stage: 'workflow-deepen+workflow-review', snapshot: 'snap/03-p1-workflow-deepen', phase: 1, view: 'catalog',
+    status: 'done', passed: 11, scored: 11, seconds: 141.6, in_stages: 5, keyword_checks: 6,
+    before: { drafts: { score: 1 }, catalog: { score: 0 } }, clipped: { fields: 2, chars: 40, where: {} },
+    usage: { requests: 30, output: 13000, workspace: { failed: 1 }, by_task: { 'workflow-deepen': { requests: 12 }, 'workflow-review': { requests: 18 } } },
+  }) + '\n');
+  await mkdir(path.join(runsDir, '20261018T020000Z-aborted'), { recursive: true }); // no files: skipped
+  const list = await listStageRuns(runsDir, await readdir(runsDir));
+  assert.equal(list.length, 1);
+  assert.deepEqual(
+    { ...list[0], id: undefined },
+    { id: undefined, variant: 'clearer', tasks: ['workflow-deepen', 'workflow-review'], snapshot: 'snap/03-p1-workflow-deepen', phase: 1,
+      view: 'catalog', status: 'done', passed: 11, scored: 11, scoreBefore: 0, requests: 30, seconds: 142, output: 13000, failedCalls: 1,
+      byTask: { 'workflow-deepen': 12, 'workflow-review': 18 }, clipped: { fields: 2, chars: 40 }, inStages: 5, keywordChecks: 6,
+      truth: null, startedAt: 't' },
+  );
+  await rm(runsDir, { recursive: true });
 });

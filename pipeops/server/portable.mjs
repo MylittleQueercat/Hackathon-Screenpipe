@@ -94,7 +94,7 @@ export async function exportRun(runsDir, runId, { now = new Date() } = {}) {
   const raw = toRawRun(runId, run.variant?.name ?? runId, 'baseline', artifacts);
   const checks = (raw.checks ?? []).map((c) => ({
     id: c.id, name: c.name, lens: c.lens, passed: c.passed,
-    expected: c.expected, actual: c.actual, reason: c.reason, evidence: c.evidence,
+    expected: c.expected, actual: c.actual, reason: c.reason, evidence: c.evidence, inStages: c.inStages ?? null,
   }));
   const workflows = (raw.generatedWorkflows ?? []).map((w) => ({
     id: w.id, title: w.title, steps: w.steps ?? null, matchedTo: w.matchedTo ?? null,
@@ -222,8 +222,9 @@ export function validatePortable(doc, { fileName } = {}) {
     const phasesOk = Array.isArray(m.phases) && m.phases.every((p) => isObj(p)
       && typeof p.phase === 'number'
       && ['qualityPassed', 'qualityTotal', 'modelRequests', 'runtimeSeconds'].every((k) => typeof p[k] === 'number' && p[k] >= 0)
-      && isNullOr(p.agentRuns, 'number') && typeof p.idleChurn === 'boolean' && isNullOr(p.status, 'string'));
-    need(phasesOk, 'metrics.phases, when present, must be [{phase, qualityPassed, qualityTotal, modelRequests, runtimeSeconds (numbers ≥0), agentRuns:number|null, idleChurn:boolean, status:string|null}]');
+      && isNullOr(p.agentRuns, 'number') && typeof p.idleChurn === 'boolean' && isNullOr(p.status, 'string')
+      && (p.cycle === undefined || isNullOr(p.cycle, 'string')));
+    need(phasesOk, 'metrics.phases, when present, must be [{phase, qualityPassed, qualityTotal, modelRequests, runtimeSeconds (numbers ≥0), agentRuns:number|null, idleChurn:boolean, status:string|null, cycle?:string|null}]');
     if (phasesOk && Array.isArray(c?.phases)) {
       need(m.phases.length === c.phases.length, `metrics.phases has ${m.phases.length} entries but conditions.phases has ${c.phases.length}`);
     }
@@ -235,6 +236,7 @@ export function validatePortable(doc, { fileName } = {}) {
     const okShape = doc.checks.every((k) => isObj(k) && typeof k.id === 'string' && typeof k.passed === 'boolean'
       && isNullOr(k.name, 'string') && isNullOr(k.lens, 'string') && isNullOr(k.expected, 'string')
       && isNullOr(k.actual, 'string') && isNullOr(k.reason, 'string')
+      && (k.inStages === undefined || isNullOr(k.inStages, 'boolean'))
       && (k.evidence === null || (Array.isArray(k.evidence) && k.evidence.every((e) => typeof e === 'string'))));
     need(okShape, 'every check needs {id, passed:boolean} and string-or-null name/lens/expected/actual/reason, string[]-or-null evidence');
     if (okShape && isObj(m)) {

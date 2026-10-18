@@ -10,7 +10,7 @@ import { access, mkdir, mkdtemp, readFile, readdir, rm, unlink, writeFile } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { bundleFromRuns, buildExperimentBundle, listRuns, loadRunArtifacts } from './convert.mjs';
+import { bundleFromRuns, buildExperimentBundle, listRuns, listStageRuns, loadRunArtifacts } from './convert.mjs';
 import { conditionsKey, portableToRawRun, readPortableFile, validatePortable } from './portable.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -258,6 +258,19 @@ app.get('/api/snapshots', async (_req, res) => {
   }
 });
 
+// Stage runs (`wfeval stage`) on this machine: one agent, or a --through chain, from a
+// snapshot step. Listed apart from full runs because their scores are not comparable.
+app.get('/api/stage-runs', async (_req, res) => {
+  try {
+    const entries = (await readdir(RUNS_DIR, { withFileTypes: true }).catch(() => [])).filter((e) => e.isDirectory()).map((e) => e.name);
+    res.json(await listStageRuns(RUNS_DIR, entries));
+  } catch (e) {
+    res.status(500).json({ error: String(e.message ?? e) });
+  }
+});
+
+const STAGE_ORDER = ['workflow-discover', 'workflow-maintain', 'workflow-deepen', 'workflow-review']; // eval/src/wfeval/stage.py ORDER
+
 app.get('/api/wfeval/status', (_req, res) => {
   if (!live) return res.json({ running: false });
   res.json({ running: !live.done, runId: live.runId, error: live.error });
@@ -334,7 +347,7 @@ app.post('/api/wfeval/stage', async (req, res) => {
   if (live && !live.done) {
     return res.status(409).json({ error: 'a run is already in progress' });
   }
-  const { step, task, variant, repeat } = req.body ?? {};
+  const { step, task, variant, repeat, through } = req.body ?? {};
   if (!step || !variant) {
     return res.status(400).json({ error: 'step and variant are required' });
   }
@@ -352,6 +365,12 @@ app.post('/api/wfeval/stage', async (req, res) => {
   if (repeat !== undefined && !(Number.isInteger(Number(repeat)) && Number(repeat) >= 1 && Number(repeat) <= 3)) {
     return res.status(400).json({ error: 'repeat must be 1–3' });
   }
+  if (through !== undefined && through !== null) {
+    const first = String(task ?? String(step).match(/-p\d+-(workflow-[a-z]+)$/)?.[1] ?? '');
+    if (!STAGE_ORDER.includes(String(through)) || STAGE_ORDER.indexOf(String(through)) <= STAGE_ORDER.indexOf(first)) {
+      return res.status(400).json({ error: `through must be an agent after ${first || 'the step\'s agent'}: ${STAGE_ORDER.join(', ')}` });
+    }
+  }
   const vdef = JSON.parse(await readFile(path.join(EVAL_DIR, String(variant)), 'utf8'));
   if (!(await exists(path.join(EVAL_DIR, vdef.binary ?? '')))) {
     return res.status(409).json({ error: `The engine for variant "${vdef.name}" isn't built on this machine. Build it first: cd eval && ./setup-engine.sh ${vdef.name}` });
@@ -359,8 +378,10 @@ app.post('/api/wfeval/stage', async (req, res) => {
   const args = ['run', 'wfeval', 'stage', String(step), '--variant', String(variant)];
   if (task) args.push('--task', String(task));
   if (repeat) args.push('--repeat', String(repeat));
+  if (through) args.push('--through', String(through));
 
   res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' });
+  const beforeDirs = new Set(await readdir(RUNS_DIR).catch(() => []));
   const proc = spawn('uv', args, { cwd: EVAL_DIR, env: PY_ENV });
   live = { proc, done: false, runId: null, error: null };
 
@@ -368,11 +389,16 @@ app.post('/api/wfeval/stage', async (req, res) => {
   proc.stdout.on('data', onData);
   proc.stderr.on('data', onData);
 
-  proc.on('close', (code) => {
+  proc.on('close', async (code) => {
     live.done = true;
     if (code !== 0) {
       live.error = `wfeval stage exited with code ${code}`;
       res.write(`\n[pipeops] ${live.error}\n`);
+    } else {
+      // The UI reads this line to show the graded result from /api/stage-runs.
+      const newDir = [...new Set(await readdir(RUNS_DIR).catch(() => []))].find((d) => !beforeDirs.has(d));
+      live.runId = newDir ?? null;
+      if (newDir) res.write(`\n[pipeops] stage complete: ${newDir}\n`);
     }
     res.end();
   });
