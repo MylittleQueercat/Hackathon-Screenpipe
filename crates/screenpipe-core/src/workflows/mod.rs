@@ -283,13 +283,23 @@ pub fn clipped(value: &Value, max_chars: usize) -> Value {
     }
 }
 
+/// Prose a person reads in full: a workflow's description, and each of its open
+/// questions and limitations. Agents write up to ~830 and ~370 characters there;
+/// a shorter bound cut them mid-sentence without telling anyone.
+pub const DESCRIPTION_CHARS: usize = 2000;
+pub const NOTE_CHARS: usize = 600;
+
 pub fn non_empty_string(value: &Value, key: &str) -> Option<String> {
+    bounded_string(value, key, 400)
+}
+
+pub fn bounded_string(value: &Value, key: &str, max_chars: usize) -> Option<String> {
     value
         .get(key)
         .and_then(Value::as_str)
         .map(str::trim)
         .filter(|text| !text.is_empty())
-        .map(|text| text.chars().take(400).collect())
+        .map(|text| text.chars().take(max_chars).collect())
 }
 
 pub fn bounded_number(value: &Value, key: &str, max: u64) -> u64 {
@@ -314,6 +324,10 @@ pub fn normalized_bottleneck_control(bottleneck: &Value) -> Option<(String, Stri
 }
 
 pub fn string_list(value: &Value, key: &str, limit: usize) -> Vec<String> {
+    bounded_list(value, key, limit, 180)
+}
+
+pub fn bounded_list(value: &Value, key: &str, limit: usize, max_chars: usize) -> Vec<String> {
     let mut seen = HashSet::new();
     value
         .get(key)
@@ -325,7 +339,7 @@ pub fn string_list(value: &Value, key: &str, limit: usize) -> Vec<String> {
         .filter(|item| !item.is_empty())
         .filter(|item| seen.insert(item.to_lowercase()))
         .take(limit)
-        .map(|item| item.chars().take(180).collect())
+        .map(|item| item.chars().take(max_chars).collect())
         .collect()
 }
 
@@ -685,7 +699,7 @@ pub fn normalize_analysis(
         let Some(title) = non_empty_string(item, "title") else {
             continue;
         };
-        let Some(description) = non_empty_string(item, "description") else {
+        let Some(description) = bounded_string(item, "description", DESCRIPTION_CHARS) else {
             continue;
         };
 
@@ -738,7 +752,7 @@ pub fn normalize_analysis(
                 })
                 .map(|(_, source)| source)
                 .collect();
-            let mut open_questions = string_list(stage, "openQuestions", 6);
+            let mut open_questions = bounded_list(stage, "openQuestions", 6, NOTE_CHARS);
             if procedure.is_empty() {
                 open_questions.push("This proposed step has no verified procedural detail. Confirm what actually happened.".to_string());
             }
@@ -787,7 +801,7 @@ pub fn normalize_analysis(
                     .and_then(Value::as_array)
                     .is_some_and(|details| !details.is_empty())
             });
-        let mut limitations = string_list(item, "limitations", 8);
+        let mut limitations = bounded_list(item, "limitations", 8, NOTE_CHARS);
         if sequence.is_empty() {
             limitations.push("No ordered capture example covers every step. These references do not establish one end-to-end occurrence.".to_string());
         }
@@ -996,7 +1010,7 @@ pub fn normalize_analysis(
             "evidenceVersion": if detailed_contract { 3 } else { 1 },
             "evidenceStatus": if fully_supported { "supported-steps" } else { "candidate" },
             "captureSequence": sequence,
-            "openQuestions": string_list(item, "openQuestions", 8),
+            "openQuestions": bounded_list(item, "openQuestions", 8, NOTE_CHARS),
             "limitations": limitations,
             "repetitions": repetitions,
             "frequency": normalized_frequency(repetitions, days),
@@ -1778,6 +1792,63 @@ mod quote_tests {
         assert!(result["workflows"][0]["captureSequence"]
             .as_array()
             .is_none_or(Vec::is_empty));
+    }
+
+    #[test]
+    fn descriptions_questions_and_limitations_are_kept_whole() {
+        let timestamp = "2026-09-18T10:00:00Z";
+        let catalog = EvidenceCatalog {
+            points: vec![EvidencePoint {
+                timestamp: DateTime::parse_from_rfc3339(timestamp)
+                    .unwrap()
+                    .with_timezone(&Utc),
+                app: "Receipts".into(),
+                source: "screen".into(),
+                speaker: None,
+                detail: "Opened the scan. Receipt saved successfully.".into(),
+            }],
+            ..Default::default()
+        };
+        // Lengths agents write: the exceptions come last in a long description.
+        let description = format!(
+            "{} A scan without a readable date gets a 'missing date' note.",
+            "Rename each scan and log it in the tracker. ".repeat(18)
+        );
+        let question = format!(
+            "{} Who resolves flagged rows?",
+            "Flags are kept inline. ".repeat(12)
+        );
+        let raw = json!({"evidenceVersion":2,"workflows":[{"title":"File receipts","description":description,
+            "openQuestions":[question],"limitations":[question],
+            "stages":[{"name":"Open","description":"Open the scan","evidence":[{"timestamp":timestamp,"app":"Receipts"}],
+                "openQuestions":[question],
+                "procedure":[{"kind":"action","text":"Open it","quote":"Opened the scan.","timestamp":timestamp,"app":"Receipts"}]},
+                {"name":"Save","description":"Save the receipt","evidence":[{"timestamp":timestamp,"app":"Receipts"}],
+                "procedure":[{"kind":"action","text":"Save it","quote":"Receipt saved successfully.","timestamp":timestamp,"app":"Receipts"}]}]}]});
+        let result = normalize_analysis(raw.clone(), 90, &catalog).unwrap();
+        let workflow = &result["workflows"][0];
+        assert!(description.chars().count() > 800);
+        assert_eq!(workflow["description"], description.trim());
+        assert_eq!(workflow["openQuestions"][0], question);
+        assert_eq!(workflow["limitations"][0], question);
+        assert_eq!(workflow["stages"][0]["openQuestions"][0], question);
+        // Other fields keep their bounds, and these keep one.
+        let long = "x".repeat(DESCRIPTION_CHARS + 50);
+        let mut over = raw.clone();
+        over["workflows"][0]["description"] = json!(long);
+        over["workflows"][0]["title"] = json!(long);
+        let bounded = normalize_analysis(over, 90, &catalog).unwrap();
+        assert_eq!(
+            bounded["workflows"][0]["description"]
+                .as_str()
+                .unwrap()
+                .len(),
+            DESCRIPTION_CHARS
+        );
+        assert_eq!(
+            bounded["workflows"][0]["title"].as_str().unwrap().len(),
+            400
+        );
     }
 
     #[test]

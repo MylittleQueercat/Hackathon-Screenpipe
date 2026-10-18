@@ -270,7 +270,10 @@ pub async fn resolve_references(
                         {
                             return None;
                         }
-                        Some((content["frame_id"].as_i64().filter(|id| *id > 0)?, timestamp))
+                        Some((
+                            content["frame_id"].as_i64().filter(|id| *id > 0)?,
+                            timestamp,
+                        ))
                     })
                     .collect();
                 Ok((at, app.clone(), source_points(&payload, at, &app), frames))
@@ -361,8 +364,14 @@ mod tests {
     #[test]
     fn whole_second_citations_read_their_whole_second() {
         let at = |s: &str| DateTime::parse_from_rfc3339(s).unwrap().with_timezone(&Utc);
-        assert_eq!(citation_span(at("2026-08-01T10:00:00Z")), ChronoDuration::seconds(1));
-        assert_eq!(citation_span(at("2026-08-01T10:00:00.250Z")), ChronoDuration::milliseconds(1));
+        assert_eq!(
+            citation_span(at("2026-08-01T10:00:00Z")),
+            ChronoDuration::seconds(1)
+        );
+        assert_eq!(
+            citation_span(at("2026-08-01T10:00:00.250Z")),
+            ChronoDuration::milliseconds(1)
+        );
         let payload = json!({"data":[
             {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:00.725Z","app_name":"Editor","text":"in that second"}},
             {"type":"OCR","content":{"timestamp":"2026-08-01T10:00:01.000Z","app_name":"Editor","text":"next second"}}]});
