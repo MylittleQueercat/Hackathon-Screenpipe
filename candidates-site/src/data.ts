@@ -15,13 +15,13 @@ export const timelines = {
 
 export const candidates: Record<
   CandidateId,
-  { name: string; label: string; owner: string; color: string; summary: string }
+  { name: string; label: string; owner: string; color: 'base' | 'mid' | 'ours'; summary: string }
 > = {
   baseline: {
     name: 'clearer-rejection',
     label: 'Baseline',
     owner: 'reference engine',
-    color: '#8D929E',
+    color: 'base',
     summary:
       'The reference engine. Rejections explain which items failed and why, but Review only learns that after a publish is refused.',
   },
@@ -29,7 +29,7 @@ export const candidates: Record<
     name: 'conflict-revision',
     label: 'Conflict',
     owner: 'candidate',
-    color: '#FFC24D',
+    color: 'mid',
     summary:
       'A 409 revision conflict now carries the current revision and the open drafts, so Review retries without another context read.',
   },
@@ -37,7 +37,7 @@ export const candidates: Record<
     name: 'preflight-conflict',
     label: 'Preflight + Conflict',
     owner: 'our candidate',
-    color: '#C8FF4D',
+    color: 'ours',
     summary:
       'Every draft read already contains the publish verdict, computed by a dry run of the real validation. Review fixes before it sends. 409s carry the revision too.',
   },
@@ -119,3 +119,6 @@ export const pct = (a: number, b: number) => {
   const n = Math.round(((b - a) / a) * 100)
   return `${n < 0 ? '−' : n > 0 ? '+' : ''}${Math.abs(n)}%`
 }
+
+/** Candidate colours are theme tokens; `tone` returns a CSS colour, optionally with alpha. */
+export const tone = (id: CandidateId, alpha = 1) => `rgb(var(--${candidates[id].color}) / ${alpha})`

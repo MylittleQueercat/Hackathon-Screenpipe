@@ -1,16 +1,29 @@
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/fraunces';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/600.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html { background: #0A0B0D; color: #F4F5F7; scroll-behavior: smooth; }
-body { font-feature-settings: 'tnum' 1, 'cv11' 1; -webkit-font-smoothing: antialiased; }
-.grid-bg {
-  background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-  background-size: 48px 48px;
+/* Colour tokens as RGB channels so Tailwind opacity modifiers work.
+   ours = our candidate, mid = conflict-revision, base = reference engine, bad = refused call. */
+:root {
+  color-scheme: light;
+  --bg: 246 247 250; --surface: 255 255 255; --raised: 236 239 246; --line: 215 220 232;
+  --fg: 15 20 40; --muted: 71 80 106; --faint: 104 112 136;
+  --ours: 52 80 224; --on-ours: 255 255 255; --mid: 168 100 0; --base: 100 108 130; --bad: 214 56 40;
 }
-.card { @apply rounded-2xl border border-ink-700 bg-ink-800/70 backdrop-blur; }
-.eyebrow { @apply font-mono text-[11px] uppercase tracking-[0.18em] text-ink-300; }
-.tag { @apply inline-flex items-center gap-1 rounded-full border border-ink-600 px-2.5 py-0.5 font-mono text-[11px] text-ink-200; }
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: 11 14 26; --surface: 17 21 37; --raised: 25 30 52; --line: 42 49 78;
+  --fg: 236 239 248; --muted: 164 172 196; --faint: 130 138 165;
+  --ours: 124 155 255; --on-ours: 11 14 26; --mid: 240 185 80; --base: 140 148 170; --bad: 255 107 94;
+}
+
+html { background: rgb(var(--bg)); color: rgb(var(--fg)); scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { font-family: 'Inter Variable', Inter, system-ui, sans-serif; font-feature-settings: 'cv11' 1; -webkit-font-smoothing: antialiased; }
+.num { font-variant-numeric: tabular-nums; }
+.display { font-family: 'Fraunces Variable', Georgia, serif; font-variation-settings: 'SOFT' 50, 'WONK' 0; letter-spacing: -0.02em; }
+:focus-visible { outline: 2px solid rgb(var(--ours)); outline-offset: 3px; border-radius: 4px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }

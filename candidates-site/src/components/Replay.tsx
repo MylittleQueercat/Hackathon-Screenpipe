@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { candidates, sonnetReview, timelines, type CandidateId, type TimelineEvent } from '../data'
+import { candidates, sonnetReview, timelines, tone, type CandidateId, type TimelineEvent } from '../data'
 
 const ORDER: CandidateId[] = ['baseline', 'conflict', 'preflight']
 const PLAY_MS = 14000
 
 type WsEvent = Extract<TimelineEvent, { k: 'ws' }>
 
-function lastT(id: CandidateId) {
-  return Math.max(sonnetReview[id].seconds, ...timelines[id].map((e) => e.t))
-}
+const lastT = (id: CandidateId) => Math.max(sonnetReview[id].seconds, ...timelines[id].map((e) => e.t))
 
+/** Workspace calls that land within 2.5 s of each other are nudged apart so every dot stays clickable. */
 function clusterOffsets(evs: TimelineEvent[]) {
   const offsets = new Map<TimelineEvent, number>()
   let prevT = -Infinity
@@ -24,12 +23,8 @@ function clusterOffsets(evs: TimelineEvent[]) {
   return offsets
 }
 
-const ACTION_LETTER: Record<string, string> = { context: 'C', publish: 'P', handoff: 'H', finish: 'F' }
-
-function shortMsg(msg?: string) {
-  if (!msg) return ''
-  return msg.replace('Workflow operation failed: ', '')
-}
+const LETTER: Record<string, string> = { context: 'C', publish: 'P', handoff: 'H', finish: 'F' }
+const shortMsg = (msg?: string) => (msg ? msg.replace('Workflow operation failed: ', '') : '')
 
 export function Replay() {
   const horizon = useMemo(() => Math.ceil(Math.max(...ORDER.map(lastT)) / 10) * 10 + 5, [])
@@ -60,7 +55,7 @@ export function Replay() {
 
   useEffect(() => {
     const el = root.current
-    if (!el) return
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !autoplayed.current) {
@@ -68,7 +63,7 @@ export function Replay() {
           setTimeout(() => setPlaying(true), 400)
         }
       },
-      { threshold: 0.45 },
+      { threshold: 0.5 },
     )
     io.observe(el)
     return () => io.disconnect()
@@ -77,27 +72,25 @@ export function Replay() {
   const x = (sec: number) => `${(sec / horizon) * 100}%`
 
   return (
-    <div ref={root} className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-ink-700 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (t >= horizon) setT(0)
-              setPlaying((p) => !p)
-            }}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-signal text-ink-950 transition hover:scale-105"
-            aria-label={playing ? 'Pause' : 'Play'}
-          >
-            {playing ? (
-              <svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="1" width="3.5" height="12" fill="currentColor" /><rect x="8.5" y="1" width="3.5" height="12" fill="currentColor" /></svg>
-            ) : (
-              <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 1l10 6-10 6z" fill="currentColor" /></svg>
-            )}
-          </button>
-          <div>
-            <div className="font-mono text-2xl font-semibold tabular-nums text-ink-50">{t.toFixed(0).padStart(3, '0')} s</div>
-            <div className="eyebrow">real wall-clock · replayed ×{(horizon / (PLAY_MS / 1000)).toFixed(0)}</div>
-          </div>
+    <div ref={root} className="rounded-xl border border-line bg-surface">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-line px-5 py-4">
+        <button
+          onClick={() => {
+            if (t >= horizon) setT(0)
+            setPlaying((p) => !p)
+          }}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ours text-on-ours transition hover:scale-105"
+          aria-label={playing ? 'Pause replay' : 'Play replay'}
+        >
+          {playing ? (
+            <svg width="14" height="14" viewBox="0 0 14 14"><rect x="2" y="1" width="3.5" height="12" fill="currentColor" /><rect x="8.5" y="1" width="3.5" height="12" fill="currentColor" /></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 1l10 6-10 6z" fill="currentColor" /></svg>
+          )}
+        </button>
+        <div className="num w-24">
+          <div className="display text-3xl font-semibold">{t.toFixed(0)} s</div>
+          <div className="text-xs text-faint">wall-clock</div>
         </div>
         <input
           type="range"
@@ -105,50 +98,38 @@ export function Replay() {
           max={horizon}
           step={0.5}
           value={t}
+          aria-label="Replay position in seconds"
           onChange={(e) => {
             setPlaying(false)
             setT(Number(e.target.value))
           }}
-          className="w-full max-w-md accent-[#C8FF4D] md:w-1/2"
+          className="min-w-[160px] flex-1 accent-[rgb(var(--ours))]"
         />
-        <div className="flex flex-wrap gap-3 font-mono text-[11px] text-ink-300">
-          <span className="flex items-center gap-1.5"><i className="h-3 w-0.5 bg-ink-400" />model request</span>
-          <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-signal" />workspace call ok</span>
-          <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-cost" />refused</span>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          <span className="flex items-center gap-1.5"><i className="h-3 w-0.5 bg-faint" />model request</span>
+          <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-ours" />call accepted</span>
+          <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-bad" />call refused</span>
         </div>
       </div>
 
-      <div className="space-y-1 px-6 py-6">
+      <div className="px-5 py-5">
         {ORDER.map((id) => {
           const c = candidates[id]
           const evs = timelines[id]
           const end = lastT(id)
           const reqs = evs.filter((e) => e.k === 'req' && e.t <= t).length
           const fails = evs.filter((e) => e.k === 'ws' && !e.ok && e.t <= t).length
-          const out = evs.reduce((a, e) => (e.k === 'usage' && e.t <= t ? a + e.out : a), 0)
           const done = t >= end
           const offsets = clusterOffsets(evs)
           return (
-            <div key={id} className="grid grid-cols-1 items-center gap-4 py-3 md:grid-cols-[200px_1fr_240px]">
-              <div>
-                <div className="font-mono text-[13px] font-semibold" style={{ color: c.color }}>{c.name}</div>
-                <div className="eyebrow mt-0.5">{c.label}</div>
-              </div>
-
-              <div className="relative h-14 rounded-lg bg-ink-900">
-                <div className="absolute inset-y-0 left-0 rounded-lg" style={{ width: x(Math.min(t, end)), background: `${c.color}10` }} />
+            <div key={id} className="grid items-center gap-x-4 gap-y-2 py-3 md:grid-cols-[190px_1fr_150px]">
+              <div className="font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>{c.name}</div>
+              <div className="relative h-14 rounded-lg bg-raised">
+                <div className="absolute inset-y-0 left-0 rounded-lg" style={{ width: x(Math.min(t, end)), background: tone(id, 0.14) }} />
                 {evs.map((e, i) => {
                   if (e.t > t) return null
                   if (e.k === 'req')
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ scaleY: 0 }}
-                        animate={{ scaleY: 1 }}
-                        className="absolute top-1.5 h-3 w-[2px] origin-top bg-ink-400"
-                        style={{ left: x(e.t) }}
-                      />
-                    )
+                    return <span key={i} className="absolute top-1.5 h-3 w-0.5 bg-faint" style={{ left: x(e.t) }} />
                   if (e.k === 'ws') {
                     const isSel = selected?.id === id && selected.e === e
                     return (
@@ -158,68 +139,48 @@ export function Replay() {
                         animate={{ scale: 1 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 18 }}
                         onClick={() => setSelected(isSel ? null : { id, e })}
-                        className={`absolute top-[26px] flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full font-mono text-[9px] font-bold text-ink-950 ${e.ok ? 'bg-signal' : 'bg-cost ring-4 ring-cost/25'} ${isSel ? 'outline outline-2 outline-offset-2 outline-ink-50' : ''}`}
+                        className={`absolute top-[26px] flex h-5 w-5 -translate-x-1/2 items-center justify-center rounded-full text-[10px] font-bold text-on-ours ${
+                          e.ok ? 'bg-ours' : 'bg-bad ring-4 ring-bad/25'
+                        } ${isSel ? 'outline outline-2 outline-offset-2 outline-fg' : ''}`}
                         style={{ left: `calc(${x(e.t)} + ${offsets.get(e) ?? 0}px)` }}
-                        title={`${e.action} · ${e.ok ? 'ok' : 'refused'}`}
+                        aria-label={`${e.action}, ${e.ok ? 'accepted' : 'refused'}, at ${e.t} seconds`}
                       >
-                        {e.ok ? ACTION_LETTER[e.action] ?? '·' : '✕'}
+                        {e.ok ? LETTER[e.action] ?? '·' : '✕'}
                       </motion.button>
                     )
                   }
                   return null
                 })}
-                {done && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute top-0 h-full border-r-2 border-dashed"
-                    style={{ left: x(end), borderColor: c.color }}
-                  />
-                )}
-                <div className="absolute top-0 h-full w-px bg-ink-50/80" style={{ left: x(Math.min(t, horizon)) }} />
+                {done && <div className="absolute top-0 h-full border-r-2 border-dashed" style={{ left: x(end), borderColor: tone(id) }} />}
+                <div className="absolute top-0 h-full w-px bg-fg/70" style={{ left: x(Math.min(t, horizon)) }} />
               </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-lg bg-ink-900 py-1.5">
-                  <div className="font-semibold tabular-nums text-ink-50">{reqs}</div>
-                  <div className="font-mono text-[9px] uppercase text-ink-300">requests</div>
-                </div>
-                <div className="rounded-lg bg-ink-900 py-1.5">
-                  <div className={`font-semibold tabular-nums ${fails ? 'text-cost' : 'text-signal'}`}>{fails}</div>
-                  <div className="font-mono text-[9px] uppercase text-ink-300">refused</div>
-                </div>
-                <div className="rounded-lg bg-ink-900 py-1.5">
-                  <div className="font-semibold tabular-nums text-ink-50">{done ? `${Math.round(end)} s` : `${(out / 1000).toFixed(1)}k`}</div>
-                  <div className="font-mono text-[9px] uppercase text-ink-300">{done ? 'finished' : 'out tok'}</div>
-                </div>
+              <div className="num flex gap-5 text-sm md:justify-end">
+                <span><b className="text-lg font-semibold">{reqs}</b> <span className="text-xs text-muted">requests</span></span>
+                <span><b className={`text-lg font-semibold ${fails ? 'text-bad' : ''}`}>{fails}</b> <span className="text-xs text-muted">refused</span></span>
               </div>
             </div>
           )
         })}
-        <div className="relative ml-0 h-5 md:ml-[216px] md:mr-[256px]">
+        <div className="relative mt-1 h-5 md:ml-[206px] md:mr-[166px]">
           {Array.from({ length: Math.floor(horizon / 20) + 1 }, (_, i) => i * 20).map((s) => (
-            <span key={s} className="absolute -translate-x-1/2 font-mono text-[10px] text-ink-400" style={{ left: x(s) }}>
-              {s}s
-            </span>
+            <span key={s} className="num absolute -translate-x-1/2 text-[11px] text-faint" style={{ left: x(s) }}>{s}s</span>
           ))}
         </div>
       </div>
 
-      <div className="min-h-[86px] border-t border-ink-700 bg-ink-900/60 px-6 py-4">
+      <div className="min-h-[76px] border-t border-line bg-raised/50 px-5 py-4 text-sm">
         <AnimatePresence mode="wait">
           {selected ? (
-            <motion.div key={`${selected.id}-${selected.e.t}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <div className="eyebrow mb-1.5">
-                {candidates[selected.id].name} · t = {selected.e.t}s · {selected.e.action} · {selected.e.ok ? 'ok' : 'refused'}
+            <motion.div key={`${selected.id}-${selected.e.t}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="text-xs text-muted">
+                {candidates[selected.id].name} · {selected.e.t} s · {selected.e.action} · {selected.e.ok ? 'accepted' : 'refused'}
               </div>
-              <div className={`font-mono text-[12px] leading-relaxed ${selected.e.ok ? 'text-signal' : 'text-cost'}`}>
+              <div className={`mt-1 font-mono text-[12px] leading-relaxed ${selected.e.ok ? 'text-ours' : 'text-bad'}`}>
                 {selected.e.ok ? `workflow_workspace.${selected.e.action} → ok` : shortMsg(selected.e.msg)}
               </div>
             </motion.div>
           ) : (
-            <motion.div key="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-mono text-[12px] text-ink-300">
-              Click any workspace call to read the engine's reply. C = context · H = handoff · P = publish · F = finish
-            </motion.div>
+            <p className="text-muted">Select a dot to read the engine’s reply. C read context · H handoff · P publish · F finish.</p>
           )}
         </AnimatePresence>
       </div>

@@ -1,95 +1,171 @@
-import { motion } from 'framer-motion'
-import { candidates, type CandidateId } from '../data'
+import { candidates, fmtK, sonnetReview, tone, type CandidateId } from '../data'
 
-type Step = { kind: 'agent' | 'engine' | 'fail' | 'ok' | 'waste'; title: string; detail?: string; changed?: boolean }
-
-const flows: Record<CandidateId, Step[]> = {
-  baseline: [
-    { kind: 'agent', title: 'Read drafts', detail: 'context' },
-    { kind: 'agent', title: 'Publish draft', detail: 'publish' },
-    { kind: 'fail', title: '422 · Stage 1 retained 0 of 3 items', detail: 'Verdict arrives after the write attempt' },
-    { kind: 'agent', title: 'Re-read evidence, fix, publish again' },
-    { kind: 'fail', title: '409 · Workspace changed', detail: '"Read context before publishing."' },
-    { kind: 'agent', title: 'Read context again → retry', detail: 'extra round-trip' },
-    { kind: 'ok', title: 'Published', detail: 'publish' },
-    { kind: 'waste', title: 'finish → one more summary turn', detail: 'extra request, nothing changes' },
-  ],
-  conflict: [
-    { kind: 'agent', title: 'Read drafts', detail: 'context' },
-    { kind: 'agent', title: 'Publish draft', detail: 'publish' },
-    { kind: 'fail', title: '422 · Stage 1 retained 0 of 3 items', detail: 'Same as baseline' },
-    { kind: 'agent', title: 'Re-read evidence, fix, publish again' },
-    { kind: 'engine', title: '409 + current revision + open drafts', detail: 'Current revision: 9 · your open drafts: [...]', changed: true },
-    { kind: 'agent', title: 'Retry at revision 9 directly', detail: 'no context read', changed: true },
-    { kind: 'ok', title: 'Published', detail: 'publish' },
-    { kind: 'engine', title: 'finish ends Review', detail: 'no summary turn', changed: true },
-  ],
-  preflight: [
-    { kind: 'engine', title: 'Read drafts + publicationCheck', detail: 'dry run of the real publish validation, no write, no lock', changed: true },
-    { kind: 'engine', title: '{ ok: false, problems: "procedure[0]: quote is not in…" }', detail: 'the 422 Review would have hit, before sending', changed: true },
-    { kind: 'agent', title: 'Fix the draft, hand it off', detail: 'handoff' },
-    { kind: 'engine', title: 'publicationCheck { ok: true }', changed: true },
-    { kind: 'ok', title: 'Published first time', detail: 'publish ×2, 0 refused' },
-    { kind: 'engine', title: 'If 409: revision included', detail: 'same as conflict-revision', changed: true },
-    { kind: 'engine', title: 'finish ends Review', detail: 'no summary turn', changed: true },
-  ],
+/** One message between the Review agent (left lane) and the Workflow engine (right lane). */
+type Msg = {
+  dir: 'to-engine' | 'to-agent'
+  label: string
+  sub?: string
+  kind?: 'fail' | 'ok' | 'waste'
+  changed?: boolean
 }
 
-const kindStyle: Record<Step['kind'], { dot: string; text: string; border: string }> = {
-  agent: { dot: 'bg-ink-400', text: 'text-ink-50', border: 'border-ink-700' },
-  engine: { dot: 'bg-signal', text: 'text-ink-50', border: 'border-signal/40' },
-  fail: { dot: 'bg-cost', text: 'text-cost', border: 'border-cost/40' },
-  ok: { dot: 'bg-signal', text: 'text-signal', border: 'border-signal/30' },
-  waste: { dot: 'bg-cost/60', text: 'text-ink-200', border: 'border-dashed border-cost/40' },
+const flows: Record<CandidateId, { heading: string; intro: string; delta: string; msgs: Msg[] }> = {
+  baseline: {
+    heading: 'How Screenpipe works today',
+    intro:
+      'Review reads the drafts, publishes, and only learns what is wrong when the engine refuses the write. Every refusal costs a retry.',
+    delta: 'Reference engine, with clearer rejection messages.',
+    msgs: [
+      { dir: 'to-engine', label: 'Read drafts', sub: 'workspace.context' },
+      { dir: 'to-agent', label: 'Drafts and evidence' },
+      { dir: 'to-engine', label: 'Publish', sub: 'workspace.publish' },
+      { dir: 'to-agent', label: '422 · Stage 1 retained 0 of 3 items', sub: 'The verdict arrives after the write attempt.', kind: 'fail' },
+      { dir: 'to-engine', label: 'Fix the draft, publish again' },
+      { dir: 'to-agent', label: '409 · Workspace changed', sub: '“Read context before publishing.”', kind: 'fail' },
+      { dir: 'to-engine', label: 'Read context again', sub: 'Extra round-trip, then retry' },
+      { dir: 'to-agent', label: 'Published', kind: 'ok' },
+      { dir: 'to-engine', label: 'Finish' },
+      { dir: 'to-agent', label: 'Asks for one more summary turn', sub: 'An extra request, nothing changes.', kind: 'waste' },
+    ],
+  },
+  conflict: {
+    heading: 'conflict-revision',
+    intro:
+      'Same flow, but a 409 now carries the current revision and the open drafts, so Review retries straight away.',
+    delta: 'Changes the 409 reply and what finish does.',
+    msgs: [
+      { dir: 'to-engine', label: 'Read drafts', sub: 'workspace.context' },
+      { dir: 'to-agent', label: 'Drafts and evidence' },
+      { dir: 'to-engine', label: 'Publish', sub: 'workspace.publish' },
+      { dir: 'to-agent', label: '422 · Stage 1 retained 0 of 3 items', sub: 'Same as today.', kind: 'fail' },
+      { dir: 'to-engine', label: 'Fix the draft, publish again' },
+      { dir: 'to-agent', label: '409 · Workspace changed, now with revision 9 and your open drafts', sub: 'No need to read context again.', kind: 'fail', changed: true },
+      { dir: 'to-engine', label: 'Retry at revision 9', sub: 'Saves one round-trip', changed: true },
+      { dir: 'to-agent', label: 'Published', kind: 'ok' },
+      { dir: 'to-engine', label: 'Finish' },
+      { dir: 'to-agent', label: 'Review ends', sub: 'No summary turn.', changed: true },
+    ],
+  },
+  preflight: {
+    heading: 'preflight-conflict',
+    intro:
+      'Every draft read already includes the publish verdict, computed by a dry run of the real validation. Review fixes the draft before it publishes.',
+    delta: 'Adds the dry run to the read, on top of conflict-revision.',
+    msgs: [
+      { dir: 'to-engine', label: 'Read drafts', sub: 'workspace.context' },
+      { dir: 'to-agent', label: 'Drafts, evidence and publicationCheck: ok false', sub: 'The 422 Review would have hit. No write, no lock.', kind: 'fail', changed: true },
+      { dir: 'to-engine', label: 'Fix the draft, hand it off', sub: 'workspace.handoff' },
+      { dir: 'to-agent', label: 'publicationCheck: ok true', kind: 'ok', changed: true },
+      { dir: 'to-engine', label: 'Publish', sub: 'workspace.publish' },
+      { dir: 'to-agent', label: 'Published on the first try', sub: 'If a 409 does happen, it carries the revision.', kind: 'ok' },
+      { dir: 'to-engine', label: 'Finish' },
+      { dir: 'to-agent', label: 'Review ends', sub: 'No summary turn.', changed: true },
+    ],
+  },
 }
 
-export function ArchitectureColumn({ id, index }: { id: CandidateId; index: number }) {
-  const c = candidates[id]
-  const steps = flows[id]
-  const isOurs = id === 'preflight'
+function Arrow({ m, id }: { m: Msg; id: CandidateId }) {
+  const right = m.dir === 'to-engine'
+  const color =
+    m.kind === 'fail' ? 'text-bad' : m.kind === 'ok' ? 'text-ours' : m.kind === 'waste' ? 'text-faint' : 'text-muted'
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.6, delay: index * 0.12 }}
-      className={`card relative flex flex-col p-6 ${isOurs ? 'border-signal/50 shadow-[0_0_80px_-30px_rgba(200,255,77,0.45)]' : ''}`}
-    >
-      {isOurs && (
-        <span className="absolute -top-3 left-6 rounded-full bg-signal px-3 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink-950">
-          our candidate
-        </span>
-      )}
-      <div className="eyebrow" style={{ color: c.color }}>
-        {c.label}
+    <li className="py-2.5">
+      <div className={`mx-[14%] ${right ? '' : 'text-right'}`}>
+        <div
+          className={`inline-flex flex-wrap items-center gap-2 text-[13px] font-medium ${
+            m.kind === 'fail' ? 'text-bad' : m.kind === 'waste' ? 'text-muted' : 'text-fg'
+          } ${right ? '' : 'flex-row-reverse'}`}
+        >
+          <span>{m.label}</span>
+          {m.changed && (
+            <span className="rounded-full px-2 py-px text-[11px] font-semibold text-on-ours" style={{ background: tone(id) }}>
+              changed
+            </span>
+          )}
+        </div>
+        {m.sub && <div className="mt-0.5 text-xs text-muted">{m.sub}</div>}
       </div>
-      <h3 className="mt-1 font-mono text-lg font-semibold text-ink-50">{c.name}</h3>
-      <p className="mt-2 min-h-[72px] text-sm leading-relaxed text-ink-200">{c.summary}</p>
+      <div className={`mx-[14%] mt-1.5 flex items-center ${right ? '' : 'flex-row-reverse'} ${color}`} aria-hidden>
+        <div
+          className={`h-0 flex-1 border-t-2 border-current ${right ? '' : 'border-dashed'} ${m.kind === 'waste' ? 'opacity-60' : ''}`}
+        />
+        <svg width="10" height="12" viewBox="0 0 10 12" className={right ? '' : 'rotate-180'}>
+          <path d="M0 0l10 6-10 6z" fill="currentColor" />
+        </svg>
+      </div>
+    </li>
+  )
+}
 
-      <motion.ol className="relative mt-6 space-y-2.5" initial="hidden" whileInView="shown" viewport={{ once: true, amount: 0.1 }}>
-        <div className="absolute bottom-3 left-[7px] top-3 w-px bg-ink-700" />
-        {steps.map((s, i) => {
-          const st = kindStyle[s.kind]
-          return (
-            <motion.li
-              key={i}
-              variants={{ hidden: { opacity: 0, x: -10 }, shown: { opacity: 1, x: 0, transition: { delay: 0.3 + index * 0.12 + i * 0.07 } } }}
-              className="relative flex gap-3"
-            >
-              <span className={`relative z-10 mt-3 h-[15px] w-[15px] shrink-0 rounded-full border-[3px] border-ink-800 ${st.dot}`} />
-              <div className={`flex-1 rounded-lg border bg-ink-900/80 px-3 py-2 ${st.border}`}>
-                <div className={`flex items-start justify-between gap-2 text-[13px] font-medium ${st.text} ${s.kind === 'engine' || s.kind === 'fail' ? 'font-mono text-[12px]' : ''}`}>
-                  <span>{s.title}</span>
-                  {s.changed && (
-                    <span className="shrink-0 rounded bg-signal/15 px-1.5 py-px font-mono text-[9px] uppercase tracking-wider text-signal">engine</span>
-                  )}
-                </div>
-                {s.detail && <div className="mt-0.5 font-mono text-[11px] text-ink-300">{s.detail}</div>}
-              </div>
-            </motion.li>
-          )
-        })}
-      </motion.ol>
-    </motion.div>
+export function ArchitectureFlow({ id, index }: { id: CandidateId; index: number }) {
+  const f = flows[id]
+  const c = candidates[id]
+  const s = sonnetReview[id]
+  const ours = id === 'preflight'
+  return (
+    <article
+      className="grid gap-8 border-t border-line py-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14"
+      aria-labelledby={`arch-${id}`}
+    >
+      <div>
+        <div className="flex items-center gap-2.5 text-sm text-muted">
+          <span className="h-3 w-3 rounded-full" style={{ background: tone(id) }} />
+          {index === 0 ? 'Where we start' : index === 1 ? 'Candidate' : 'Our candidate'}
+        </div>
+        <h3
+          id={`arch-${id}`}
+          className={`mt-3 font-semibold ${index === 0 ? 'display text-3xl md:text-4xl' : 'font-mono text-2xl tracking-tight md:text-3xl'}`}
+        >
+          {f.heading}
+        </h3>
+        {index > 0 && <div className="mt-1 text-sm text-faint">{c.label}</div>}
+        <p className="mt-5 max-w-md text-[15px] leading-relaxed text-muted">{f.intro}</p>
+        <p className="mt-3 max-w-md text-sm font-medium">{f.delta}</p>
+        <dl className="mt-8 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-5">
+          {[
+            ['Requests', `${s.requests}`],
+            ['Refused', `${s.rejected}`],
+            ['Runtime', `${Math.round(s.seconds)} s`],
+          ].map(([k, v]) => (
+            <div key={k}>
+              <dd className={`num display text-3xl font-semibold ${k === 'Refused' && s.rejected === 0 ? 'text-ours' : ''}`}>{v}</dd>
+              <dt className="mt-0.5 text-xs text-muted">{k}</dt>
+            </div>
+          ))}
+        </dl>
+        <table className="num mt-5 w-full max-w-md text-sm">
+          <caption className="pb-2 text-left text-xs text-faint">Sonnet, Review stage, 1 run</caption>
+          <tbody className="divide-y divide-line border-y border-line">
+            {[
+              ['Checks passed', s.checks],
+              ['Output tokens', fmtK(s.output)],
+              ['Cache read tokens', fmtK(s.cacheRead)],
+              ['Input tokens', fmtK(s.input)],
+            ].map(([k, v]) => (
+              <tr key={k}>
+                <th scope="row" className="py-1.5 text-left font-normal text-muted">{k}</th>
+                <td className="py-1.5 text-right font-medium">{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className={`rounded-xl border bg-surface px-4 pb-4 pt-5 sm:px-6 ${ours ? 'border-ours/60' : 'border-line'}`}>
+        <div className="relative mx-[14%] h-8 text-xs font-semibold">
+          <span className="absolute left-0 -translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Review agent</span>
+          <span className="absolute right-0 translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Workflow engine</span>
+        </div>
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-[14%] w-px bg-line" />
+          <div className="pointer-events-none absolute inset-y-0 right-[14%] w-px bg-line" />
+          <ol className="relative">
+            {f.msgs.map((m, i) => (
+              <Arrow key={i} m={m} id={id} />
+            ))}
+          </ol>
+        </div>
+      </div>
+    </article>
   )
 }

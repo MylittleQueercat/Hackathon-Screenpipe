@@ -1,49 +1,66 @@
 import { motion } from 'framer-motion'
-import { ArchitectureColumn } from './components/Architecture'
+import { ArchitectureFlow } from './components/Architecture'
 import { Replay } from './components/Replay'
-import { CompareBars, RangeBands, Reveal, Stat } from './components/Charts'
-import { candidates, fmtK, gptFullRun, gptReviewRuns, messages, pct, sonnetRejections, sonnetReview, sonnetStages, type CandidateId } from './data'
+import { ResultsMatrix } from './components/Charts'
+import {
+  candidates, fmtK, messages, pct, sonnetRejections, sonnetReview, sonnetStages, tone,
+  type CandidateId,
+} from './data'
+import { toggleTheme, useTheme } from './lib/theme'
 
 const IDS: CandidateId[] = ['baseline', 'conflict', 'preflight']
 const s = sonnetReview
 
-function Section({ id, eyebrow, title, lead, children }: { id: string; eyebrow: string; title: React.ReactNode; lead?: React.ReactNode; children: React.ReactNode }) {
+function Section({ id, title, lead, children }: { id: string; title: string; lead?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section id={id} className="mx-auto max-w-6xl px-6 py-24">
-      <Reveal>
-        <div className="eyebrow text-signal">{eyebrow}</div>
-        <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-ink-50 md:text-5xl">{title}</h2>
-        {lead && <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-200">{lead}</p>}
-      </Reveal>
-      <div className="mt-12">{children}</div>
+    <section id={id} className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+      <h2 className="display max-w-3xl text-3xl font-semibold md:text-5xl">{title}</h2>
+      {lead && <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted">{lead}</p>}
+      <div className="mt-10">{children}</div>
     </section>
   )
 }
 
-function SampleNote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-4 font-mono text-[11px] text-ink-300">{children}</p>
+const Note = ({ children }: { children: React.ReactNode }) => <p className="mt-4 max-w-3xl text-xs leading-relaxed text-faint">{children}</p>
+
+function ThemeToggle() {
+  const dark = useTheme() === 'dark'
+  return (
+    <button
+      onClick={toggleTheme}
+      className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition hover:text-fg"
+      aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+    >
+      {dark ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" /></svg>
+      )}
+    </button>
+  )
 }
 
 function Nav() {
   const links = [
     ['architecture', 'Architecture'],
     ['replay', 'Replay'],
-    ['review', 'Review data'],
-    ['repeats', 'Repeats'],
-    ['fullrun', 'Full run'],
+    ['review', 'Results'],
     ['stages', 'All stages'],
   ]
   return (
-    <nav className="sticky top-0 z-50 border-b border-ink-800 bg-ink-950/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <a href="#top" className="flex items-center gap-2 font-semibold">
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-signal font-mono text-[11px] font-bold text-ink-950">P</span>
-          PipeOps <span className="text-ink-400">/ Review candidates</span>
+    <nav className="sticky top-0 z-50 border-b border-line bg-bg/85 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <a href="#top" className="flex items-center gap-2.5 font-semibold">
+          <span className="display flex h-7 w-7 items-center justify-center rounded-lg bg-ours text-base text-on-ours">P</span>
+          PipeOps <span className="hidden font-normal text-faint sm:inline">Review candidates</span>
         </a>
-        <div className="hidden gap-5 text-sm text-ink-300 md:flex">
-          {links.map(([h, l]) => (
-            <a key={h} href={`#${h}`} className="transition hover:text-ink-50">{l}</a>
-          ))}
+        <div className="flex items-center gap-6">
+          <div className="hidden gap-5 text-sm text-muted lg:flex">
+            {links.map(([h, l]) => (
+              <a key={h} href={`#${h}`} className="transition hover:text-fg">{l}</a>
+            ))}
+          </div>
+          <ThemeToggle />
         </div>
       </div>
     </nav>
@@ -51,292 +68,183 @@ function Nav() {
 }
 
 function Hero() {
+  const facts: [string, string, string][] = [
+    [`${s.baseline.rejected} → 0`, 'refused calls in Review', 'Sonnet, 1 run each'],
+    [pct(s.baseline.seconds, s.preflight.seconds), `runtime, ${Math.round(s.baseline.seconds)} → ${Math.round(s.preflight.seconds)} s`, 'Sonnet, 1 run each'],
+    [pct(s.baseline.requests, s.preflight.requests), `model requests, ${s.baseline.requests} → ${s.preflight.requests}`, 'Sonnet, 1 run each'],
+    ['11/11', 'checks kept by all three candidates', 'Sonnet, Review stage'],
+  ]
   return (
-    <header id="top" className="grid-bg relative overflow-hidden border-b border-ink-800">
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-signal/10 blur-[120px]" />
-      <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-24">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-          <div className="flex flex-wrap gap-2">
-            <span className="tag">Screenpipe Workflows · Review agent</span>
-            <span className="tag">baseline · conflict-revision · preflight-conflict</span>
-          </div>
-          <h1 className="mt-6 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-tight md:text-7xl">
-            Let Review see the verdict <span className="text-signal">before</span> it publishes.
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-200">
-            <span className="font-mono text-ink-50">preflight-conflict</span> runs the engine's real publish validation as a dry run on every draft read.
-            Same quality, zero refused publishes, a much shorter Review.
-          </p>
-        </motion.div>
+    <header id="top" className="mx-auto max-w-6xl px-5 pb-6 pt-16 sm:px-8 md:pt-24">
+      <motion.h1
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="display max-w-4xl text-[2.75rem] font-semibold leading-[1.02] sm:text-6xl md:text-7xl"
+      >
+        Review should see the verdict before it publishes.
+      </motion.h1>
+      <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
+        We compared three engines for the Screenpipe Workflows Review agent. <b className="font-semibold text-fg">preflight-conflict</b> runs
+        the real publish validation as a dry run on every draft read. Review keeps all 11 checks, no call is refused, and it finishes sooner.
+      </p>
 
-        <div className="mt-14 grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { v: `${s.baseline.rejected} → 0`, l: 'refused workspace calls', sub: 'Sonnet · Review · 1 run each' },
-            { v: `${pct(s.baseline.seconds, s.preflight.seconds)}`, l: `runtime · ${Math.round(s.baseline.seconds)} → ${Math.round(s.preflight.seconds)} s`, sub: 'Sonnet · Review · 1 run each' },
-            { v: `${pct(gptFullRun.baseline.requests, gptFullRun.preflight.requests)}`, l: `requests, full run · ${gptFullRun.baseline.requests} → ${gptFullRun.preflight.requests}`, sub: 'GPT · 3 phases · 1 run each' },
-            { v: '4 / 4', l: 'GPT Review runs at 11/11, 0 refused', sub: 'GPT · Review · 4 runs' },
-          ].map((k, i) => (
-            <motion.div key={k.l} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 + i * 0.1 }}>
-              <Stat value={k.v} label={k.l} sub={k.sub} />
-            </motion.div>
-          ))}
-        </div>
-        <div className="mt-6 flex items-center gap-3">
-          <span className="rounded-full bg-signal px-3 py-1 font-mono text-xs font-semibold text-ink-950">11/11 checks</span>
-          <span className="text-sm text-ink-300">kept by all three candidates on the Review stage</span>
-        </div>
+      <div className="mt-12" id="replay">
+        <p className="mb-3 text-sm text-muted">The three Review runs, request by request. Press play or drag the slider.</p>
+        <Replay />
+        <Note>claude-sonnet-5 · snapshot 20261017T145651Z-baseline-receipts-s1 · stage 04-p1-workflow-review · 1 run per candidate</Note>
       </div>
+
+      <dl className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-line pt-8 md:grid-cols-4">
+        {facts.map(([v, l, sub]) => (
+          <div key={l}>
+            <dd className="display num text-4xl font-semibold text-ours md:text-5xl">{v}</dd>
+            <dt className="mt-2 text-sm">{l}</dt>
+            <dd className="mt-0.5 text-xs text-faint">{sub}</dd>
+          </div>
+        ))}
+      </dl>
     </header>
   )
 }
 
-function MessageCompare() {
+function Messages() {
   const rows = [
-    { id: 'baseline' as const, when: 'after a refused publish', lines: [messages.reject422, messages.baseline409] },
-    { id: 'conflict' as const, when: 'after a refused publish', lines: [messages.reject422, messages.conflict409] },
-    { id: 'preflight' as const, when: 'on the draft read — before any publish', lines: [messages.preflightFail, messages.preflightOk] },
+    { id: 'baseline' as const, when: 'After a refused publish', lines: [messages.reject422, messages.baseline409] },
+    { id: 'conflict' as const, when: 'After a refused publish', lines: [messages.reject422, messages.conflict409] },
+    { id: 'preflight' as const, when: 'On the draft read, before any publish', lines: [messages.preflightFail, messages.preflightOk] },
   ]
   return (
-    <div className="mt-6 grid gap-4 md:grid-cols-3">
-      {rows.map((r, i) => (
-        <Reveal key={r.id} delay={i * 0.1}>
-          <div className={`card h-full p-5 ${r.id === 'preflight' ? 'border-signal/50' : ''}`}>
-            <div className="flex items-baseline justify-between">
-              <span className="font-mono text-[12px] font-semibold" style={{ color: candidates[r.id].color }}>{candidates[r.id].name}</span>
-              <span className="eyebrow">{r.when}</span>
-            </div>
-            <div className="mt-4 space-y-2">
-              {r.lines.map((l, j) => {
-                const good = l.includes('"ok": true') || (r.id === 'conflict' && j === 1) || r.id === 'preflight'
-                return (
-                  <pre key={j} className={`whitespace-pre-wrap break-words rounded-lg border bg-ink-950 p-3 font-mono text-[11px] leading-relaxed ${good ? 'border-signal/30 text-ink-50' : 'border-ink-700 text-ink-300'}`}>
-                    {l}
-                  </pre>
-                )
-              })}
+    <div className="mt-6">
+      <h3 className="display text-2xl font-semibold">What the agent reads back</h3>
+      <p className="mt-1 text-sm text-muted">Real engine replies from the Sonnet Review runs.</p>
+      <div className="mt-6 grid gap-8 md:grid-cols-3">
+        {rows.map((r) => (
+          <div key={r.id}>
+            <div className="font-mono text-[13px] font-semibold" style={{ color: tone(r.id) }}>{candidates[r.id].name}</div>
+            <div className="mb-3 text-xs text-faint">{r.when}</div>
+            <div className="space-y-2">
+              {r.lines.map((l, j) => (
+                <pre key={j} className="whitespace-pre-wrap break-words rounded-lg border border-line bg-surface p-3 font-mono text-[11px] leading-relaxed text-muted">{l}</pre>
+              ))}
             </div>
           </div>
-        </Reveal>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }
 
 export default function App() {
-  const colors = { baseline: candidates.baseline.color, conflict: candidates.conflict.color, preflight: candidates.preflight.color }
-  const rows = (k: keyof (typeof s)['baseline']) =>
-    IDS.map((id) => ({ label: candidates[id].name, value: s[id][k] as number, color: colors[id], strong: id === 'preflight' }))
+  const col = (k: keyof (typeof s)['baseline']) =>
+    Object.fromEntries(IDS.map((id) => [id, s[id][k] as number])) as Record<CandidateId, number>
 
   return (
-    <div className="min-h-screen bg-ink-950 font-sans">
+    <div className="min-h-screen bg-bg">
       <Nav />
       <Hero />
 
       <Section
         id="architecture"
-        eyebrow="01 · Architecture"
-        title={<>Three engines, one Review loop.</>}
-        lead={<>Same agent, same prompt, same snapshot. Only the engine's answers change. Lime blocks are what each candidate changes in the engine.</>}
+        title="Three engines, one Review loop"
+        lead="Same agent, same prompt, same snapshot. Only the engine’s answers change. Each diagram follows one Review run; a dashed arrow is the engine replying, a “changed” tag marks what the candidate alters."
       >
-        <div className="grid gap-6 lg:grid-cols-3">
-          {IDS.map((id, i) => <ArchitectureColumn key={id} id={id} index={i} />)}
+        <div className="-mt-4">
+          {IDS.map((id, i) => <ArchitectureFlow key={id} id={id} index={i} />)}
         </div>
-        <Reveal className="mt-14">
-          <h3 className="text-xl font-semibold text-ink-50">What the agent actually reads</h3>
-          <p className="mt-1 text-sm text-ink-300">Real engine replies from the Sonnet Review runs below.</p>
-        </Reveal>
-        <MessageCompare />
-      </Section>
-
-      <Section
-        id="replay"
-        eyebrow="02 · Replay"
-        title={<>Watch the three Review runs, request by request.</>}
-        lead={<>Rebuilt from the raw request logs of the Sonnet Review stage. Every tick is a model request, every dot is a workspace call. Orange is the engine saying no.</>}
-      >
-        <Reveal><Replay /></Reveal>
-        <SampleNote>claude-sonnet-5 · snapshot 20261017T145651Z-baseline-receipts-s1 · stage 04-p1-workflow-review · 1 run per candidate</SampleNote>
+        <Messages />
       </Section>
 
       <Section
         id="review"
-        eyebrow="03 · Review stage · Sonnet"
-        title={<>Same 11/11, less of everything else.</>}
-        lead={<>The Review stage replayed from the same saved snapshot, so every candidate starts from identical drafts.</>}
+        title="Same 11 of 11, less of everything else"
+        lead="The Review stage replayed from the same saved snapshot, so every candidate starts from identical drafts."
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <CompareBars title="Model requests" rows={rows('requests')} />
-          <CompareBars title="Runtime" unit="seconds" rows={rows('seconds')} format={(v) => `${Math.round(v)} s`} />
-          <CompareBars title="Refused workspace calls" unit="409 / 422 / clipped" rows={rows('rejected')} />
-          <CompareBars title="Output tokens" rows={rows('output')} format={fmtK} />
-          <CompareBars title="Cache read tokens" rows={rows('cacheRead')} format={fmtK} />
-          <CompareBars title="Input tokens" rows={rows('input')} format={fmtK} />
-        </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <ResultsMatrix
+          rows={[
+            { label: 'Model requests', values: col('requests') },
+            { label: 'Runtime', unit: 'seconds', values: col('seconds'), format: (v) => `${Math.round(v)} s` },
+            { label: 'Refused workspace calls', unit: '409, 422 or clipped', values: col('rejected') },
+            { label: 'Output tokens', values: col('output'), format: fmtK },
+            { label: 'Cache read tokens', values: col('cacheRead'), format: fmtK },
+            { label: 'Input tokens', values: col('input'), format: fmtK },
+          ]}
+        />
+        <div className="mt-10 grid gap-8 md:grid-cols-3">
           {IDS.map((id) => (
-            <div key={id} className="card p-5">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-[12px] font-semibold" style={{ color: colors[id] }}>{candidates[id].name}</span>
-                <span className="rounded-full bg-signal/15 px-2 py-0.5 font-mono text-[10px] text-signal">{s[id].checks}</span>
+            <div key={id} className="border-t border-line pt-4">
+              <div className="flex items-baseline justify-between">
+                <span className="font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>{candidates[id].name}</span>
+                <span className="num text-sm font-semibold">{s[id].checks} checks</span>
               </div>
-              <div className="mt-3 space-y-1.5">
+              <ul className="mt-3 space-y-1.5 text-sm">
                 {sonnetRejections[id].length === 0 ? (
-                  <div className="font-mono text-[12px] text-signal">No refused call.</div>
+                  <li className="text-ours">No refused call.</li>
                 ) : (
                   sonnetRejections[id].map((r) => (
-                    <div key={r.kind} className="flex justify-between font-mono text-[12px] text-ink-200">
+                    <li key={r.kind} className="flex justify-between gap-3 text-muted">
                       <span>{r.kind}</span>
-                      <span className="text-cost">×{r.n}</span>
-                    </div>
+                      <span className="num font-semibold text-bad">×{r.n}</span>
+                    </li>
                   ))
                 )}
-              </div>
+              </ul>
             </div>
           ))}
         </div>
-        <SampleNote>
-          claude-sonnet-5 · 1 run per candidate · checks graded with the current truth.json (the snapshot's older truth.json gives 10/11 to all three, on missing_date).
-        </SampleNote>
-      </Section>
-
-      <Section
-        id="repeats"
-        eyebrow="04 · Repeated runs · GPT"
-        title={<>Not a lucky run: 4 out of 4.</>}
-        lead={<>We reran the Review stage four times per engine on GPT. Every preflight-conflict run used fewer requests and less cache than every baseline run, and none was refused.</>}
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          {([
-            ['Model requests', 'requests', (v: number) => `${v}`],
-            ['Runtime', 'seconds', (v: number) => `${Math.round(v)} s`],
-            ['Cache read tokens', 'cacheRead', fmtK],
-            ['Refused workspace calls', 'rejected', (v: number) => `${v}`],
-          ] as const).map(([title, key, f]) => (
-            <RangeBands
-              key={key}
-              title={title}
-              unit="4 runs each"
-              format={f}
-              series={[
-                { label: 'clearer-rejection (baseline)', values: gptReviewRuns.baseline.map((r) => r[key]), color: colors.baseline },
-                { label: 'preflight-conflict', values: gptReviewRuns.preflight.map((r) => r[key]), color: colors.preflight },
-              ]}
-            />
-          ))}
-        </div>
-        <Reveal className="mt-6">
-          <div className="card flex flex-wrap items-center gap-6 p-6">
-            <div className="text-5xl font-semibold tabular-nums text-signal">1 / 70</div>
-            <p className="max-w-xl text-sm leading-relaxed text-ink-200">
-              Chance that all four preflight-conflict runs land below all four baseline runs if the two engines were the same
-              (exact rank test, ≈ 1.4 %). Holds for requests and for cache read. One snapshot, so it says nothing yet about other data.
-            </p>
-          </div>
-        </Reveal>
-        <SampleNote>gpt-6.1-sol via openai-chatgpt · Review stage · 4 runs per engine · conflict-revision alone was not repeated on GPT · not comparable with the Sonnet numbers above</SampleNote>
-      </Section>
-
-      <Section
-        id="fullrun"
-        eyebrow="05 · Full run · GPT"
-        title={<>Across a whole evaluation: −30% requests.</>}
-        lead={<>Discover, Maintain, Deepen and Review over three phases of captures. Every agent, every cycle.</>}
-      >
-        <div className="grid gap-4 md:grid-cols-4">
-          <Stat value={`${pct(gptFullRun.baseline.requests, gptFullRun.preflight.requests)}`} label={`requests · ${gptFullRun.baseline.requests} → ${gptFullRun.preflight.requests}`} />
-          <Stat value={`${pct(gptFullRun.baseline.seconds, gptFullRun.preflight.seconds)}`} label={`runtime · ${Math.round(gptFullRun.baseline.seconds)} → ${Math.round(gptFullRun.preflight.seconds)} s`} />
-          <Stat value={`${pct(gptFullRun.baseline.cacheRead, gptFullRun.preflight.cacheRead)}`} label={`cache read · ${fmtK(gptFullRun.baseline.cacheRead)} → ${fmtK(gptFullRun.preflight.cacheRead)}`} />
-          <Stat value={`${gptFullRun.baseline.rejected} → ${gptFullRun.preflight.rejected}`} label="refused workspace calls" />
-        </div>
-        <Reveal className="mt-6">
-          <div className="card p-6">
-            <div className="mb-5 flex items-baseline justify-between">
-              <span className="text-sm font-medium text-ink-50">Requests per phase</span>
-              <span className="rounded-full bg-signal/15 px-2 py-0.5 font-mono text-[10px] text-signal">14/14 checks · both</span>
-            </div>
-            <div className="grid grid-cols-3 gap-6">
-              {[0, 1, 2].map((p) => {
-                const b = gptFullRun.baseline.phases[p].requests
-                const q = gptFullRun.preflight.phases[p].requests
-                return (
-                  <div key={p}>
-                    <div className="flex h-48 items-end justify-center gap-3">
-                      {[
-                        [b, colors.baseline],
-                        [q, colors.preflight],
-                      ].map(([v, c], i) => (
-                        <div key={i} className="flex w-14 flex-col items-center justify-end">
-                          <span className="mb-1 font-semibold tabular-nums text-ink-50">{v}</span>
-                          <motion.div
-                            className="w-full rounded-t-md"
-                            style={{ background: c as string }}
-                            initial={{ height: 0 }}
-                            whileInView={{ height: `${((v as number) / 120) * 160}px` }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.8, delay: p * 0.15 + i * 0.1 }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 text-center font-mono text-[11px] text-ink-300">
-                      phase {p + 1} · <span className={q < b ? 'text-signal' : 'text-ink-300'}>{pct(b, q)}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </Reveal>
-        <SampleNote>gpt-6.1-sol · receipts suite, 3 phases · 1 run per engine · baseline = clearer-rejection · Sonnet full runs in progress</SampleNote>
+        <Note>
+          claude-sonnet-5 · 1 run per candidate · checks graded with the current truth.json (the snapshot’s older truth.json gives 10/11 to all three, on missing_date).
+        </Note>
       </Section>
 
       <Section
         id="stages"
-        eyebrow="06 · Every stage · Sonnet"
-        title={<>The gain is where the patch is.</>}
-        lead={<>Each stage replayed from the same snapshot. Discover and Maintain don't move — expected, the patch targets Review.</>}
+        title="The gain is where the patch is"
+        lead="Each stage replayed from the same snapshot. Discover and Maintain don’t move, as expected: the patch targets Review."
       >
-        <div className="overflow-hidden rounded-2xl border border-ink-700">
-          <div className="grid grid-cols-[1.2fr_repeat(5,1fr)] bg-ink-850 px-5 py-3 font-mono text-[10px] uppercase tracking-wider text-ink-300">
-            <span>Stage</span><span>Checks</span><span>Requests</span><span>Runtime</span><span>Refused</span><span>Cache read</span>
-          </div>
-          {sonnetStages.map((st, i) => (
-            <Reveal key={st.stage} delay={i * 0.06}>
-              <div className={`border-t border-ink-700 px-5 py-4 ${st.stage.includes('Review') ? 'bg-signal/[0.04]' : ''}`}>
+        <div className="overflow-x-auto">
+          <table className="num w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="text-left text-xs font-normal text-faint">
+                {['Stage', 'Engine', 'Checks', 'Requests', 'Runtime', 'Refused', 'Cache read'].map((h) => (
+                  <th key={h} className="pb-3 pr-4 font-normal">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            {sonnetStages.map((st) => (
+              <tbody key={st.stage} className="border-t border-line">
                 {(['b', 'p'] as const).map((k) => {
                   const r = st[k]
                   const o = st[k === 'b' ? 'p' : 'b']
-                  const better = (a: number, c: number) => (k === 'p' && a < c ? 'text-signal' : k === 'p' && a > c ? 'text-cost' : 'text-ink-50')
+                  const cmp = (a: number, c: number) => (k === 'p' && a < c ? 'font-semibold text-ours' : k === 'p' && a > c ? 'font-semibold text-bad' : '')
                   return (
-                    <div key={k} className="grid grid-cols-[1.2fr_repeat(5,1fr)] items-center py-1 text-sm tabular-nums">
-                      <span className="font-mono text-[12px]">
-                        {k === 'b' ? <span className="text-ink-50">{st.stage}</span> : null}
-                        <span className="ml-2" style={{ color: k === 'b' ? colors.baseline : colors.preflight }}>{k === 'b' ? 'baseline' : 'preflight-conflict'}</span>
-                      </span>
-                      <span className={r.checks !== o.checks && k === 'p' ? 'text-cost' : 'text-ink-50'}>{r.checks}</span>
-                      <span className={better(r.requests, o.requests)}>{r.requests}</span>
-                      <span className={better(r.seconds, o.seconds)}>{r.seconds} s</span>
-                      <span className={better(r.rejected, o.rejected)}>{r.rejected}</span>
-                      <span className={better(r.cacheRead, o.cacheRead)}>{fmtK(r.cacheRead)}</span>
-                    </div>
+                    <tr key={k} className={st.stage.includes('Review') ? 'bg-ours/[0.06]' : ''}>
+                      <th scope="row" className="py-1.5 pl-1 pr-4 text-left font-medium">{k === 'b' ? st.stage : ''}</th>
+                      <td className="py-1.5 pr-4 font-mono text-[12px]" style={{ color: tone(k === 'b' ? 'baseline' : 'preflight') }}>{k === 'b' ? 'baseline' : 'preflight-conflict'}</td>
+                      <td className={`py-1.5 pr-4 ${k === 'p' && r.checks !== o.checks ? 'font-semibold text-bad' : ''}`}>{r.checks}</td>
+                      <td className={`py-1.5 pr-4 ${cmp(r.requests, o.requests)}`}>{r.requests}</td>
+                      <td className={`py-1.5 pr-4 ${cmp(r.seconds, o.seconds)}`}>{r.seconds} s</td>
+                      <td className={`py-1.5 pr-4 ${cmp(r.rejected, o.rejected)}`}>{r.rejected}</td>
+                      <td className={`py-1.5 pr-4 ${cmp(r.cacheRead, o.cacheRead)}`}>{fmtK(r.cacheRead)}</td>
+                    </tr>
                   )
                 })}
-                {st.note && <div className="mt-2 font-mono text-[11px] text-ink-300">↳ {st.note}</div>}
-              </div>
-            </Reveal>
-          ))}
+                {st.note && (
+                  <tr><td colSpan={7} className="pb-3 pl-1 pt-1 text-xs text-muted">{st.note}</td></tr>
+                )}
+              </tbody>
+            ))}
+          </table>
         </div>
-        <SampleNote>claude-sonnet-5 · 1 run per stage and engine · checks per stage only cover what that stage can affect</SampleNote>
+        <Note>claude-sonnet-5 · 1 run per stage and engine · checks per stage only cover what that stage can affect</Note>
       </Section>
 
-      <footer className="border-t border-ink-800">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-10">
-          <div className="text-2xl font-semibold tracking-tight">
-            PipeOps. <span className="text-signal">Prove it before you ship it.</span>
-          </div>
-          <div className="max-w-md font-mono text-[11px] leading-relaxed text-ink-300">
-            Sonnet and GPT numbers are never mixed. Stage runs and full runs are never mixed. Small samples are labeled as such.
-          </div>
+      <footer className="border-t border-line">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-6 px-5 py-12 sm:px-8">
+          <div className="display text-3xl font-semibold">Prove it before you ship it.</div>
+          <p className="max-w-md text-xs leading-relaxed text-faint">
+            Every number here is Claude Sonnet, one run per candidate and stage. Small samples are labeled as such.
+          </p>
         </div>
       </footer>
     </div>
