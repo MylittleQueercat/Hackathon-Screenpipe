@@ -151,6 +151,7 @@ def grade_views(phase: int, ws: dict, catalog: dict, seeded: list[dict], truth: 
         g = grade_phase(phase, read_view(ws, catalog, view), seeded, truth, previous)
         out[view] = {**{k: v for k, v in g.items() if k != "attributed"},
                      "workflows_by_job": {a["title"]: a["job"] for a in g["attributed"]},
+                     "citations": [{k: a[k] for k in ("title", "job", "cited", "unresolved")} for a in g["attributed"]],
                      "_attributed": g["attributed"]}
     return out
 

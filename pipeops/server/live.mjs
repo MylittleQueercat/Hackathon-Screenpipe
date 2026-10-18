@@ -47,7 +47,8 @@ export async function readResult(runDir, file = 'results.jsonl') {
   const lines = (await readFile(path.join(runDir, file), 'utf8')).split('\n').filter(Boolean);
   const r = JSON.parse(lines[lines.length - 1]);
   const checks = Object.fromEntries(DISCOVER_CHECKS.map((k) => [k, r.checks?.[k]?.pass ?? null]));
-  const drafts = Object.entries(r.workflows_by_job ?? {}).map(([title, job]) => ({ title, job }));
+  // Per draft: the job its cited screens point to, how many it cited, how many do not exist.
+  const drafts = r.citations ?? Object.entries(r.workflows_by_job ?? {}).map(([title, job]) => ({ title, job, cited: null, unresolved: null }));
   return { status: r.status, seconds: r.seconds, requests: r.usage?.requests ?? null, checks, drafts };
 }
 

@@ -202,11 +202,15 @@
   "drafts": [
    {
     "title": "Scan paperwork intake: rename/log receipts and contracts into tracker.csv",
-    "job": "receipts"
+    "job": "receipts",
+    "cited": 3,
+    "unresolved": 1
    },
    {
     "title": "File incoming project attachment and send a confirmation reply",
-    "job": "email"
+    "job": "email",
+    "cited": 4,
+    "unresolved": 0
    }
   ]
  }
