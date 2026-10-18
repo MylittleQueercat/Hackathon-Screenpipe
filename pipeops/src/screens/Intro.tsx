@@ -1,6 +1,6 @@
 // screenpipe — AI that knows everything you've seen, said, or heard
 // https://screenpipe.com
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, Label, Screen } from '../ui';
 import { fmtTime, sameCapture, story } from '../story';
 
@@ -15,6 +15,12 @@ const ROLES = [
 export default function Intro() {
   const example = story.base[0].workflows.find((w) => w.job === 'email')!;
   const [open, setOpen] = useState<number | null>(null);
+  const beat = useBeat(open === null);
+  // One loop: screens arrive, the agents work in turn, the workflow is written step by step.
+  const screenOn = (i: number) => beat >= i;
+  const arrowOn = (k: 0 | 1) => beat === (k === 0 ? 3 : 8);
+  const agentOn = (i: number) => beat === 4 + i;
+  const stepOn = (i: number) => beat >= 9 + i;
 
   return (
     <Screen title="Are screenpipe's AI agents finding the right work, and at what cost?" lede="PipeOps measures it.">
@@ -25,8 +31,8 @@ export default function Intro() {
             {[0, 1, 2].map((i) => (
               <div
                 key={i}
-                className="absolute rounded-md border border-ink bg-surface"
-                style={{ left: `${i * 12}%`, top: `${i * 14}%`, width: '72%', height: '58%' }}
+                className="absolute rounded-md border border-ink bg-surface transition-all duration-500"
+                style={{ left: `${i * 12}%`, top: `${i * 14}%`, width: '72%', height: '58%', opacity: screenOn(i) ? 1 : 0, transform: screenOn(i) ? 'none' : 'translateY(12px)' }}
               >
                 <div className="flex gap-1.5 border-b border-line px-3 py-2">
                   {[0, 1, 2].map((d) => <span key={d} className="h-2 w-2 rounded-full border border-trace" />)}
@@ -38,19 +44,19 @@ export default function Intro() {
             ))}
           </div>
         </Card>
-        <Arrow />
+        <Arrow on={arrowOn(0)} />
         <Card className="flex flex-col p-7">
           <Label className="text-base">2 · four AI agents read it</Label>
           <ol className="mt-6 flex flex-1 flex-col justify-around">
-            {ROLES.map((r) => (
+            {ROLES.map((r, i) => (
               <li key={r.name} className="flex items-baseline gap-4 border-b border-line pb-3 last:border-0">
-                <span className="w-28 shrink-0 font-sans text-2xl font-medium">{r.name}</span>
+                <span className={`w-32 shrink-0 rounded-sm px-2 font-sans text-2xl font-medium transition-colors duration-300 ${agentOn(i) ? 'bg-phosphor' : ''}`}>{r.name}</span>
                 <span className="font-serif text-xl text-muted">{r.does}</span>
               </li>
             ))}
           </ol>
         </Card>
-        <Arrow />
+        <Arrow on={arrowOn(1)} />
         <Card className="flex flex-col p-7">
           <Label className="text-base">3 · a workflow you can automate</Label>
           <div className="mt-6 flex flex-1 flex-col rounded-md border border-ink px-6 py-5">
@@ -61,7 +67,7 @@ export default function Intro() {
                 const shown = open === i && step?.at;
                 const full = step?.at ? example.evidence.find((e) => sameCapture(e.at, step.at!) && e.app === step.app) : undefined;
                 return (
-                  <li key={i} className="border-t border-line pt-3">
+                  <li key={i} className="border-t border-line pt-3 transition-opacity duration-500" style={{ opacity: stepOn(i) ? 1 : 0.15 }}>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="font-serif text-xl"><span className="mr-2 font-mono text-base text-faint">{i + 1}</span>{s.name}</span>
                       {step?.at && (
@@ -91,6 +97,26 @@ export default function Intro() {
   );
 }
 
-function Arrow() {
-  return <div className="flex items-center justify-center font-mono text-3xl text-faint">→</div>;
+const BEATS = 15; // 0-2 screens, 3 arrow, 4-7 agents, 8 arrow, 9-11 steps, then a pause
+const BEAT_MS = 650;
+
+/** Animation clock; stopped (everything shown) when paused or when the viewer prefers less motion. */
+function useBeat(running: boolean) {
+  const still = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const [beat, setBeat] = useState(0);
+  useEffect(() => {
+    if (!running || still) return;
+    const id = setInterval(() => setBeat((b) => (b + 1) % BEATS), BEAT_MS);
+    return () => clearInterval(id);
+  }, [running, still]);
+  return running && !still ? beat : BEATS - 1;
+}
+
+function Arrow({ on }: { on: boolean }) {
+  return (
+    <div className="relative flex items-center justify-center font-mono text-3xl">
+      <span className={`transition-colors duration-300 ${on ? 'text-ink' : 'text-faint'}`}>→</span>
+      {on && <span className="absolute h-3 w-3 rounded-full bg-phosphor animate-flow" />}
+    </div>
+  );
 }
