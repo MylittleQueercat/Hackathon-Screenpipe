@@ -143,6 +143,9 @@ Every live cycle spends the account's AI allowance. Failures of the provider or 
 (allowance, rate limit, sign-in, 5xx) mark a phase `rerun`; it is never scored. A model
 the account's tier does not offer is silently swapped by the engine (to `auto`); the
 harness catches that in the engine log and marks the phase `invalid`, also never scored.
+An engine that declines to start a cycle (its start returns `idle`: nothing was recorded
+after the last checked period, as in `variants/idle-skip.json`) runs no agent in that
+phase; the phase is graded as it stands, with `cycle_status: idle` in its `phase.json`.
 
 ## Stage runs
 
@@ -168,7 +171,12 @@ synonym, say): regrade with `grade --truth`, as for a full run. Each result reco
 `truth`, an id of the truth that graded it, and `compare` warns when its runs differ
 there. A Review result also reports `clipped`: each string Review published that the
 catalog saved shorter (the engine bounds text fields; checks cannot see this, because
-the same words often survive in another field). Because the serial
+the same words often survive in another field). Every grade, a phase's or a stage's,
+also reports `in_stages` for each passing keyword check: whether its words are in the
+stages, which say what to do, or only in a variation, question or limitation
+("how do missing-date rows get resolved?" passes `missing_date`). Reported, not scored,
+so scores stay comparable with every run graded before it; `compare` prints it per
+check. Because the serial
 order is not the app's (it runs ready agents at once), a snapshot is a fixed starting
 point, not a replay of a production cycle; a variant that changes the handoffs still
 needs full runs.
@@ -176,6 +184,11 @@ needs full runs.
 A snapshot is shared, not retaken: taking one costs a cycle's worth of model calls (87
 requests for receipts seed 1, phase 1: Discover 10, Maintain 4, Deepen 13, Review 60), and
 the restored slot path is the same on every Mac.
+
+`stage <step> --through <task>` also runs the agents after the step's, in the snapshot's
+serial order and in the same slot, and grades the last one's view; `usage.by_task` splits
+the requests. Use it when a change moves work between agents: from Deepen's step,
+`--through workflow-review` measures Deepen and Review together (about 30 requests).
 
 `uv run wfeval probe-publish snapshots/<id>/steps/<NN>-p1-workflow-review --variant <v>`
 costs nothing: it restores the step and asks the engine to publish each open draft as
@@ -260,6 +273,12 @@ The same history gave different catalogs: decide nothing from one run per side. 
 email job is found in half the phase-1 runs, the clearest noise so far. The grader
 catches damage to a real catalog (`tests/test_controls.py`): a dropped job, a lost
 exception, invented evidence and merged jobs each cost exactly their check.
+
+Changes to Workflows, one at a time and then all together, are in `EXPERIMENTS.md`. On
+one complete full-run pair (18 October), the final stack (`variants/idle-skip.json`)
+took 111 requests against baseline's 213, 92k output tokens against 182k and 619 s of
+agent time against 1,538 s, with no check lost. The idle phase went from 56 requests to
+none; the gaps in phases 1 and 2 are within baseline's own spread.
 
 ## Limits
 

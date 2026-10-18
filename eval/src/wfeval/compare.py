@@ -128,6 +128,17 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\nall checks: fixed {flips['fixed']}, broken {flips['broken']}, "
           f"p = {mcnemar(flips['fixed'], flips['broken']):.3f}")
 
+    staged = [cid for cid in checks if any("in_stages" in r["checks"].get(cid, {}) for k in both for r in (A[k], B[k]))]
+    if staged and not a.totals:
+        print("\nin_stages: a passing keyword check whose words are in the stages, not only in a"
+              " variation, question or limitation (reported, not scored)")
+        for cid in staged:
+            ha = [A[k]["checks"].get(cid, {}).get("in_stages") for k in both]
+            hb = [B[k]["checks"].get(cid, {}).get("in_stages") for k in both]
+            pairs = [(x, y) for x, y in zip(ha, hb) if x is not None and y is not None]
+            if pairs:
+                print(f"  {cid:22} {sum(x for x, _ in pairs):>4}/{len(pairs):<3} -> {sum(y for _, y in pairs)}/{len(pairs)}")
+
     ta = sum((Counter(A[k]["mistakes"]) for k in both), Counter())
     tb = sum((Counter(B[k]["mistakes"]) for k in both), Counter())
     print("\nmistakes (A -> B)")

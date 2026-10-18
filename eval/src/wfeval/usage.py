@@ -140,6 +140,8 @@ def phase_usage(logs: list[Path], model: str | None = None, request_log: Path | 
     if full:
         total.update(full)
         total["source"] = "request_log"
+    elif not per and request_log and request_log.exists():
+        total["source"] = "request_log"  # no agent ran (an idle phase): zero is exact
     total["agent_runs"] = len(per)
     total["runs_by_task"] = {}
     for r in per:

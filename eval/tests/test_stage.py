@@ -128,3 +128,17 @@ def test_snapshot_state_leaves_the_login_out_and_restores_the_templates(tmp_path
     stage.restore_state(tmp_path / "state", other, str(tmp_path / "a"), tmp_path / "b")
     s = json.loads((other / "store.bin").read_text())["settings"]
     assert (s["userId"], s["user"]["email"], s["aiPresets"]) == ("template-session", "template@example.com", ["eval-sonnet"])
+
+
+def test_an_idle_start_runs_no_agent():
+    """An engine that skips a cycle with nothing new recorded answers start with
+    `idle`; the harness then starts no agent instead of failing on "no agent ready"."""
+    posted = []
+    e = engine.Engine.__new__(engine.Engine)
+    e.post = lambda path, body=None: posted.append(path) or (
+        {"idle": "Nothing was recorded after T.", "cycle": {"status": "complete"}}
+        if path == "/workflows/workspace" else {})
+    e.workspace = lambda task=None: pytest.fail("an idle start must not look for ready agents")
+    started = e.start_cycle()
+    assert started["idle"].startswith("Nothing was recorded") and started["runs"] == {}
+    assert not any(p.startswith("/pipes/") for p in posted)

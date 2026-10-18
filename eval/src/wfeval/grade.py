@@ -6,6 +6,12 @@ app)` in its evidence, stage evidence and procedure resolves to a seeded frame, 
 hidden owner is the job. Keyword checks read only what the agents wrote (titles,
 descriptions, steps, variations, questions), never quoted evidence: a quote copies
 screen text, so matching it would credit the history rather than the workflow.
+
+A passing keyword check also reports `in_stages`: whether its words are in the stages
+(names, descriptions, procedure steps), the part that says what to do, rather than only
+in a variation, question or limitation. "How do missing-date rows get resolved?" passes
+`missing_date` without saying what to do. Reported next to the score, never part of it,
+so scores stay comparable with every run graded before it.
 """
 
 from __future__ import annotations
@@ -71,6 +77,15 @@ def authored(w: dict) -> str:
     return "\n".join(str(p) for p in parts if p)
 
 
+def staged(w: dict) -> str:
+    """What the stages say to do: their names, descriptions and procedure steps."""
+    parts = []
+    for stage in w.get("stages") or []:
+        parts += [stage.get("name") or "", stage.get("description") or ""]
+        parts += [p.get("text") or "" for p in stage.get("procedure") or []]
+    return "\n".join(str(p) for p in parts if p)
+
+
 def apps_of(w: dict) -> set[str]:
     apps = {a.lower() for a in w.get("apps") or []}
     for stage in w.get("stages") or []:
@@ -102,7 +117,7 @@ def attribute(workflows: list[dict], frames: Frames, jobs: set[str]) -> list[dic
                     "cited": len(points), "unresolved": unresolved,
                     "quality": (w.get("quality") or {}).get("grade"),
                     "days": (w.get("quality") or {}).get("distinctDays"),
-                    "text": authored(w), "apps": sorted(apps_of(w))})
+                    "text": authored(w), "steps": staged(w), "apps": sorted(apps_of(w))})
     return out
 
 
@@ -126,7 +141,7 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
         kind, job = c["kind"], c.get("job")
         mine = of(job) if job else []
         text = "\n".join(a["text"] for a in mine)
-        result, reason = None, ""
+        result, reason, in_stages = None, "", None
         if kind == "published":
             result = bool(mine)
             if not result:
@@ -143,6 +158,8 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
                 result, reason = not missing, f"missing {missing}" if missing else ""
             else:
                 result = has_any(text, c["any"])
+            what_to_do = "\n".join(a["steps"] for a in mine)
+            in_stages = bool(result) and all(has_any(what_to_do, g) for g in c.get("all") or [c["any"]])
             if result is False:
                 steps = c["id"] == "steps" or c["id"].endswith("_steps")
                 tags["steps_incomplete" if steps else f"exception_missed:{c['id']}"] += 1
@@ -179,7 +196,8 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
                 tags["invented_evidence"] += bad
         elif kind == "cost":
             result = None
-        checks[c["id"]] = {"pass": result, **({"reason": reason} if reason else {})}
+        checks[c["id"]] = {"pass": result, **({"reason": reason} if reason else {}),
+                           **({"in_stages": in_stages} if in_stages is not None else {})}
 
     for a in attributed:
         if a["job"] in (None, NOISE):
@@ -188,6 +206,8 @@ def grade_phase(phase: int, catalog: dict, seeded: list[dict], truth: dict,
     return {"phase": phase, "workflows": len(workflows), "checks": checks,
             "passed": sum(scored), "scored": len(scored),
             "score": round(sum(scored) / len(scored), 4) if scored else None,
+            "in_stages": sum(1 for v in checks.values() if v.get("in_stages")),
+            "keyword_checks": sum(1 for v in checks.values() if "in_stages" in v),
             "mistakes": dict(sorted(tags.items())), "attributed": attributed}
 
 
