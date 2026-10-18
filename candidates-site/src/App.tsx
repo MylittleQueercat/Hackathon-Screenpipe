@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 import { ArchitectureFlow } from './components/Architecture'
 import { Replay } from './components/Replay'
-import { ResultsMatrix } from './components/Charts'
+import { Comparator } from './components/Comparator'
 import {
-  candidates, fmtK, messages, pct, sonnetRejections, sonnetReview, sonnetStages, tone,
+  candidates, fmtK, messages, sonnetRejections, sonnetReview, sonnetStages, tone,
   type CandidateId,
 } from './data'
 import { toggleTheme, useTheme } from './lib/theme'
@@ -44,7 +44,8 @@ function Nav() {
   const links = [
     ['architecture', 'Architecture'],
     ['replay', 'Replay'],
-    ['review', 'Results'],
+    ['compare', 'Compare'],
+    ['review', 'Refusals'],
     ['stages', 'All stages'],
   ]
   return (
@@ -68,12 +69,6 @@ function Nav() {
 }
 
 function Hero() {
-  const facts: [string, string, string][] = [
-    [`${s.baseline.rejected} → 0`, 'refused calls in Review', 'Sonnet, 1 run each'],
-    [pct(s.baseline.seconds, s.preflight.seconds), `runtime, ${Math.round(s.baseline.seconds)} → ${Math.round(s.preflight.seconds)} s`, 'Sonnet, 1 run each'],
-    [pct(s.baseline.requests, s.preflight.requests), `model requests, ${s.baseline.requests} → ${s.preflight.requests}`, 'Sonnet, 1 run each'],
-    ['11/11', 'checks kept by all three candidates', 'Sonnet, Review stage'],
-  ]
   return (
     <header id="top" className="mx-auto max-w-6xl px-5 pb-6 pt-16 sm:px-8 md:pt-24">
       <motion.h1
@@ -95,15 +90,11 @@ function Hero() {
         <Note>claude-sonnet-5 · snapshot 20261017T145651Z-baseline-receipts-s1 · stage 04-p1-workflow-review · 1 run per candidate</Note>
       </div>
 
-      <dl className="mt-14 grid grid-cols-2 gap-x-6 gap-y-8 border-t border-line pt-8 md:grid-cols-4">
-        {facts.map(([v, l, sub]) => (
-          <div key={l}>
-            <dd className="display num text-4xl font-semibold text-ours md:text-5xl">{v}</dd>
-            <dt className="mt-2 text-sm">{l}</dt>
-            <dd className="mt-0.5 text-xs text-faint">{sub}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-14" id="compare">
+        <h2 className="display text-3xl font-semibold md:text-4xl">Pick two engines and see the difference</h2>
+        <p className="mb-5 mt-2 max-w-2xl text-sm text-muted">Same drafts, same prompt, one Review run each. Choose a version on each side.</p>
+        <Comparator />
+      </div>
     </header>
   )
 }
@@ -136,9 +127,6 @@ function Messages() {
 }
 
 export default function App() {
-  const col = (k: keyof (typeof s)['baseline']) =>
-    Object.fromEntries(IDS.map((id) => [id, s[id][k] as number])) as Record<CandidateId, number>
-
   return (
     <div className="min-h-screen bg-bg">
       <Nav />
@@ -157,19 +145,9 @@ export default function App() {
 
       <Section
         id="review"
-        title="Same 11 of 11, less of everything else"
-        lead="The Review stage replayed from the same saved snapshot, so every candidate starts from identical drafts."
+        title="What each engine was refused on"
+        lead="Every refused workspace call in the Review runs above, by kind. The Review stage was replayed from the same saved snapshot, so every candidate starts from identical drafts."
       >
-        <ResultsMatrix
-          rows={[
-            { label: 'Model requests', values: col('requests') },
-            { label: 'Runtime', unit: 'seconds', values: col('seconds'), format: (v) => `${Math.round(v)} s` },
-            { label: 'Refused workspace calls', unit: '409, 422 or clipped', values: col('rejected') },
-            { label: 'Output tokens', values: col('output'), format: fmtK },
-            { label: 'Cache read tokens', values: col('cacheRead'), format: fmtK },
-            { label: 'Input tokens', values: col('input'), format: fmtK },
-          ]}
-        />
         <div className="mt-10 grid gap-8 md:grid-cols-3">
           {IDS.map((id) => (
             <div key={id} className="border-t border-line pt-4">

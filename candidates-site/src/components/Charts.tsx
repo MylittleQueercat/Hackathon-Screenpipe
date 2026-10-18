@@ -3,21 +3,25 @@ import { candidates, tone, type CandidateId } from '../data'
 
 const IDS: CandidateId[] = ['baseline', 'conflict', 'preflight']
 
-/** Metric rows x candidate columns. Each cell is a value plus a bar scaled to the row maximum. */
+const TAG: Record<CandidateId, string> = { baseline: 'Today', conflict: 'Candidate', preflight: 'Our candidate' }
+
+/** Metric rows x candidate columns. Lower is better; the best cell in each row is marked and
+ *  every other cell shows its change against today's engine. */
 export function ResultsMatrix({
   rows,
 }: {
   rows: { label: string; unit?: string; values: Record<CandidateId, number>; format?: (v: number) => string }[]
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="num w-full min-w-[640px] border-collapse text-sm">
+    <div className="overflow-x-auto rounded-xl border border-line bg-surface">
+      <table className="num w-full min-w-[680px] border-collapse text-sm">
         <thead>
           <tr className="text-left">
-            <th className="w-[22%] pb-3 pr-4 text-xs font-normal text-faint">Lower is better</th>
+            <th className="w-[24%] px-5 py-4 text-xs font-normal text-faint">Review stage, Sonnet<br />Lower is better</th>
             {IDS.map((id) => (
-              <th key={id} className="pb-3 pr-6 font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>
-                {candidates[id].name}
+              <th key={id} className={`px-5 py-4 ${id === 'preflight' ? 'bg-ours/[0.08]' : ''}`}>
+                <div className="text-xs font-normal text-faint">{TAG[id]}</div>
+                <div className="mt-0.5 font-mono text-[13px] font-semibold" style={{ color: tone(id) }}>{candidates[id].name}</div>
               </th>
             ))}
           </tr>
@@ -25,27 +29,29 @@ export function ResultsMatrix({
         <tbody>
           {rows.map((r) => {
             const max = Math.max(...IDS.map((id) => r.values[id]), 1)
+            const best = Math.min(...IDS.map((id) => r.values[id]))
             const f = r.format ?? ((v: number) => `${v}`)
             const base = r.values.baseline
             return (
               <tr key={r.label} className="border-t border-line align-middle">
-                <th scope="row" className="py-4 pr-4 text-left font-medium">
+                <th scope="row" className="px-5 py-4 text-left font-medium">
                   {r.label}
                   {r.unit && <div className="text-xs font-normal text-faint">{r.unit}</div>}
                 </th>
                 {IDS.map((id, i) => {
                   const v = r.values[id]
+                  const isBest = v === best && IDS.some((o) => r.values[o] !== v)
                   const delta = id === 'baseline' || base === 0 ? null : Math.round(((v - base) / base) * 100)
                   return (
-                    <td key={id} className="py-4 pr-6">
-                      <div className="flex items-baseline gap-2">
-                        <span className="display text-2xl font-semibold">{f(v)}</span>
-                        {delta !== null && (
-                          <span className={`text-xs font-semibold ${delta < 0 ? 'text-ours' : delta > 0 ? 'text-bad' : 'text-faint'}`}>
-                            {delta > 0 ? '+' : delta < 0 ? '−' : ''}
-                            {Math.abs(delta)}%
+                    <td key={id} className={`px-5 py-4 ${id === 'preflight' ? 'bg-ours/[0.08]' : ''}`}>
+                      <div className="flex flex-wrap items-baseline gap-x-2">
+                        <span className={`display text-2xl font-semibold ${isBest ? 'text-ours' : ''}`}>{f(v)}</span>
+                        {delta !== null && delta !== 0 && (
+                          <span className={`text-xs font-semibold ${delta < 0 ? 'text-ours' : 'text-bad'}`}>
+                            {delta > 0 ? '+' : '−'}{Math.abs(delta)}% vs today
                           </span>
                         )}
+                        {isBest && <span className="text-xs font-semibold text-ours">best</span>}
                       </div>
                       <div className="mt-2 h-1.5 rounded-full bg-raised">
                         <motion.div

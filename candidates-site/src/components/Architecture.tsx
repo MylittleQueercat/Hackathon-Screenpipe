@@ -97,11 +97,32 @@ function Arrow({ m, id }: { m: Msg; id: CandidateId }) {
   )
 }
 
+export function SequenceDiagram({ id }: { id: CandidateId }) {
+  const f = flows[id]
+  const ours = id === 'preflight'
+  return (
+    <div className={`rounded-xl border bg-surface px-4 pb-4 pt-5 sm:px-6 ${ours ? 'border-ours/60' : 'border-line'}`}>
+        <div className="relative mx-[14%] h-8 text-xs font-semibold">
+          <span className="absolute left-0 -translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Review agent</span>
+          <span className="absolute right-0 translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Workflow engine</span>
+        </div>
+        <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-[14%] w-px bg-line" />
+          <div className="pointer-events-none absolute inset-y-0 right-[14%] w-px bg-line" />
+          <ol className="relative">
+            {f.msgs.map((m, i) => (
+              <Arrow key={i} m={m} id={id} />
+            ))}
+          </ol>
+        </div>
+      </div>
+  )
+}
+
 export function ArchitectureFlow({ id, index }: { id: CandidateId; index: number }) {
   const f = flows[id]
   const c = candidates[id]
   const s = sonnetReview[id]
-  const ours = id === 'preflight'
   return (
     <article
       className="grid gap-8 border-t border-line py-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14"
@@ -151,21 +172,7 @@ export function ArchitectureFlow({ id, index }: { id: CandidateId; index: number
         </table>
       </div>
 
-      <div className={`rounded-xl border bg-surface px-4 pb-4 pt-5 sm:px-6 ${ours ? 'border-ours/60' : 'border-line'}`}>
-        <div className="relative mx-[14%] h-8 text-xs font-semibold">
-          <span className="absolute left-0 -translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Review agent</span>
-          <span className="absolute right-0 translate-x-1/2 rounded-md bg-raised px-2.5 py-1.5">Workflow engine</span>
-        </div>
-        <div className="relative">
-          <div className="pointer-events-none absolute inset-y-0 left-[14%] w-px bg-line" />
-          <div className="pointer-events-none absolute inset-y-0 right-[14%] w-px bg-line" />
-          <ol className="relative">
-            {f.msgs.map((m, i) => (
-              <Arrow key={i} m={m} id={id} />
-            ))}
-          </ol>
-        </div>
-      </div>
+      <SequenceDiagram id={id} />
     </article>
   )
 }
