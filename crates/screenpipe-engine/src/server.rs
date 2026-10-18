@@ -1539,6 +1539,10 @@ impl SCServer {
                     }
                 }),
             )
+            .route(
+                "/eval/seed",
+                axum::routing::post(crate::routes::eval_seed::seed),
+            )
             .layer(Extension(crate::routes::workflows::WorkflowCatalogSource(self.workflow_catalog_dir.clone())))
             .with_state(app_state.clone())
             .layer(axum::middleware::from_fn(crate::search_only::history_only))

@@ -1173,7 +1173,12 @@ async fn main() -> anyhow::Result<()> {
     let ignored_windows_clone = config.ignored_windows.clone();
     let included_windows_clone = config.included_windows.clone();
     // Create UI recorder config early before cli is moved
-    let ui_recorder_config = config.to_ui_recorder_config();
+    let mut ui_recorder_config = config.to_ui_recorder_config();
+    // Eval harness: the history is seeded; the user's own clicks and app switches
+    // must not mix into it. No CLI flag turns the UI recorder off.
+    if std::env::var("SCREENPIPE_EVAL_SEED").as_deref() == Ok("1") {
+        ui_recorder_config.enabled = false;
+    }
 
     // Meeting detection uses app focus + audio RMS only (no transcription needed).
     // It still needs audio capture enabled; otherwise the UI scanner has no useful
@@ -1465,6 +1470,9 @@ async fn main() -> anyhow::Result<()> {
         eprintln!();
     }
 
+    // Only the desktop app gave Workflows a catalog directory; without one every
+    // catalog read and write answers "Workflow storage is unavailable".
+    let workflow_catalog_dir = local_data_dir_clone_2.join("workflows");
     let mut server = SCServer::new(
         db_server,
         SocketAddr::new(IpAddr::V4(config.listen_address), config.port),
@@ -1487,6 +1495,7 @@ async fn main() -> anyhow::Result<()> {
     server.manual_meeting = Some(manual_meeting.clone());
     server.api_auth = config.api_auth;
     server.api_auth_key = config.api_auth_key.clone();
+    server.workflow_catalog_dir = Some(workflow_catalog_dir);
     // Cloud JWT for the /v1/chat/completions proxy. CLI/binary path reads
     // SCREENPIPE_API_KEY directly; desktop path overrides via
     // SCServer::cloud_token_handle after spawn.
@@ -1566,7 +1575,13 @@ async fn main() -> anyhow::Result<()> {
     let pipes_dir = local_data_dir.join("pipes");
     std::fs::create_dir_all(&pipes_dir).ok();
 
-    let user_token = std::env::var("SCREENPIPE_API_KEY").ok();
+    // Same resolution as `screenpipe pipe run`: an explicit cloud JWT wins, else the
+    // session `screenpipe login` stored. SCREENPIPE_API_KEY may be the local `sp-*` key.
+    let user_token = screenpipe_engine::auth_key::resolve_cloud_token(
+        &local_data_dir,
+        std::env::var("SCREENPIPE_API_KEY").ok(),
+    )
+    .await;
     let pi_executor = std::sync::Arc::new(
         screenpipe_core::agents::pi::PiExecutor::new(user_token.clone())
             .with_api_auth_key(config.api_auth_key.clone()),
