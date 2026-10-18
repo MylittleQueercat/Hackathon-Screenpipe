@@ -74,9 +74,6 @@ function LoadedEvidenceView({ experiment, run }: { experiment: Experiment; run: 
         <h2 className="mt-3 text-[44px] font-semibold leading-[1.02] tracking-tightest text-ink-50">
           Why did each check pass?
         </h2>
-        <p className="mt-4 text-[17.5px] leading-relaxed text-ink-400">
-          Pick a lens, then a check.
-        </p>
 
         <div className="mt-12 flex flex-col gap-3">
           <LensRow label="All checks" count={n} active={lens === null} onClick={() => setLens(null)} />

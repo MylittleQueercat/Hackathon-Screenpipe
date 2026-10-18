@@ -9,9 +9,9 @@ import { fetchSnapshots, fetchStageRuns, fetchVariants, streamWfevalStage, type 
 
 /* graph geometry */
 const GW = 1680;
-const GH = 262;
-const MAIN_Y = 92;
-const BRANCH_Y = 200;
+const GH = 330;
+const MAIN_Y = 110;
+const BRANCH_Y = 250;
 const ORIGIN_X = 40;
 const END_X = 1630;
 const stageX = (i: number) => 310 + i * 375;
@@ -93,7 +93,6 @@ export function ReplayView({
   usePlayKey(preview);
 
   const config = experiment.runs.find((r) => r.id === configId)!;
-  const snapshotId = run.stages[sel.id]?.snapshotId ?? null;
   const upstreamReq = upstream.map((s) => run.stages[s.id]?.modelRequests ?? null);
   const reusedRequests = upstreamReq.every((v) => v !== null) ? upstreamReq.reduce<number>((t, v) => t + (v ?? 0), 0) : null;
 
@@ -161,9 +160,6 @@ export function ReplayView({
           <h2 className="mt-3 text-[54px] font-semibold leading-none tracking-tightest text-ink-50">
             Replay a stage. Resume from a snapshot.
           </h2>
-          <p className="mt-2 text-[19px] text-ink-300">
-            Rerun one agent without rerunning the whole pipeline.
-          </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge size="lg" kind="simulated" label="Replay Preview" />
@@ -227,10 +223,10 @@ export function ReplayView({
                   <motion.rect
                     initial={false}
                     animate={{
-                      x: isFork ? -10 : -7,
-                      y: isFork ? -10 : -7,
-                      width: isFork ? 20 : 14,
-                      height: isFork ? 20 : 14,
+                      x: isFork ? -13 : -9,
+                      y: isFork ? -13 : -9,
+                      width: isFork ? 26 : 18,
+                      height: isFork ? 26 : 18,
                       fill: isFork ? pal.signal : pal.bg,
                       stroke: isFork ? pal.signal : pal.line,
                     }}
@@ -238,7 +234,7 @@ export function ReplayView({
                     strokeDasharray={run.stages[s.id]?.snapshotId || isFork ? undefined : '3 2'}
                   />
                 </g>
-                {isFork && <circle r="18" fill="none" stroke="rgb(var(--signal))" strokeOpacity=".35" className="pulse-dot" />}
+                {isFork && <circle r="24" fill="none" stroke="rgb(var(--signal))" strokeOpacity=".35" className="pulse-dot" />}
               </g>
             );
           })}
@@ -268,10 +264,10 @@ export function ReplayView({
 
         {/* snapshot label for fork */}
         <motion.div
-          className="absolute w-[220px] text-center font-mono text-[13px] text-signal"
-          style={{ top: MAIN_Y - 36 }}
+          className="absolute w-[280px] text-center font-mono text-[16px] text-signal"
+          style={{ top: MAIN_Y - 66 }}
           initial={false}
-          animate={{ left: forkX - 110 }}
+          animate={{ left: forkX - 140 }}
           transition={{ type: 'spring', stiffness: 260, damping: 28 }}
         >
           snapshot before {sel.name}
@@ -306,7 +302,7 @@ export function ReplayView({
         </motion.div>
         <motion.div
           className="absolute w-[280px] text-right font-mono text-[13px] text-ink-400"
-          style={{ left: END_X - 270, top: BRANCH_Y + 40 }}
+          style={{ left: END_X - 270, top: BRANCH_Y + 52 }}
           animate={{ opacity: sim >= lastSim ? 1 : 0.4 }}
         >
           eval′ · replay not yet executed
@@ -314,16 +310,16 @@ export function ReplayView({
       </div>
 
       {/* lower panels */}
-      <div className="mt-4 grid flex-1 grid-cols-[1fr_1.25fr_1fr] gap-10 border-t border-ink-800 pt-7">
+      <div className="mt-6 grid flex-1 grid-cols-[1fr_1.25fr_1fr] gap-16 border-t border-ink-800 pt-8">
         {/* 1. choose */}
         <div>
-          <Eyebrow size="lg">1 · Choose a stage</Eyebrow>
-          <div className="mt-3 flex flex-col gap-1">
+          <Eyebrow size="xl">1 · Choose a stage</Eyebrow>
+          <div className="mt-4 flex flex-col gap-2.5">
             {stages.map((s, i) => (
               <button
                 key={s.id}
                 onClick={() => onStage(s.id)}
-                className={`flex items-center justify-between rounded-xl px-4 py-2.5 text-left transition ${
+                className={`flex items-center justify-between rounded-xl px-4 py-3 text-left transition ${
                   i === selIdx ? 'bg-ink-850 ring-1 ring-signal/50' : 'hover:bg-ink-900'
                 }`}
               >
@@ -337,13 +333,13 @@ export function ReplayView({
               </button>
             ))}
           </div>
-          <Eyebrow size="lg" className="mt-5">Replay with config</Eyebrow>
-          <div className="mt-2 flex gap-2">
+          <Eyebrow size="xl" className="mt-8">Replay with config</Eyebrow>
+          <div className="mt-3 flex gap-2.5">
             {experiment.runs.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setConfigId(r.id)}
-                className={`rounded-full border px-3 py-1 text-[15.5px] transition ${
+                className={`rounded-full border px-4 py-1.5 text-[17px] transition ${
                   configId === r.id ? 'border-signal/60 bg-signal/10 text-signal' : 'border-ink-700 text-ink-300 hover:text-ink-100'
                 }`}
               >
@@ -355,27 +351,19 @@ export function ReplayView({
 
         {/* 2. plan */}
         <div>
-          <Eyebrow size="lg">2 · Replay plan</Eyebrow>
-          <ol className="mt-3 flex flex-col gap-3">
-            <PlanStep n={1} active={sim >= 1} title={`Restore snapshot before ${sel.name}`}>
-              {snapshotId && <span className="font-mono text-ink-200">{snapshotId}</span>}
-            </PlanStep>
-            <PlanStep n={2} active={sim >= 1} title={upstream.length ? `Reuse ${upstream.map((s) => s.name).join(', ')}` : 'Nothing upstream to reuse'}>
-              <span className="text-ink-400">{upstream.length ? 'Outputs come from the snapshot — these stages are not re-run.' : 'Replay starts at the first stage.'}</span>
-            </PlanStep>
-            <PlanStep n={3} active={sim >= 2} title={`Re-execute ${downstream.map((s) => s.name).join(' → ')}`}>
-              <span className="text-ink-400">with the {config.label} configuration</span>
-            </PlanStep>
-            <PlanStep n={4} active={sim >= lastSim} title={`Re-evaluate against ${run.metrics.qualityTotal} ground-truth checks`}>
-              <span className="text-ink-400">then diff against the parent run</span>
-            </PlanStep>
+          <Eyebrow size="xl">2 · Replay plan</Eyebrow>
+          <ol className="mt-5 flex flex-col gap-7">
+            <PlanStep n={1} active={sim >= 1} title={`Restore snapshot before ${sel.name}`} />
+            <PlanStep n={2} active={sim >= 1} title={upstream.length ? `Reuse ${upstream.map((s) => s.name).join(', ')}` : 'Nothing upstream to reuse'} />
+            <PlanStep n={3} active={sim >= 2} title={`Re-execute ${downstream.map((s) => s.name).join(' → ')}`} />
+            <PlanStep n={4} active={sim >= lastSim} title={`Re-evaluate against ${run.metrics.qualityTotal} ground-truth checks`} />
           </ol>
         </div>
 
         {/* 3. outcome */}
         <div className="flex flex-col">
-          <Eyebrow size="lg">3 · Outcome</Eyebrow>
-          <div className="mt-3 space-y-4">
+          <Eyebrow size="xl">3 · Outcome</Eyebrow>
+          <div className="mt-5 space-y-7">
             <OutcomeRow label="Model requests reused">
               {reusedRequests !== null ? (
                 <span className="tnum text-[32px] font-semibold text-ink-50">{reusedRequests}</span>
@@ -507,8 +495,8 @@ export function ReplayView({
 function Dot({ x, y, label }: { x: number; y: number; label: string }) {
   return (
     <>
-      <span className="absolute h-[14px] w-[14px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink-200 bg-ink-950" style={{ left: x, top: y }} />
-      <span className="absolute -translate-x-1/2 whitespace-nowrap font-mono text-[13px] text-ink-400" style={{ left: x, top: y + 16 }}>
+      <span className="absolute h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink-200 bg-ink-950" style={{ left: x, top: y }} />
+      <span className="absolute -translate-x-1/2 whitespace-nowrap font-mono text-[15px] text-ink-300" style={{ left: x, top: y + 20 }}>
         {label}
       </span>
     </>
@@ -548,39 +536,36 @@ function GraphNode({
       animate={{ opacity: 1, y: 0, scale: tone === 'sim-lit' ? 1.04 : 1 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.4, ease: EASE }}
-      className={`absolute flex h-[60px] w-[200px] flex-col justify-center rounded-xl border px-4 text-left transition-colors duration-300 ${cls}`}
-      style={{ left: x - 100, top: y - 30 }}
+      className={`absolute flex h-[80px] w-[250px] flex-col justify-center rounded-2xl border px-5 text-left transition-colors duration-300 ${cls}`}
+      style={{ left: x - 125, top: y - 40 }}
     >
       <span className="flex items-center justify-between">
-        <span className="text-[20px] font-semibold tracking-tight">{title}</span>
-        <span className="font-mono text-[12px] opacity-60">{pad2(index + 1)}</span>
+        <span className="text-[26px] font-semibold tracking-tight">{title}</span>
+        <span className="font-mono text-[14px] opacity-60">{pad2(index + 1)}</span>
       </span>
-      {tag && <span className="whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.1em] opacity-70">{tag}</span>}
+      {tag && <span className="whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.1em] opacity-70">{tag}</span>}
     </motion.button>
   );
 }
 
-function PlanStep({ n, title, active, children }: { n: number; title: string; active: boolean; children: ReactNode }) {
+function PlanStep({ n, title, active }: { n: number; title: string; active: boolean }) {
   return (
-    <li className="flex gap-4">
+    <li className="flex items-center gap-4">
       <span
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[13px] transition-colors duration-300 ${
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-[15px] transition-colors duration-300 ${
           active ? 'border-signal bg-signal text-on-signal' : 'border-ink-600 text-ink-400'
         }`}
       >
         {n}
       </span>
-      <div className="min-w-0">
-        <div className={`text-[19px] transition-colors ${active ? 'text-ink-50' : 'text-ink-200'}`}>{title}</div>
-        <div className="mt-0.5 text-[15.5px]">{children}</div>
-      </div>
+      <div className={`min-w-0 text-[21px] transition-colors ${active ? 'text-ink-50' : 'text-ink-200'}`}>{title}</div>
     </li>
   );
 }
 
 function OutcomeRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="border-b border-ink-800 pb-3">
+    <div className="border-b border-ink-800 pb-5">
       <div className="font-mono text-[13px] uppercase tracking-widest text-ink-400">{label}</div>
       <div className="mt-1.5">{children}</div>
     </div>
